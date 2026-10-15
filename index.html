@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MetaGRADE</title>
+<meta name="description" content="Meta-análisis por pares y en red (NMA) con calificación de la certeza de la evidencia según Core GRADE y GRADE para NMA. Todo se calcula en el navegador.">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo" aria-hidden="true">⨁</span><div><h1>MetaGRADE</h1><p>Meta-análisis por pares y en red con certeza de la evidencia (Core GRADE · GRADE para NMA)</p></div></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="datos" class="active">1 · Datos</button>
+    <button role="tab" data-tab="analisis">2 · Análisis y GRADE</button>
+    <button role="tab" data-tab="sof">3 · Tabla SoF y exportar</button>
+    <button role="tab" data-tab="ayuda">Métodos y ayuda</button>
+  </nav>
+</header>
+
+<main>
+<!-- ============ DATOS ============ -->
+<section id="tab-datos" class="tab active">
+  <div class="card">
+    <h2>Subir datos</h2>
+    <p class="muted">Archivos <b>CSV</b> (coma, punto y coma o tabulador) o <b>Excel (.xlsx)</b>. Los datos no salen de tu computadora: todo se calcula en el navegador.</p>
+    <div class="drop" id="drop">
+      <input type="file" id="file" accept=".csv,.txt,.tsv,.xlsx,.xls">
+      <label for="file"><b>Elegir archivo</b> o arrastrarlo aquí</label>
+    </div>
+    <div class="row gap">
+      <span class="muted">Ejemplos:</span>
+      <button class="ghost" data-example="examples/pairwise_binary.csv">Pares · binario</button>
+      <button class="ghost" data-example="examples/pairwise_continuous.csv">Pares · continuo</button>
+      <button class="ghost" data-example="examples/pairwise_hr_cohorts.csv">Pares · HR ajustados</button>
+      <button class="ghost" data-example="examples/nma_binary.csv">NMA · binario</button>
+      <button class="ghost" data-example="examples/nma_continuous.csv">NMA · continuo</button>
+    </div>
+  </div>
+
+  <div class="card" id="data-card" hidden>
+    <div class="row between"><h2>Vista previa</h2><span id="detected" class="pill"></span></div>
+    <div class="row gap wrap">
+      <label>Hoja <select id="sheet"></select></label>
+      <label>Tipo de análisis <select id="kind"><option value="pairwise">Meta-análisis por pares</option><option value="nma">Meta-análisis en red (NMA)</option></select></label>
+      <label id="outcome-wrap" hidden>Desenlace <select id="outcome-filter"></select></label>
+      <label id="subgroup-wrap" hidden>Subgrupo / comparación <select id="subgroup-filter"></select></label>
+    </div>
+    <details class="mapping"><summary>Columnas reconocidas (puede corregirlas)</summary><div id="mapping" class="grid-map"></div></details>
+    <div class="tablewrap"><table id="preview" class="data"></table></div>
+    <div class="row end"><button id="go-analysis" class="primary">Continuar al análisis →</button></div>
+  </div>
+
+  <div class="card">
+    <h2>Formato de los archivos</h2>
+    <div class="cols2">
+      <div>
+        <h3>Meta-análisis por pares (una fila por estudio)</h3>
+        <ul class="tight">
+          <li><b>Binario:</b> <code>study, events_int, n_int, events_comp, n_comp</code></li>
+          <li><b>Continuo:</b> <code>study, mean_int, sd_int, n_int, mean_comp, sd_comp, n_comp</code></li>
+          <li><b>Efectos ajustados (HR/OR/RR):</b> <code>study, estimate, lower, upper, n</code></li>
+          <li><b>Genérico:</b> <code>study, yi, sei, n</code> (yi en escala log para razones)</li>
+          <li>Opcionales: <code>rob</code> (Low / Some concerns / High), <code>indirect</code> (0/1 o texto), <code>outcome</code>, <code>subgroup</code>, <code>design</code></li>
+        </ul>
+      </div>
+      <div>
+        <h3>NMA (una fila por brazo)</h3>
+        <ul class="tight">
+          <li><b>Binario:</b> <code>study, treatment, responders, n</code></li>
+          <li><b>Continuo:</b> <code>study, treatment, mean, sd, n</code></li>
+          <li>Opcionales por estudio (repetidos en cada brazo): <code>rob</code>, <code>indirect</code>, <code>modifier</code> (p. ej., población, para intransitividad), <code>outcome</code></li>
+        </ul>
+        <p class="muted">También se aceptan nombres en español (estudio, tratamiento, eventos, media, de, riesgo_sesgo…).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ANÁLISIS ============ -->
+<section id="tab-analisis" class="tab">
+  <div class="empty card" id="no-data"><p>Primero sube un archivo o carga un ejemplo en la pestaña <b>Datos</b>.</p></div>
+
+  <!-- PARES -->
+  <div id="pw" hidden>
+    <div class="card">
+      <h2>Configuración — meta-análisis por pares</h2>
+      <div class="form">
+        <label>Desenlace <input id="pw-outcome" value="Outcome"></label>
+        <label>Intervención <input id="pw-int" value="intervention"></label>
+        <label>Comparador <input id="pw-comp" value="control"></label>
+        <label>Medida <select id="pw-measure"></select></label>
+        <label>Modelo <select id="pw-method"><option value="REML">Efectos aleatorios · REML</option><option value="DL">Efectos aleatorios · DerSimonian-Laird</option><option value="EE">Efecto común</option></select></label>
+        <label>IC del efecto combinado <select id="pw-test"><option value="z">Wald (z)</option><option value="adhoc">HKSJ ad hoc (t, max(1,q))</option><option value="knha">Knapp-Hartung (t)</option></select></label>
+        <label>Diseño de los estudios <select id="pw-design"><option value="RCT">ECA (inicia en alta)</option><option value="NRSI">No aleatorizados (inicia en baja)</option><option value="NRSI_TTE">No aleatorizados evaluados con ROBINS-I / emulación de ensayo (inicia en alta)</option></select></label>
+        <label>Un valor mayor del desenlace es… <select id="pw-dir"><option value="lower">indeseable (p. ej., mortalidad, eventos adversos)</option><option value="higher">deseable (p. ej., remisión, función)</option></select></label>
+      </div>
+      <h3>Umbral y riesgo basal</h3>
+      <div class="form">
+        <label>Umbral de la calificación <select id="pw-threshold"><option value="MID">MID (efecto importante vs. poco o ninguno)</option><option value="null">Valor nulo (existe o no un efecto)</option></select></label>
+        <label>MID <span class="unit" id="pw-mid-unit">por 100</span><input id="pw-mid" type="number" step="any" value="2"></label>
+        <label>Escala absoluta <select id="pw-unit"><option value="100">por 100</option><option value="1000">por 1000</option></select></label>
+        <label>Riesgo basal (proporción) <input id="pw-p0" type="number" step="any" min="0" max="1"></label>
+        <label>DE para OIS continuo <input id="pw-sd" type="number" step="any" placeholder="opcional"></label>
+      </div>
+      <details class="helper"><summary>Calcular la MID con GRADE-THRESHOLD (disutilidad)</summary>
+        <div class="row gap wrap">
+          <label>Disutilidad del estado (0–1) <input id="dt-dis" type="number" step="any" value="1"></label>
+          <label><input type="checkbox" id="dt-desirable"> desenlace deseable (usar utilidad)</label>
+          <button class="ghost" id="dt-calc">Calcular</button>
+          <span id="dt-out" class="muted"></span>
+        </div>
+        <p class="muted">DT1 = 1,35 por 100 ÷ disutilidad (trivial → pequeño); DT2 = 3,21; DT3 = 6,25 (Morgano et al., J Clin Epidemiol 2025). Continuos: MID publicada o 0,2 DE.</p>
+      </details>
+      <details class="helper"><summary>Opciones de los dominios GRADE</summary>
+        <div class="form">
+          <label>Dominancia de alto riesgo de sesgo <select id="pw-robdom"><option value="0.65">&gt;65 % del peso</option><option value="0.55">≥55 % del peso</option><option value="0.5">&gt;50 % del peso</option></select></label>
+          <label><input type="checkbox" id="pw-someconc"> contar "algunas preocupaciones" como alto riesgo</label>
+          <label>RRR para el OIS <select id="pw-oisrrr"><option value="0.25">25 %</option><option value="0.2">20 %</option><option value="0.3">30 % (menos estricto)</option></select></label>
+          <label>Potencia <select id="pw-power"><option value="0.8">80 %</option><option value="0.9">90 %</option></select></label>
+          <label><input type="checkbox" id="pw-surrogate"> desenlace sustituto</label>
+          <label><input type="checkbox" id="pw-industry"> estudios pequeños financiados por la industria</label>
+          <label><input type="checkbox" id="pw-dose"> gradiente dosis-respuesta (no aleatorizados)</label>
+        </div>
+      </details>
+      <div class="row end"><button class="primary" id="pw-run">Ejecutar meta-análisis</button></div>
+    </div>
+    <div id="pw-results"></div>
+  </div>
+
+  <!-- NMA -->
+  <div id="nm" hidden>
+    <div class="card">
+      <h2>Configuración — meta-análisis en red</h2>
+      <div class="form">
+        <label>Desenlace <input id="nm-outcome" value="Outcome"></label>
+        <label>Tipo <select id="nm-type"><option value="binary">Binario (OR)</option><option value="continuous">Continuo (MD)</option></select></label>
+        <label>Modelo <select id="nm-method"><option value="REML">Efectos aleatorios · REML (τ² común)</option><option value="FE">Efecto común</option></select></label>
+        <label>Comparador(es) de la tabla SoF <select id="nm-ref" multiple size="5"></select></label>
+        <label>Un valor mayor del desenlace es… <select id="nm-dir"><option value="higher">deseable (p. ej., respuesta)</option><option value="lower">indeseable (p. ej., mortalidad)</option></select></label>
+        <label>Escala absoluta <select id="nm-unit"><option value="100">por 100</option><option value="1000">por 1000</option></select></label>
+        <label>MID (umbral) <input id="nm-mid" type="number" step="any" value="5"></label>
+        <label>Umbral de efecto grande (para −3) <input id="nm-large" type="number" step="any" placeholder="opcional"></label>
+        <label>Riesgo basal del comparador <select id="nm-base"><option value="pt">Proporción combinada (efectos aleatorios)</option><option value="median">Mediana de los brazos</option><option value="lo">Límite inferior del IC 95 %</option><option value="hi">Límite superior del IC 95 %</option><option value="manual">Manual</option></select></label>
+        <label>Riesgo basal manual <input id="nm-p0" type="number" step="any" min="0" max="1" placeholder="0–1"></label>
+        <label>DE combinada (continuo, para OIS) <input id="nm-sd" type="number" step="any" placeholder="opcional"></label>
+        <label>Umbral p de incoherencia (node-split) <select id="nm-incp"><option value="0.10">0,10</option><option value="0.05">0,05</option></select></label>
+      </div>
+      <div class="row end"><button class="primary" id="nm-run">Ejecutar NMA</button></div>
+    </div>
+    <div id="nm-results"></div>
+  </div>
+</section>
+
+<!-- ============ SoF ============ -->
+<section id="tab-sof" class="tab">
+  <div class="card">
+    <div class="row between wrap"><h2>Tabla Summary of Findings</h2>
+      <div class="row gap wrap">
+        <label>Paleta <select id="palette"><option value="default">Verde/rojo/amarillo</option><option value="cvd">Apta para daltonismo</option></select></label>
+        <button class="ghost" id="sof-doc">Descargar Word (.doc)</button>
+        <button class="ghost" id="sof-csv">Descargar CSV</button>
+        <button class="ghost" id="sof-copy">Copiar tabla</button>
+        <button class="ghost danger" id="sof-clear">Vaciar</button>
+      </div>
+    </div>
+    <p class="muted">Agrega desenlaces desde la pestaña de análisis («Añadir a la tabla SoF»). Las celdas de efecto absoluto y certeza se colorean según la leyenda (marco mínimamente contextualizado).</p>
+    <div id="sof"></div>
+  </div>
+  <div class="card">
+    <h2>Texto para la sección de métodos</h2>
+    <textarea id="methods-text" rows="12"></textarea>
+  </div>
+</section>
+
+<!-- ============ AYUDA ============ -->
+<section id="tab-ayuda" class="tab">
+  <div class="card prose" id="help"></div>
+</section>
+</main>
+<footer class="foot"><p>MetaGRADE · código abierto · los cálculos se hacen en el navegador. Las calificaciones automáticas son sugerencias que dos revisores deben verificar y justificar.</p></footer>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

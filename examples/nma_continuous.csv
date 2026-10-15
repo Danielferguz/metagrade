@@ -1,0 +1,22 @@
+study,treatment,mean,sd,n,rob
+Study A 2012,Usual care,0.12,8.68,39,Low
+Study A 2012,Exercise,-5.9,11.55,69,Low
+Study B 2013,Usual care,0.05,10.97,40,Some concerns
+Study B 2013,Exercise,-4.51,11.1,55,Some concerns
+Study C 2014,Usual care,-0.21,9.41,118,High
+Study C 2014,Diet,-1.56,10.99,59,High
+Study D 2015,Usual care,1.71,8.45,111,Low
+Study D 2015,Diet,-2.62,10.83,52,Low
+Study E 2016,Exercise,-0.46,9.34,41,Some concerns
+Study E 2016,Exercise + diet,-6.91,9.28,108,Some concerns
+Study F 2017,Diet,-3.98,9.57,30,High
+Study F 2017,Exercise + diet,-6.25,8.73,111,High
+Study G 2018,Usual care,1.34,10.05,71,Low
+Study G 2018,Exercise + diet,-2.56,8.77,73,Low
+Study H 2019,Usual care,0.4,10.1,109,Some concerns
+Study H 2019,Drug,-6.56,11.37,79,Some concerns
+Study I 2020,Drug,-2.6,9.53,38,High
+Study I 2020,Exercise,-4.17,10.99,116,High
+Study J 2021,Usual care,-0.98,9.9,93,Low
+Study J 2021,Diet,-2.06,9.24,45,Low
+Study J 2021,Exercise,-4.12,9.59,110,Low

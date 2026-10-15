@@ -1,0 +1,21 @@
+study,outcome,events_int,n_int,events_comp,n_comp,rob,indirect
+Alvarez 2015,All-cause mortality,48,434,16,138,Low,0
+Brown 2016,All-cause mortality,37,425,45,407,Low,0
+Chen 2017,All-cause mortality,41,380,65,464,Some concerns,0
+Diaz 2018,All-cause mortality,12,124,18,159,High,1
+Evans 2019,All-cause mortality,44,425,7,65,Low,0
+Garcia 2020,All-cause mortality,23,203,28,251,Some concerns,0
+Huang 2021,All-cause mortality,32,292,50,326,High,0
+Ito 2022,All-cause mortality,20,241,26,198,Low,0
+Kumar 2023,All-cause mortality,24,297,31,276,Low,0
+Lopez 2024,All-cause mortality,50,387,27,277,Some concerns,0
+Alvarez 2015,Hospitalisation,91,391,61,203,Low,0
+Brown 2016,Hospitalisation,79,326,86,243,Low,0
+Chen 2017,Hospitalisation,27,106,147,476,Some concerns,0
+Diaz 2018,Hospitalisation,26,86,74,274,High,1
+Evans 2019,Hospitalisation,63,304,82,324,Low,0
+Garcia 2020,Hospitalisation,55,167,113,406,Some concerns,0
+Huang 2021,Hospitalisation,83,397,92,323,High,0
+Ito 2022,Hospitalisation,47,207,31,89,Low,0
+Kumar 2023,Hospitalisation,72,267,51,183,Low,0
+Lopez 2024,Hospitalisation,132,493,110,350,Some concerns,0

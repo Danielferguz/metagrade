@@ -1,0 +1,28 @@
+study,treatment,responders,n,rob,modifier
+Trial 01 (2008),Placebo,50,159,Low,Pre-dialysis
+Trial 01 (2008),Drug A,101,176,Low,Pre-dialysis
+Trial 02 (2009),Placebo,39,143,Some concerns,Dialysis
+Trial 02 (2009),Drug A,17,45,Some concerns,Dialysis
+Trial 03 (2010),Placebo,29,45,Some concerns,Pre-dialysis
+Trial 03 (2010),Drug A,176,208,Some concerns,Pre-dialysis
+Trial 04 (2011),Placebo,33,72,Low,Dialysis
+Trial 04 (2011),Drug B,129,169,Low,Dialysis
+Trial 05 (2012),Placebo,18,41,High,Pre-dialysis
+Trial 05 (2012),Drug B,77,123,High,Pre-dialysis
+Trial 06 (2013),Drug A,105,170,Some concerns,Dialysis
+Trial 06 (2013),Drug B,99,157,Some concerns,Dialysis
+Trial 07 (2014),Drug A,55,83,Low,Pre-dialysis
+Trial 07 (2014),Drug C,44,87,Low,Pre-dialysis
+Trial 08 (2015),Placebo,33,65,Some concerns,Dialysis
+Trial 08 (2015),Drug C,52,116,Some concerns,Dialysis
+Trial 09 (2016),Drug B,57,128,Some concerns,Pre-dialysis
+Trial 09 (2016),Drug D,52,93,Some concerns,Pre-dialysis
+Trial 10 (2017),Drug B,38,61,High,Dialysis
+Trial 10 (2017),Drug D,74,129,High,Dialysis
+Trial 11 (2018),Placebo,31,80,Some concerns,Pre-dialysis
+Trial 11 (2018),Drug A,79,151,Some concerns,Pre-dialysis
+Trial 11 (2018),Drug E,71,123,Some concerns,Pre-dialysis
+Trial 12 (2019),Drug C,98,215,Some concerns,Dialysis
+Trial 12 (2019),Drug E,135,199,Some concerns,Dialysis
+Trial 13 (2020),Placebo,126,197,Low,Pre-dialysis
+Trial 13 (2020),Drug D,111,150,Low,Pre-dialysis
