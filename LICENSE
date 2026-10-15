@@ -1,21 +1,32 @@
-MIT License
+MetaGRADE
+Copyright (c) 2025-2026 Daniel Fernández-Guzmán. Some rights reserved.
 
-Copyright (c) 2026 MetaGRADE contributors
+This work (source code, documentation, examples and web application) is licensed
+under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0
+International License (CC BY-NC-ND 4.0).
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+The full, legally binding license text (legal code) is available at:
+https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Human-readable summary (not a substitute for the legal code):
+https://creativecommons.org/licenses/by-nc-nd/4.0/
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+You are free to:
+  - Share: copy and redistribute the material in any medium or format.
+
+Under the following terms:
+  - Attribution: you must give appropriate credit (cite MetaGRADE as indicated in
+    CITATION.cff), provide a link to the license, and indicate if changes were made.
+  - NonCommercial: you may not use the material for commercial purposes.
+  - NoDerivatives: if you remix, transform, or build upon the material, you may not
+    distribute the modified material.
+  - No additional restrictions: you may not apply legal terms or technological
+    measures that legally restrict others from doing anything the license permits.
+
+Using the web application to analyse your own data and publishing the results
+(tables, figures, text) is permitted; please cite MetaGRADE.
+
+For commercial licensing or permission to distribute modified versions, contact the author.
+
+Note: versions of this repository published before this change were distributed
+under the MIT License; that license continues to apply to copies obtained at that time.

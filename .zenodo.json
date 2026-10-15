@@ -1,0 +1,9 @@
+{
+  "title": "MetaGRADE: pairwise and network meta-analysis with GRADE certainty of evidence (Core GRADE and GRADE for NMA)",
+  "upload_type": "software",
+  "description": "Browser-based tool for pairwise and network meta-analysis with suggested certainty-of-evidence ratings following Core GRADE and the GRADE approach for network meta-analysis (stepwise direct, indirect and network ratings), summary of findings tables with colour legend, supplementary GRADE tables, funnel plots, node-splitting and Evidence-to-Decision frameworks. All calculations run in the browser.",
+  "creators": [{ "name": "Fernández-Guzmán, Daniel" }],
+  "license": "cc-by-nc-nd-4.0",
+  "access_right": "open",
+  "keywords": ["meta-analysis", "network meta-analysis", "GRADE", "certainty of evidence", "summary of findings", "evidence to decision"]
+}

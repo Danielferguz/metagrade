@@ -49,9 +49,9 @@ Las calificaciones automáticas son **sugerencias** basadas en reglas explícita
 
 Guyatt G, et al. Core GRADE 1–7. BMJ 2025 · Brignardello-Petersen R, et al. GRADE guidelines 33. J Clin Epidemiol 2021;139:49-56 · Puhan MA, et al. BMJ 2014;349:g5630 · Brignardello-Petersen R, et al. BMJ 2020;371:m3900 · Morgano GP, et al. GRADE-THRESHOLD. J Clin Epidemiol 2025;179:111639 · Yepes-Nuñez JJ, et al. J Clin Epidemiol 2019;115:1-13 · Rücker G. Res Synth Methods 2012;3:312-24.
 
-## Licencia
+## Licencia y cita
 
-MIT
+© Daniel Fernández-Guzmán. Licencia **CC BY-NC-ND 4.0** (Creative Commons Atribución-NoComercial-SinDerivadas 4.0 Internacional): se puede usar y compartir citando al autor, sin fines comerciales y sin distribuir versiones modificadas. Usar la app con sus propios datos y publicar los resultados está permitido citando MetaGRADE (ver `CITATION.cff`). Texto completo: https://creativecommons.org/licenses/by-nc-nd/4.0/legalcode. Las versiones anteriores a este cambio se distribuyeron con licencia MIT.
 
 ## Publicar una versión nueva
 

@@ -1,14 +1,14 @@
-import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.16-3';
-import { escalc, rma, egger, subgroupTest } from './pairwise.js?v=2026.10.16-3';
-import { NMA, isConnected, armBaseline } from './nma.js?v=2026.10.16-3';
-import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.16-3';
-import { mountThreshold } from './thresh.js?v=2026.10.16-3';
-import { renderEtD } from './etd.js?v=2026.10.16-3';
-import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.16-3';
-import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.16-3';
-import { forestSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.16-3';
-import { median } from './stats.js?v=2026.10.16-3';
-import { HELP_HTML } from './help.js?v=2026.10.16-3';
+import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.16-4';
+import { escalc, rma, egger, subgroupTest } from './pairwise.js?v=2026.10.16-4';
+import { NMA, isConnected, armBaseline } from './nma.js?v=2026.10.16-4';
+import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.16-4';
+import { mountThreshold } from './thresh.js?v=2026.10.16-4';
+import { renderEtD } from './etd.js?v=2026.10.16-4';
+import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.16-4';
+import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.16-4';
+import { forestSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.16-4';
+import { median } from './stats.js?v=2026.10.16-4';
+import { HELP_HTML } from './help.js?v=2026.10.16-4';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -108,6 +108,7 @@ function refreshData() {
     pick.innerHTML = `<div class="row between wrap"><b>Desenlaces a analizar</b><span><button type="button" class="ghost" data-pickall="1">Todos</button> <button type="button" class="ghost" data-pickall="0">Ninguno</button></span></div><div class="picklist">${outs.map(o => `<label><input type="checkbox" value="${esc(o)}" checked> ${esc(o)} <small class="muted">(${all.filter(r => r.outcome === o).length} filas)</small></label>`).join('')}</div><p class="muted">«Ejecutar todos los desenlaces» en el paso 2 analiza solo los marcados; el selector «Desenlace» define la vista previa y el análisis individual.</p>`;
     pick.querySelectorAll('[data-pickall]').forEach(b => b.addEventListener('click', () => pick.querySelectorAll('input').forEach(x => x.checked = b.dataset.pickall === '1')));
   }
+  if (outs.length < 2) $('#outcome-filter').innerHTML = '';
   const curOpts = [...$('#outcome-filter').options].map(o => o.value);
   if (outs.length >= 2 && curOpts.join('\u0001') !== outs.join('\u0001')) { $('#outcome-filter').innerHTML = outs.map(o => `<option>${esc(o)}</option>`).join(''); if (outs.includes(prevO)) $('#outcome-filter').value = prevO; }
   let rows = all;
@@ -159,14 +160,15 @@ $('#pw-scheme').addEventListener('change', syncScheme); $('#nm-scheme').addEvent
 // umbrales moderado/grande por defecto en binarios: proporciones de GRADE-THRESHOLD (DT2/DT1 = 2,38; DT3/DT1 = 4,63)
 const defT = (v, mid, f, binary) => (v > 0 ? v : binary && mid > 0 ? +(mid * f).toFixed(2) : NaN);
 $('#pw-unit').addEventListener('change', () => $('#pw-mid-unit').textContent = 'por ' + $('#pw-unit').value);
-mountThreshold($('#pw-thr'), '', { unit: 'pw-unit', mid: 'pw-mid', mod: 'pw-t2', large: 'pw-t3' });
-mountThreshold($('#nm-thr'), 'nm-', { unit: 'nm-unit', mid: 'nm-mid', mod: 'nm-mod', large: 'nm-large' });
+
 const DT = (dis, unit) => [0.0135, 0.0321, 0.0625].map(c => +Math.min(unit, c * unit / dis).toFixed(2));
 // configuración por desenlace desde columnas opcionales del archivo
 // ---------- configuración por desenlace (desplegables en el paso 2) ----------
 const IMP_OPTS = ['Critical', 'Important', 'Surrogate'];
 const normImp = v => (/crit/i.test(v || '') ? 'Critical' : /surrog|subrog/i.test(v || '') ? 'Surrogate' : /import/i.test(v || '') ? 'Important' : 'Critical');
-function outcomeRows(o) { return normalize(state.raw, state.map).filter(r => !state.map.outcome || r.outcome === o); }
+const SINGLE = '__single__';
+const oName = (kind, o) => (o === SINGLE ? ($(kind === 'pw' ? '#pw-outcome' : '#nm-outcome').value || 'Outcome') : o);
+function outcomeRows(o) { return normalize(state.raw, state.map).filter(r => o === SINGLE || !state.map.outcome || r.outcome === o); }
 function defaultCfg(kind, o) {
   const rows = outcomeRows(o), r = rows.find(x => x.o_dir || x.o_mid || x.o_dis || x.o_importance) || rows[0] || {};
   const t = detectType(state.map), pre = kind === 'pw' ? '#pw-' : '#nm-', unit = +$(pre + 'unit').value;
@@ -185,11 +187,10 @@ function defaultCfg(kind, o) {
   }
   return c;
 }
-function outcomeList() { return state.map.outcome ? [...new Set(normalize(state.raw, state.map).map(r => r.outcome))] : []; }
+function outcomeList() { const o = state.map.outcome ? [...new Set(normalize(state.raw, state.map).map(r => r.outcome))] : []; return o.length >= 2 ? o : [SINGLE]; }
 const ocSummary = (kind, c) => `· ${c.n} ${kind === 'nm' ? 'estudios' : 'filas'} · ${c.importance} · ${c.dir === 'higher' ? '↑ deseable' : '↓ indeseable'}${kind === 'pw' ? ' · ' + c.measure : ''} · MID ${c.mid === '' ? '—' : c.mid}${c.mod ? ` / ${c.mod} / ${c.large}` : ''}`;
 function renderOutcomeConfig(kind) {
   const el = $(kind === 'pw' ? '#pw-outcfg' : '#nm-outcfg'), outs = outcomeList();
-  if (outs.length < 2) { el.innerHTML = ''; return; }
   const C = (state.ocfg[kind] = state.ocfg[kind] || {});
   const picked = [...document.querySelectorAll('#outcome-pick input')].reduce((a, x) => (a[x.value] = x.checked, a), {});
   outs.forEach(o => { if (!C[o]) { C[o] = defaultCfg(kind, o); if (picked[o] === false) C[o].include = false; } });
@@ -197,8 +198,8 @@ function renderOutcomeConfig(kind) {
   const fld = (o, k, label, attrs = '', unit = '') => `<label>${label}${unit ? ` <span class="unit">${unit}</span>` : ''}<input data-oc="${k}" value="${esc(C[o][k] ?? '')}" ${attrs}></label>`;
   el.innerHTML = `<div class="row between wrap"><h3 style="margin:0">Desenlaces: configuración individual</h3><span class="row gap"><button type="button" class="ghost" data-ocall="1">Abrir todos</button><button type="button" class="ghost" data-ocall="0">Cerrar todos</button></span></div>
   <p class="muted">Cada desenlace tiene su propia importancia, dirección, umbrales (MID, moderado, grande) y, en pares, medida, riesgo basal y nombres. Al final use «Ejecutar todos los desenlaces y añadir a SoF». La configuración global de arriba (modelo, IC, esquema de umbrales, opciones de dominios) se aplica a todos.</p>
-  ${outs.map(o => { const c = C[o], st = state.cache[kind]?.[o];
-    return `<details class="ocfg" data-out="${esc(o)}"><summary><input type="checkbox" data-oc="include" ${c.include ? 'checked' : ''} title="Incluir en «Ejecutar todos»"> <b>${esc(o)}</b>
+  ${outs.map((o, oi) => { const c = C[o], st = state.cache[kind]?.[oName(kind, o)];
+    return `<details class="ocfg" data-out="${esc(o)}"><summary><input type="checkbox" data-oc="include" ${c.include ? 'checked' : ''} title="Incluir en «Ejecutar todos»"> <b>${esc(oName(kind, o))}</b>
       <span class="muted">${esc(ocSummary(kind, c))}</span>${st ? ` <span class="pill">${st.addedSoF ? 'en SoF ✓' : 'analizado'}</span>` : ''}</summary>
       <div class="form">
         <label>Importancia <select data-oc="importance">${IMP_OPTS.map(x => `<option ${x === c.importance ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
@@ -207,11 +208,10 @@ function renderOutcomeConfig(kind) {
         ${fld(o, 'mid', 'MID (umbral pequeño)', 'type="number" step="any"', c.binary ? unitLbl : '')}
         ${fld(o, 'mod', 'Umbral moderado', 'type="number" step="any" placeholder="opcional"')}
         ${fld(o, 'large', 'Umbral grande', 'type="number" step="any" placeholder="opcional"')}
-        ${c.binary ? `<label>Disutilidad (GRADE-THRESHOLD) <span class="row gap"><input data-oc="dis" type="number" step="0.01" min="0.01" max="1" value="${esc(c.dis)}" placeholder="0–1" style="flex:1"><button type="button" class="ghost" data-occalc="dis">→ umbrales</button></span></label>`
-          : `<label>DE combinada (DME 0,2/0,5/0,8) <span class="row gap"><input data-oc="sd" type="number" step="any" value="${esc(c.sd)}" placeholder="DE" style="flex:1"><button type="button" class="ghost" data-occalc="sd">→ umbrales</button></span></label>`}
         ${kind === 'pw' && c.binary ? fld(o, 'p0', 'Riesgo basal (proporción)', 'type="number" step="any" min="0" max="1"') : ''}
         ${kind === 'pw' ? fld(o, 'int', 'Intervención') + fld(o, 'comp', 'Comparador') : ''}
       </div>
+      <details class="thr-oc" open><summary>Umbrales de este desenlace: GRADE-THRESHOLD (disutilidad) o DME 0,2 / 0,5 / 0,8</summary><div class="thr" data-thr="${oi}"></div></details>
       <div class="row end gap"><button type="button" class="ghost" data-ocrun>Ejecutar solo este desenlace</button></div></details>`; }).join('')}`;
   el.querySelectorAll('details.ocfg').forEach(d => {
     const o = d.dataset.out, c = C[o];
@@ -219,11 +219,14 @@ function renderOutcomeConfig(kind) {
       inp.addEventListener('click', e => { if (inp.dataset.oc === 'include') e.stopPropagation(); });
       inp.addEventListener('change', () => { c[inp.dataset.oc] = inp.type === 'checkbox' ? inp.checked : inp.value; const sm = d.querySelector('summary .muted'); if (sm) sm.textContent = ocSummary(kind, c); });
     });
-    d.querySelectorAll('[data-occalc]').forEach(b => b.addEventListener('click', () => {
-      if (b.dataset.occalc === 'dis') { const v = +d.querySelector('[data-oc="dis"]').value; if (!(v > 0)) return; c.dis = v; [c.mid, c.mod, c.large] = DT(v, +$(kind === 'pw' ? '#pw-unit' : '#nm-unit').value); }
-      else { const sd = +d.querySelector('[data-oc="sd"]').value; if (!(sd > 0)) return; c.sd = sd; [c.mid, c.mod, c.large] = [0.2, 0.5, 0.8].map(k => +(c.measure === 'SMD' ? k : k * sd).toFixed(3)); }
-      renderOutcomeConfig(kind); el.querySelector(`details[data-out="${CSS.escape(o)}"]`).open = true;
-    }));
+    const thr = d.querySelector('[data-thr]');
+    mountThreshold(thr, `oc-${kind}-${thr.dataset.thr}-`, {
+      unitFn: () => +$(kind === 'pw' ? '#pw-unit' : '#nm-unit').value, mode: c.binary ? 'bin' : 'cont', dis: c.dis, sd: c.sd, smd: c.measure === 'SMD',
+      apply: (t, info) => {
+        [c.mid, c.mod, c.large] = t; if (info.mode === 'bin') c.dis = info.dis; else c.sd = info.sd;
+        ['mid', 'mod', 'large'].forEach(k => { const inp = d.querySelector(`[data-oc="${k}"]`); if (inp) inp.value = c[k]; });
+        const sm = d.querySelector('summary .muted'); if (sm) sm.textContent = ocSummary(kind, c);
+      } });
     d.querySelector('[data-ocrun]').addEventListener('click', () => runAll(kind, [o]));
   });
   el.querySelectorAll('[data-ocall]').forEach(b => b.addEventListener('click', () => el.querySelectorAll('details.ocfg').forEach(d => d.open = b.dataset.ocall === '1')));
@@ -243,8 +246,8 @@ async function runAll(kind, only = null) {
   const outsAll = [...$('#outcome-filter').options].map(o => o.value);
   const C = state.ocfg[kind] || {};
   const picked = [...document.querySelectorAll('#outcome-pick input:checked')].map(x => x.value);
-  const outs = only || outsAll.filter(o => (C[o] ? C[o].include : (!picked.length || picked.includes(o))));
-  const list = outs.length ? outs : (outsAll.length ? [] : [null]);
+  const outs = only ? only.filter(o => o !== SINGLE) : outsAll.filter(o => (C[o] ? C[o].include : (!picked.length || picked.includes(o))));
+  const list = outsAll.length ? outs : (C[SINGLE] && C[SINGLE].include === false && !only ? [] : [null]);
   const btn = $(kind === 'pw' ? '#pw-runall' : '#nm-runall'), t0 = btn.textContent;
   for (const [i, o] of list.entries()) {
     btn.textContent = `Ejecutando ${i + 1}/${list.length}…`;
@@ -253,7 +256,8 @@ async function runAll(kind, only = null) {
     setupAnalysis();
     if (keepRefs) [...$('#nm-ref').options].forEach(x => x.selected = keepRefs.includes(x.value));
     if (o != null && !C[o]) { state.ocfg[kind] = state.ocfg[kind] || {}; state.ocfg[kind][o] = defaultCfg(kind, o); }
-    const imp = o != null ? applyCfg(kind, o) : '';
+    if (o == null && !C[SINGLE]) { state.ocfg[kind] = state.ocfg[kind] || {}; state.ocfg[kind][SINGLE] = defaultCfg(kind, SINGLE); }
+    const imp = applyCfg(kind, o ?? SINGLE);
     state.lastPw = null; state.lastNm = null;
     if (kind === 'pw') { if (o != null) $('#pw-outcome').value = o; runPairwise(); if (state.lastPw) addPwToSoF(imp); }
     else { if (o != null) $('#nm-outcome').value = o; runNMA(); if (state.lastNm && $('#nm-add')) addNmToSoF(imp); }

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MetaGRADE</title>
 <meta name="description" content="Meta-análisis por pares y en red (NMA) con calificación de la certeza de la evidencia según Core GRADE y GRADE para NMA. Todo se calcula en el navegador.">
-<link rel="stylesheet" href="css/style.css?v=2026.10.16-3">
+<link rel="stylesheet" href="css/style.css?v=2026.10.16-4">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 </head>
 <body>
@@ -119,7 +119,6 @@
         <label>Riesgo basal (proporción) <input id="pw-p0" type="number" step="any" min="0" max="1"></label>
         <label>DE para OIS continuo <input id="pw-sd" type="number" step="any" placeholder="opcional"></label>
       </div>
-      <details class="helper" id="pw-thr-d"><summary>Calcular los umbrales (MID, moderado, grande): GRADE-THRESHOLD por disutilidad o DME</summary><div id="pw-thr" class="thr"></div></details>
       <details class="helper"><summary>Opciones de los dominios GRADE</summary>
         <div class="form">
           <label>Dominancia de alto riesgo de sesgo <select id="pw-robdom"><option value="0.65">&gt;65 % del peso</option><option value="0.55">≥55 % del peso</option><option value="0.5">&gt;50 % del peso</option></select></label>
@@ -160,7 +159,6 @@
         <label>DE combinada (continuo, para OIS) <input id="nm-sd" type="number" step="any" placeholder="opcional"></label>
         <label>Umbral p de incoherencia (node-split) <select id="nm-incp"><option value="0.10">0,10</option><option value="0.05">0,05</option></select></label>
       </div>
-      <details class="helper" id="nm-thr-d"><summary>Calcular los umbrales (MID, moderado, grande): GRADE-THRESHOLD por disutilidad o DME</summary><div id="nm-thr" class="thr"></div></details>
       <div id="nm-outcfg" class="outcfg"></div>
       <div class="row end gap"><button class="primary" id="nm-runall" title="Usa las columnas importance, direction, mid, disutility si existen">Ejecutar todos los desenlaces y añadir a SoF</button><button class="ghost" id="nm-run">Ejecutar solo el desenlace actual</button></div>
     </div>
@@ -206,7 +204,7 @@
   <div class="card prose" id="help"></div>
 </section>
 </main>
-<footer class="foot"><p>MetaGRADE <span id="app-version">2026.10.16-3</span> · código abierto · los cálculos se hacen en el navegador. Las calificaciones automáticas son sugerencias que dos revisores deben verificar y justificar.</p></footer>
-<script type="module" src="js/app.js?v=2026.10.16-3"></script>
+<footer class="foot"><p>MetaGRADE <span id="app-version">2026.10.16-4</span> · © Daniel Fernández-Guzmán · <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="noopener">CC BY-NC-ND 4.0</a> · cite MetaGRADE si lo usa · los cálculos se hacen en el navegador. Las calificaciones automáticas son sugerencias que dos revisores deben verificar y justificar.</p></footer>
+<script type="module" src="js/app.js?v=2026.10.16-4"></script>
 </body>
 </html>

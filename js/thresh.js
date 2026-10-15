@@ -54,9 +54,13 @@ export function mountThreshold(root, pre, targets) {
     </div>
     <div class="dt-zones"></div>
     <div class="row gap wrap"><button class="primary" type="button" id="${id('dt-calc')}">Aplicar umbrales</button><span id="${id('dt-out')}" class="muted"></span></div>
-    <p class="muted">Los tres umbrales rellenan MID (pequeño), moderado y grande. Para calificar la imprecisión con los tres, elija el esquema «3 umbrales por lado». Anclas de disutilidad orientativas: ajústelas con utilidades publicadas (p. ej., EQ-5D, Tufts CEA Registry) o con las preferencias del panel.</p>`;
+    <p class="muted">Los tres umbrales rellenan MID (pequeño), moderado y grande de este desenlace. Para calificar la imprecisión con los tres, elija el esquema «3 umbrales por lado». Anclas de disutilidad orientativas: ajústelas con utilidades publicadas (p. ej., EQ-5D, Tufts CEA Registry) o con las preferencias del panel.</p>`;
   const $r = s => root.querySelector(s);
-  const unit = () => +(document.getElementById(targets.unit)?.value || 100);
+  const unit = () => +(targets.unitFn ? targets.unitFn() : document.getElementById(targets.unit)?.value || 100);
+  if (targets.mode) $r(`#${id('dt-mode')}`).value = targets.mode;
+  if (targets.dis > 0) { $r(`#${id('dt-dis')}`).value = targets.dis; $r(`#${id('dt-slider')}`).value = targets.dis; }
+  if (targets.sd > 0) $r(`#${id('dt-sd')}`).value = targets.sd;
+  if (targets.smd) $r(`#${id('dt-smd')}`).checked = true;
   const state = () => {
     const mode = $r(`#${id('dt-mode')}`).value;
     if (mode === 'bin') {
@@ -81,12 +85,12 @@ export function mountThreshold(root, pre, targets) {
   $r(`#${id('dt-slider')}`).addEventListener('input', e => { $r(`#${id('dt-dis')}`).value = e.target.value; draw(); });
   root.querySelectorAll('.anc').forEach(b => b.addEventListener('click', () => { $r(`#${id('dt-dis')}`).value = b.dataset.v; $r(`#${id('dt-slider')}`).value = b.dataset.v; draw(); }));
   [`#${id('dt-sd')}`, `#${id('dt-smd')}`].forEach(s => $r(s).addEventListener('input', draw));
-  document.getElementById(targets.unit)?.addEventListener('change', draw);
+  if (targets.unit) document.getElementById(targets.unit)?.addEventListener('change', draw);
   $r(`#${id('dt-calc')}`).addEventListener('click', () => {
     const st = state(); if (!st) { $r(`#${id('dt-out')}`).textContent = 'Complete la disutilidad o la DE.'; return; }
-    document.getElementById(targets.mid).value = +st.t[0].toFixed(3);
-    document.getElementById(targets.mod).value = +st.t[1].toFixed(3);
-    document.getElementById(targets.large).value = +st.t[2].toFixed(3);
+    const t = st.t.map(v => +v.toFixed(3));
+    if (targets.apply) targets.apply(t, { mode: $r(`#${id('dt-mode')}`).value, dis: +$r(`#${id('dt-dis')}`).value, sd: +$r(`#${id('dt-sd')}`).value, smd: $r(`#${id('dt-smd')}`).checked });
+    else { document.getElementById(targets.mid).value = t[0]; document.getElementById(targets.mod).value = t[1]; document.getElementById(targets.large).value = t[2]; }
     $r(`#${id('dt-out')}`).textContent = `Aplicado: ${st.txt}`;
   });
   draw();
