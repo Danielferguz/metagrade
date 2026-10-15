@@ -15,6 +15,7 @@
     <button role="tab" data-tab="datos" class="active">1 · Datos</button>
     <button role="tab" data-tab="analisis">2 · Análisis y GRADE</button>
     <button role="tab" data-tab="sof">3 · Tabla SoF y exportar</button>
+    <button role="tab" data-tab="etd">4 · Marco EtD</button>
     <button role="tab" data-tab="ayuda">Métodos y ayuda</button>
   </nav>
 </header>
@@ -100,6 +101,9 @@
       <div class="form">
         <label>Umbral de la calificación <select id="pw-threshold"><option value="MID">MID (efecto importante vs. poco o ninguno)</option><option value="null">Valor nulo (existe o no un efecto)</option></select></label>
         <label>MID <span class="unit" id="pw-mid-unit">por 100</span><input id="pw-mid" type="number" step="any" value="2"></label>
+        <label>Umbrales para imprecisión <select id="pw-scheme"><option value="2">2 umbrales: ±MID (−1 si cruza uno, −2 si cruza ambos)</option><option value="3">3 umbrales por lado: pequeño, moderado y grande (−1 por umbral cruzado, máx. −3)</option></select></label>
+        <label class="s3">Umbral moderado <span class="unit">(DT2)</span><input id="pw-t2" type="number" step="any" placeholder="binario: MID × 2,38"></label>
+        <label class="s3">Umbral grande <span class="unit">(DT3)</span><input id="pw-t3" type="number" step="any" placeholder="binario: MID × 4,63"></label>
         <label>Escala absoluta <select id="pw-unit"><option value="100">por 100</option><option value="1000">por 1000</option></select></label>
         <label>Riesgo basal (proporción) <input id="pw-p0" type="number" step="any" min="0" max="1"></label>
         <label>DE para OIS continuo <input id="pw-sd" type="number" step="any" placeholder="opcional"></label>
@@ -111,12 +115,13 @@
           <button class="ghost" id="dt-calc">Calcular</button>
           <span id="dt-out" class="muted"></span>
         </div>
-        <p class="muted">DT1 = 1,35 por 100 ÷ disutilidad (trivial → pequeño); DT2 = 3,21; DT3 = 6,25 (Morgano et al., J Clin Epidemiol 2025). Continuos: MID publicada o 0,2 DE.</p>
+        <p class="muted">DT1 = 1,35 por 100 ÷ disutilidad (trivial → pequeño = MID); DT2 = 3,21 (pequeño → moderado); DT3 = 6,25 (moderado → grande); «Calcular» rellena los tres umbrales (Morgano et al., J Clin Epidemiol 2025). Continuos: MID publicada o 0,2 DE.</p>
       </details>
       <details class="helper"><summary>Opciones de los dominios GRADE</summary>
         <div class="form">
           <label>Dominancia de alto riesgo de sesgo <select id="pw-robdom"><option value="0.65">&gt;65 % del peso</option><option value="0.55">≥55 % del peso</option><option value="0.5">&gt;50 % del peso</option></select></label>
           <label><input type="checkbox" id="pw-someconc"> contar "algunas preocupaciones" como alto riesgo</label>
+          <label><input type="checkbox" id="pw-piinc" checked> inconsistencia: bajar si el intervalo de predicción cruza ±MID que el IC no cruza (−1 por umbral, máx. −2)</label>
           <label>RRR para el OIS <select id="pw-oisrrr"><option value="0.25">25 %</option><option value="0.2">20 %</option><option value="0.3">30 % (menos estricto)</option></select></label>
           <label>Potencia <select id="pw-power"><option value="0.8">80 %</option><option value="0.9">90 %</option></select></label>
           <label><input type="checkbox" id="pw-surrogate"> desenlace sustituto</label>
@@ -141,7 +146,10 @@
         <label>Un valor mayor del desenlace es… <select id="nm-dir"><option value="higher">deseable (p. ej., respuesta)</option><option value="lower">indeseable (p. ej., mortalidad)</option></select></label>
         <label>Escala absoluta <select id="nm-unit"><option value="100">por 100</option><option value="1000">por 1000</option></select></label>
         <label>MID (umbral) <input id="nm-mid" type="number" step="any" value="5"></label>
-        <label>Umbral de efecto grande (para −3) <input id="nm-large" type="number" step="any" placeholder="opcional"></label>
+        <label>Umbrales para imprecisión <select id="nm-scheme"><option value="2">2 umbrales: ±MID (−3 si va de beneficio grande a daño grande)</option><option value="3">3 umbrales por lado: pequeño (MID), moderado y grande</option></select></label>
+        <label class="s3n">Umbral moderado <input id="nm-mod" type="number" step="any" placeholder="binario: MID × 2,38"></label>
+        <label>Umbral de efecto grande <input id="nm-large" type="number" step="any" placeholder="opcional (binario: MID × 4,63)"></label>
+        <label><input type="checkbox" id="nm-piinc" checked> inconsistencia por intervalo de predicción (cruza ±MID que el IC no cruza)</label>
         <label>Riesgo basal del comparador <select id="nm-base"><option value="pt">Proporción combinada (efectos aleatorios)</option><option value="median">Mediana de los brazos</option><option value="lo">Límite inferior del IC 95 %</option><option value="hi">Límite superior del IC 95 %</option><option value="manual">Manual</option></select></label>
         <label>Riesgo basal manual <input id="nm-p0" type="number" step="any" min="0" max="1" placeholder="0–1"></label>
         <label>DE combinada (continuo, para OIS) <input id="nm-sd" type="number" step="any" placeholder="opcional"></label>
@@ -172,6 +180,11 @@
     <h2>Texto para la sección de métodos</h2>
     <textarea id="methods-text" rows="12"></textarea>
   </div>
+</section>
+
+<!-- ============ EtD ============ -->
+<section id="tab-etd" class="tab">
+  <div id="etd"></div>
 </section>
 
 <!-- ============ AYUDA ============ -->

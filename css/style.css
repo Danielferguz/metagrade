@@ -86,3 +86,17 @@ table.data th { background: var(--soft); position: sticky; top: 0; }
 .wtable { margin: 8px 0; } .wtable td { vertical-align: middle; }
 .vlegend { font-size: .82rem; color: var(--muted); margin: 6px 0; }
 .vlegend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.etd-crit { border-top: 1px solid var(--line); padding: 12px 0; }
+.etd-q { margin-bottom: 8px; }
+.etd-grid { display: grid; grid-template-columns: minmax(220px, 1fr) 1.4fr 1.2fr; gap: 12px; }
+.etd-h { font-size: .8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 4px; }
+.opts label { flex-direction: row; align-items: flex-start; gap: 6px; color: var(--text); margin: 2px 0; }
+.opts hr { border: 0; border-top: 1px dashed var(--line); margin: 6px 0; }
+.sug { background: #FFE699; color: #4D3B00; border-radius: 4px; padding: 0 5px; font-size: .72rem; }
+.etd-sum { border-collapse: collapse; font-size: .8rem; }
+.etd-sum th, .etd-sum td { border: 1px solid var(--line); padding: 5px 6px; vertical-align: middle; }
+.etd-sum th { background: var(--soft); text-align: left; white-space: nowrap; }
+.etd-sum td.on { background: var(--accent); color: #fff; font-weight: 600; }
+@media (prefers-color-scheme: dark) { .etd-sum td.on { color: #0F141B; } }
+.etd-out select { padding: 2px 4px; }
+@media (max-width: 760px) { .etd-grid { grid-template-columns: 1fr; } }

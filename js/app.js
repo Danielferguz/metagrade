@@ -1,7 +1,8 @@
 import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js';
 import { escalc, rma, egger, subgroupTest } from './pairwise.js';
 import { NMA, isConnected, armBaseline } from './nma.js';
-import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js';
+import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js';
+import { renderEtD } from './etd.js';
 import { forestSVG, networkSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js';
 import { median } from './stats.js';
 import { HELP_HTML } from './help.js';
@@ -29,6 +30,7 @@ function showTab(t) {
   document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
   document.querySelectorAll('.tab').forEach(s => s.classList.toggle('active', s.id === 'tab-' + t));
   if (t === 'sof') renderSoF();
+  if (t === 'etd') renderEtD($('#etd'), { sof: state.sof, fillFor, save, load });
   window.scrollTo({ top: 0 });
 }
 $('#help').innerHTML = HELP_HTML;
@@ -127,13 +129,17 @@ function setupAnalysis() {
     $('#nm-results').innerHTML = '';
   }
 }
+const syncScheme = () => { document.querySelectorAll('.s3').forEach(e => e.hidden = $('#pw-scheme').value !== '3'); document.querySelectorAll('.s3n').forEach(e => e.hidden = $('#nm-scheme').value !== '3'); };
+$('#pw-scheme').addEventListener('change', syncScheme); $('#nm-scheme').addEventListener('change', syncScheme); syncScheme();
+// umbrales moderado/grande por defecto en binarios: proporciones de GRADE-THRESHOLD (DT2/DT1 = 2,38; DT3/DT1 = 4,63)
+const defT = (v, mid, f, binary) => (v > 0 ? v : binary && mid > 0 ? +(mid * f).toFixed(2) : NaN);
 $('#pw-unit').addEventListener('change', () => $('#pw-mid-unit').textContent = 'por ' + $('#pw-unit').value);
 $('#dt-calc').addEventListener('click', () => {
   const u = +$('#dt-dis').value, unit = +$('#pw-unit').value;
   if (!(u > 0)) return;
   const v = [0.0135, 0.0321, 0.0625].map(c => Math.min(unit, c * unit / u));
   $('#dt-out').textContent = `DT1 ${f1(v[0])} · DT2 ${f1(v[1])} · DT3 ${f1(v[2])} por ${unit} (MID = DT1)`;
-  $('#pw-mid').value = v[0].toFixed(2);
+  $('#pw-mid').value = v[0].toFixed(2); $('#pw-t2').value = v[1].toFixed(2); $('#pw-t3').value = v[2].toFixed(2);
 });
 
 // ---------------- meta-análisis por pares ----------------
@@ -164,7 +170,10 @@ function runPairwise() {
     robDominance: +$('#pw-robdom').value, someConcernsAsHigh: $('#pw-someconc').checked, oisRRR: +$('#pw-oisrrr').value,
     power: +$('#pw-power').value, sdForOIS: +$('#pw-sd').value || NaN, eggerRes: eg, industrySmall: $('#pw-industry').checked,
     surrogate: $('#pw-surrogate').checked, doseResponse: $('#pw-dose').checked, unit,
+    scheme: +$('#pw-scheme').value, usePI: $('#pw-piinc').checked,
   };
+  const binM = ['RR', 'OR', 'HR', 'RD'].includes(measure);
+  cfg.moderate = defT(+$('#pw-t2').value, cfg.mid, 3.21 / 1.35, binM); cfg.large = defT(+$('#pw-t3').value, cfg.mid, 6.25 / 1.35, binM);
   const binaryAbs = ['RR', 'OR', 'HR', 'RD'].includes(measure);
   if (binaryAbs && !(cfg.p0 > 0 && cfg.p0 < 1)) { $('#pw-results').innerHTML = '<div class="err">Indique el riesgo basal (proporción entre 0 y 1) para calcular el efecto absoluto.</div>'; return; }
   const g = gradePairwise(cfg);
@@ -284,7 +293,8 @@ function pwVizHTML(robCmp) {
     const rows = S.map((s, i) => { const se = Math.sqrt(s.vi); return { label: s.study, ...pwAbs(s.yi, s.yi - 1.96 * se, s.yi + 1.96 * se), w: w[i], chip: ROB_COL[robClass(s.rob)] }; });
     const piA = fit.k >= 3 ? pwAbs(fit.est, fit.pi[0], fit.pi[1]) : null;
     rows.push({ label: 'Pooled', sub: piA ? 'band = 95% prediction interval' : '', ...g.abs, bold: true, pi: piA ? [piA.lo, piA.hi] : null });
-    inc = thresholdSVG({ rows, mid, higherBetter: cfg.higherBetter, xlabel: pwXLabel(), title: 'Study estimates against the decision threshold (absolute scale)' });
+    const Di = g.domains.inc;
+    inc = thresholdSVG({ rows, mid, higherBetter: cfg.higherBetter, xlabel: pwXLabel(), title: `Study estimates against the decision threshold (absolute scale)${Di.piAbs && cfg.usePI ? ` — prediction interval ${Di.piLevel ? `crosses ${Di.piLevel} MID${Di.piLevel > 1 ? 's' : ''} not crossed by the CI → −${Di.piLevel}` : 'adds no threshold → 0'}` : ''}` });
     const zoneOf = d => { const v = cfg.higherBetter ? d : -d; return mid > 0 ? (v >= mid ? 'benefit' : v <= -mid ? 'harm' : 'nodiff') : (v > 0 ? 'benefit' : 'harm'); };
     const zw = { benefit: 0, nodiff: 0, harm: 0 }; rows.slice(0, -1).forEach(r => { zw[zoneOf(r.d)] += r.w; });
     const D = g.domains.inc;
@@ -298,8 +308,8 @@ function pwVizHTML(robCmp) {
 }
 function pwImpViz(s) {
   const { g, cfg } = state.lastPw, mid = cfg.threshold === 'MID' ? cfg.mid : 0, I = g.domains.imp;
-  let h = thresholdSVG({ rows: [{ label: s.intervention, sub: `vs ${s.comparator}`, ...g.abs, bold: true, fill: fillFor(s.cat, s.c), right: `${crossLabel(g.abs.lo, g.abs.hi, mid)}${I.level && !/crosses/i.test(I.why) ? ' · OIS → −' + I.level : ''}`, badge: { text: `${SYM[s.c]} ${LEVELS[s.c]}`, fill: fillFor(s.cat, s.c) } }],
-    mid, higherBetter: cfg.higherBetter, xlabel: pwXLabel(), title: `Imprecision: 95% CI of the absolute effect vs ${mid > 0 ? '±MID' : 'the null'}` });
+  let h = thresholdSVG({ rows: [{ label: s.intervention, sub: `vs ${s.comparator}`, ...g.abs, bold: true, fill: fillFor(s.cat, s.c), right: `${crossLabel(g.abs.lo, g.abs.hi, mid, I.ths)}${I.level && !/crosses/i.test(I.why) ? ' · OIS → −' + I.level : ''}`, badge: { text: `${SYM[s.c]} ${LEVELS[s.c]}`, fill: fillFor(s.cat, s.c) } }],
+    mid, ths: I.ths, higherBetter: cfg.higherBetter, xlabel: pwXLabel(), title: `Imprecision: 95% CI of the absolute effect vs ${I.ths && I.ths.length > 1 ? 'small, moderate and large thresholds' : mid > 0 ? '±MID' : 'the null'}` });
   if (isFinite(I.ois) && I.ntot > 0) h += oisSVG({ n: I.ntot, ois: I.ois, title: 'Optimal information size (applies when the CI does not cross the threshold and the effect is large)' });
   return h + `<p class="muted">${esc(I.why || '')}</p>`;
 }
@@ -326,8 +336,8 @@ function pwSummary() {
     type: 'pairwise', outcome: P.outcome, intervention: P.int, comparator: P.comp, participants: `${ntot || '–'} (${fit.k} ${des === 'RCT' ? (fit.k > 1 ? 'RCTs' : 'RCT') : des})`, relative: rel,
     risk0: g.ab.binary ? `${f1(cfg.p0 * cfg.unit)}${un}` : '—', risk1: g.ab.binary ? `${f1(g.ab.p1 * cfg.unit)}${un}` : '—',
     absolute: absTxt, c, cat, notes, plain: plainStatement(cat, c, P.int, P.outcome.toLowerCase(), cfg.threshold, cfg.higherBetter ? -g.abs.d : g.abs.d).replace(/an? (important )?(reduction|increase)/, (m0) => m0),
-    plainRaw: { cat, c, d: g.abs.d }, mid: cfg.threshold === 'MID' ? `${cfg.mid}${un}` : 'null', higherBetter: cfg.higherBetter,
-    methods: { measure, method: P.method, test: P.test, threshold: cfg.threshold, design: cfg.design },
+    plainRaw: { cat, c, d: g.abs.d }, magThs: thresholdSet(3, cfg.threshold === 'MID' ? cfg.mid : 0, cfg.moderate, cfg.large), d: g.abs.d, mid: cfg.threshold === 'MID' ? `${cfg.mid}${un}` : 'null', higherBetter: cfg.higherBetter,
+    methods: { measure, method: P.method, test: P.test, threshold: cfg.threshold, design: cfg.design, scheme: cfg.scheme, usePI: cfg.usePI },
   };
 }
 function updatePwFinal() {
@@ -369,13 +379,14 @@ function runNMA() {
   let m;
   try { m = new NMA(studies, type, refs[0], { method: $('#nm-method').value }); } catch (e) { out.innerHTML = `<div class="err">${esc(e.message)}</div>`; return; }
   const unit = +$('#nm-unit').value, mid = +$('#nm-mid').value || 0, large = +$('#nm-large').value || 0, higherBetter = $('#nm-dir').value === 'higher';
-  const bmode = $('#nm-base').value, p0man = +$('#nm-p0').value;
+  const bmode = $('#nm-base').value, p0man = +$('#nm-p0').value, scheme = +$('#nm-scheme').value, isBin = type === 'binary';
+  const magThs = thresholdSet(3, mid, defT(+$('#nm-mod').value, mid, 3.21 / 1.35, isBin), defT(large, mid, 6.25 / 1.35, isBin));
   const baseline = t => bmode === 'manual' && p0man > 0 ? p0man : armBaseline(studies, t, bmode);
   const blocks = refs.map(ref => {
     const pairs = m.T.filter(t => t !== ref).map(t => [t, ref]);
-    return { ref, res: gradeNMA({ m, rob, indirect, modifier, mid, large, unit, baseline, higherBetter, incP: +$('#nm-incp').value, sd: +$('#nm-sd').value || NaN }, pairs) };
+    return { ref, res: gradeNMA({ m, rob, indirect, modifier, mid, large: scheme === 3 ? defT(large, mid, 6.25 / 1.35, isBin) : large, moderate: defT(+$('#nm-mod').value, mid, 3.21 / 1.35, isBin), scheme, usePI: $('#nm-piinc').checked, unit, baseline, higherBetter, incP: +$('#nm-incp').value, sd: +$('#nm-sd').value || NaN }, pairs) };
   });
-  state.lastNm = { m, blocks, rob, outcome: $('#nm-outcome').value, unit, mid, type, higherBetter, overrides: {}, bmode, baseline };
+  state.lastNm = { m, blocks, rob, magThs, scheme, outcome: $('#nm-outcome').value, unit, mid, type, higherBetter, overrides: {}, bmode, baseline };
   renderNMA();
 }
 const shortName = t => (t.length > 28 ? t.slice(0, 26) + '…' : t);
@@ -398,9 +409,9 @@ function renderNMA() {
     const rows = B.res.rows;
     const fr = rows.map(r => ({ label: r.a, est: tr(r.est), lo: tr(r.est - 1.96 * r.se), hi: tr(r.est + 1.96 * r.se) }));
     const vrows = rows.map((r, i) => { const c = N.overrides[`${bi}|${i}`] ?? r.c, f = fillFor(r.cat, c);
-      return { label: shortName(r.a), d: r.r[0], lo: r.r[1], hi: r.r[2], fill: f, badge: { text: `${SYM[c]} ${LEVELS[c]}`, fill: f },
-        right: `${r.impLvl === 3 ? 'Large benefit to large harm → −3' : crossLabel(r.r[1], r.r[2], N.mid)}${isFinite(r.ess) && isFinite(r.ois) ? ` · ESS ${r.ess} vs OIS ${r.ois}` : ''}` }; });
-    const impViz = thresholdSVG({ rows: vrows, mid: N.mid, higherBetter: N.higherBetter, title: `Network estimates vs ${B.ref}: imprecision and certainty`, xlabel: isB ? `Absolute effect per ${unit} vs ${B.ref}` : `MD vs ${B.ref}` });
+      return { label: shortName(r.a), d: r.r[0], lo: r.r[1], hi: r.r[2], pi: r.piAbs, fill: f, badge: { text: `${SYM[c]} ${LEVELS[c]}`, fill: f },
+        right: `${N.scheme === 3 ? crossLabel(r.r[1], r.r[2], N.mid, r.ths) : r.impLvl === 3 ? 'Large benefit to large harm → −3' : crossLabel(r.r[1], r.r[2], N.mid)}${(r.nr.find(x => x[0] === 'inc') || [, ''])[1].replace(/^Inconsistency \((−\d)\).*$/, ' · PI $1')}${isFinite(r.ess) && isFinite(r.ois) ? ` · ESS ${r.ess} vs OIS ${r.ois}` : ''}` }; });
+    const impViz = thresholdSVG({ rows: vrows, mid: N.mid, ths: N.scheme === 3 ? rows[0]?.ths : null, higherBetter: N.higherBetter, title: `Network estimates vs ${B.ref}: imprecision and certainty`, xlabel: isB ? `Absolute effect per ${unit} vs ${B.ref}` : `MD vs ${B.ref}` });
     html += `<div class="card"><h2>Frente a ${esc(B.ref)}</h2>${impViz}${forestSVG({ rows: fr, log: isB, measure: meas + ' (network)', leftLabel: N.higherBetter ? 'Favours ' + shortName(B.ref) : 'Favours intervention', rightLabel: N.higherBetter ? 'Favours intervention' : 'Favours ' + shortName(B.ref), title: `vs ${B.ref}` })}
     <h3>Perfil de evidencia GRADE para NMA</h3><div class="tablewrap" style="max-height:none"><table class="grade-table"><thead><tr><th>Comparación</th><th>Directa</th><th>Indirecta</th><th>Red: ${meas} (IC 95 %)</th><th>Absoluto${isB ? ' por ' + unit : ''}</th><th>Certeza (editable)</th><th>Razones</th></tr></thead><tbody>
     ${rows.map((r, i) => {
@@ -464,10 +475,10 @@ function addNmToSoF() {
     const lt = keys.map(k => { const gen = k.split(':')[0]; if (!letters[gen]) letters[gen] = { l: 'abcdefghijklmnop'[li++], text: k }; return letters[gen].l; });
     (cells[r.a] = cells[r.a] || {})[B.ref] = {
       text: `${word(r.r[0])}${isB ? '' : ''}\n(${word(r.r[1])} to ${word(r.r[2])})\n${meas} ${f2(tr(r.est))} (${f2(tr(r.est - 1.96 * r.se))} to ${f2(tr(r.est + 1.96 * r.se))})\n${r.kdir ? `${r.kdir} RCT${r.kdir > 1 ? 's' : ''}; ${r.ndir} participants` : 'Indirect evidence only'}`,
-      c, cat: r.cat, letters: [...new Set(lt)].sort().join(','),
+      c, cat: r.cat, d: r.r[0], letters: [...new Set(lt)].sort().join(','),
     };
   }));
-  state.sof.push({ type: 'nma', outcome: N.outcome, cols, cells, rowsOrder: N.m.T, mid: `±${N.mid}${isB ? ' per ' + N.unit : ''}`, letters: Object.values(letters).map(x => ({ l: x.l, text: x.text })), tau2: N.m.tau2, k: N.m.k, methods: { type: N.type, bmode: N.bmode } });
+  state.sof.push({ type: 'nma', outcome: N.outcome, higherBetter: N.higherBetter, magThs: N.magThs, cols, cells, rowsOrder: N.m.T, mid: `±${N.mid}${isB ? ' per ' + N.unit : ''}`, letters: Object.values(letters).map(x => ({ l: x.l, text: x.text })), tau2: N.m.tau2, k: N.m.k, methods: { type: N.type, bmode: N.bmode } });
   save('mg-sof', state.sof);
   $('#nm-add').textContent = 'Añadido ✓';
 }
@@ -530,7 +541,7 @@ function methodsText() {
   if (pw) {
     const M = pw.methods;
     t.push(`Statistical analysis. We pooled ${{ RR: 'risk ratios', OR: 'odds ratios', HR: 'hazard ratios (generic inverse variance)', RD: 'risk differences', MD: 'mean differences', SMD: 'standardised mean differences (Hedges g)', ROM: 'ratios of means' }[M.measure]} with ${M.method === 'EE' ? 'a common-effect model' : `random-effects models (${M.method === 'REML' ? 'restricted maximum likelihood' : 'DerSimonian–Laird'} estimator of τ²)`}${M.test === 'z' ? ' and Wald-type 95% confidence intervals' : M.test === 'adhoc' ? ' and the Hartung–Knapp–Sidik–Jonkman adjustment with the ad hoc correction (q ≥ 1)' : ' and the Knapp–Hartung adjustment'}. Heterogeneity was summarised with τ², I² and 95% prediction intervals (t distribution, k−2 degrees of freedom). Small-study effects were explored with Egger's test when at least 10 studies were available.`);
-    t.push(`Certainty of evidence. Two reviewers rated the certainty of evidence for each outcome with the GRADE approach as operationalised in Core GRADE. Evidence from ${M.design === 'RCT' ? 'randomised trials started at high certainty' : M.design === 'NRSI' ? 'non-randomised studies started at low certainty' : 'non-randomised studies assessed with ROBINS-I started at high certainty'} and could be rated down for risk of bias, inconsistency, indirectness, imprecision and publication bias${M.design === 'NRSI' ? ', or rated up for a large effect or a dose–response gradient' : ''}. We rated our certainty that the true effect ${M.threshold === 'MID' ? 'is important, using minimal important differences (MIDs) as thresholds; when the point estimate was below the MID we rated certainty in little to no important effect' : 'lies on one side of the null'}. Thresholds were applied to absolute effects, obtained by applying the pooled relative effect to the baseline risk. Risk of bias was rated down when studies at high risk of bias dominated the analysis; inconsistency was judged from the location of study estimates relative to the threshold and the overlap of confidence intervals, with I² as a secondary criterion; imprecision was rated down when the 95% CI of the absolute effect crossed the threshold (two levels when it crossed both MIDs) or, for large effects, when the optimal information size was not met. Automated suggestions (MetaGRADE) were reviewed and modified with justification. Results are presented in summary of findings tables with a colour code combining certainty and the direction of the effect relative to the MID (minimally contextualised framework).`);
+    t.push(`Certainty of evidence. Two reviewers rated the certainty of evidence for each outcome with the GRADE approach as operationalised in Core GRADE. Evidence from ${M.design === 'RCT' ? 'randomised trials started at high certainty' : M.design === 'NRSI' ? 'non-randomised studies started at low certainty' : 'non-randomised studies assessed with ROBINS-I started at high certainty'} and could be rated down for risk of bias, inconsistency, indirectness, imprecision and publication bias${M.design === 'NRSI' ? ', or rated up for a large effect or a dose–response gradient' : ''}. We rated our certainty that the true effect ${M.threshold === 'MID' ? 'is important, using minimal important differences (MIDs) as thresholds; when the point estimate was below the MID we rated certainty in little to no important effect' : 'lies on one side of the null'}. Thresholds were applied to absolute effects, obtained by applying the pooled relative effect to the baseline risk. Risk of bias was rated down when studies at high risk of bias dominated the analysis; inconsistency was judged from the location of study estimates relative to the threshold and the overlap of confidence intervals, with I² as a secondary criterion${M.usePI ? '; we also rated down one level when the 95% prediction interval crossed an MID threshold not crossed by the confidence interval of the pooled estimate, and two levels when it crossed both' : ''}; ${M.scheme === 3 ? 'imprecision was rated down one level for each decision threshold (small, moderate and large effect, on either side of the null) crossed by the 95% CI of the absolute effect, up to three levels, or,' : 'imprecision was rated down when the 95% CI of the absolute effect crossed the threshold (two levels when it crossed both MIDs) or,'} for large effects, when the optimal information size was not met. Automated suggestions (MetaGRADE) were reviewed and modified with justification. Results are presented in summary of findings tables with a colour code combining certainty and the direction of the effect relative to the MID (minimally contextualised framework).`);
   }
   if (nm) {
     t.push(`Network meta-analysis. We performed a frequentist contrast-based ${nm.methods.type === 'binary' ? 'odds ratio' : 'mean difference'} network meta-analysis by generalised least squares (graph-theoretical approach), accounting for the correlation of multi-arm trials, with random effects and a common between-study variance estimated by restricted maximum likelihood. Global inconsistency was assessed with the design-by-treatment decomposition of Q and local inconsistency with node-splitting (back-calculation). P-scores were used only descriptively. Certainty was rated with the GRADE approach for NMA: direct estimates were rated for risk of bias, inconsistency and indirectness; indirect estimates started from the lower certainty of the direct comparisons in the dominant first-order loop and were rated down for intransitivity; network estimates started from the certainty of the dominant source (or the higher of direct and indirect when both contributed similarly) and were rated down for incoherence and for imprecision of the absolute effect relative to the MID, using the effective sample size and the optimal information size for large effects (GRADE guidance 33). Conclusions were drawn with the minimally contextualised framework.`);

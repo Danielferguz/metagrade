@@ -85,7 +85,11 @@ const sgn = v => (Math.abs(v) >= 10 ? Math.round(v).toString() : v.toFixed(1));
 const signed = v => (v > 0 ? '+' : v < 0 ? '−' : '') + sgn(Math.abs(v));
 
 // Texto de la regla de imprecisión: qué umbrales cruza el IC
-export function crossLabel(lo, hi, mid) {
+export function crossLabel(lo, hi, mid, ths = null) {
+  if (ths && ths.length > 1) {
+    const n = ths.flatMap(t => [-t, t]).filter(t => lo < t && hi > t).length;
+    return n ? `Crosses ${n} threshold${n > 1 ? 's' : ''} → −${Math.min(3, n)}` : 'CI within one zone → 0';
+  }
   if (mid > 0) {
     const a = lo < -mid && hi > -mid, b = lo < mid && hi > mid;
     if (a && b) return 'Crosses both MIDs → −2';
@@ -97,10 +101,14 @@ export function crossLabel(lo, hi, mid) {
 
 // Panel de umbrales (Figura S1 B): efectos absolutos con IC frente a ±MID y zonas sombreadas.
 // rows: [{label, sub, d, lo, hi, w, fill, chip, right, badge:{text, fill}, bold, pi:[lo,hi]}]
-export function thresholdSVG({ rows, mid = 0, higherBetter = false, xlabel = '', title = '' }) {
+const ZONES3 = { benefit: ['#E3F1DC', '#CDE5BF', '#B2D69E'], harm: ['#FBE1E1', '#F4C6C6', '#EBA9A9'] };
+export function thresholdSVG({ rows, mid = 0, ths = null, higherBetter = false, xlabel = '', title = '' }) {
+  ths = ths && ths.length ? ths : mid > 0 ? [mid] : [];
+  mid = ths[0] || 0;
+  const tmax = ths.length ? ths[ths.length - 1] : 0;
   const W = 900, rowH = 30, top = title ? 34 : 14, n = rows.length, x0 = 230, x1 = 570;
   const vals = rows.flatMap(r => [r.lo, r.hi, ...(r.pi || [])]).filter(isFinite);
-  let lo = Math.min(...vals, mid > 0 ? -1.6 * mid : 0), hi = Math.max(...vals, mid > 0 ? 1.6 * mid : 0);
+  let lo = Math.min(...vals, mid > 0 ? -(ths.length > 1 ? 1.15 * tmax : 1.6 * mid) : 0), hi = Math.max(...vals, mid > 0 ? (ths.length > 1 ? 1.15 * tmax : 1.6 * mid) : 0);
   const pad = (hi - lo) * 0.06 || 1; lo -= pad; hi += pad;
   const sx = scaleFn(lo, hi, x0, x1, false), cl = v => Math.max(x0, Math.min(x1, sx(v)));
   const yb = top + n * rowH, H = yb + 70;
@@ -111,10 +119,15 @@ export function thresholdSVG({ rows, mid = 0, higherBetter = false, xlabel = '',
   // zonas
   const L = mid > 0 ? -mid : 0, R = mid > 0 ? mid : 0;
   const zLeft = good > 0 ? 'harm' : 'benefit', zRight = good > 0 ? 'benefit' : 'harm';
-  s += `<rect x="${x0}" y="${top - 6}" width="${cl(L) - x0}" height="${n * rowH + 6}" fill="${ZONE[zLeft]}"/>`;
-  if (mid > 0) s += `<rect x="${cl(L)}" y="${top - 6}" width="${cl(R) - cl(L)}" height="${n * rowH + 6}" fill="${ZONE.nodiff}"/>`;
-  s += `<rect x="${cl(R)}" y="${top - 6}" width="${x1 - cl(R)}" height="${n * rowH + 6}" fill="${ZONE[zRight]}"/>`;
-  (mid > 0 ? [-mid, mid] : [0]).forEach(t => { s += `<line x1="${sx(t)}" x2="${sx(t)}" y1="${top - 6}" y2="${yb}" stroke="#5B6675" stroke-dasharray="4 3"/>`; });
+  const zr = (a, b, c) => { const xa = cl(a), xb = cl(b); if (xb > xa) s += `<rect x="${xa}" y="${top - 6}" width="${xb - xa}" height="${n * rowH + 6}" fill="${c}"/>`; };
+  if (ths.length > 1) {
+    const edges = [lo, ...ths.slice().reverse().map(t => -t)];
+    edges.forEach((a, i) => zr(a, edges[i + 1] ?? L, ZONES3[zLeft][ths.length - 1 - i] || ZONES3[zLeft][0]));
+    const er = [...ths, hi];
+    er.slice(0, -1).forEach((a, i) => zr(a, er[i + 1], ZONES3[zRight][i]));
+  } else { zr(lo, L, ZONE[zLeft]); zr(R, hi, ZONE[zRight]); }
+  if (mid > 0) zr(L, R, ZONE.nodiff);
+  (mid > 0 ? ths.flatMap(t => [-t, t]) : [0]).forEach(t => { s += `<line x1="${cl(t)}" x2="${cl(t)}" y1="${top - 6}" y2="${yb}" stroke="#5B6675" stroke-dasharray="4 3"/>`; });
   if (mid > 0) s += `<line x1="${sx(0)}" x2="${sx(0)}" y1="${top - 6}" y2="${yb}" stroke="#5B6675" stroke-width=".6"/>`;
   rows.forEach((r, i) => {
     const y = top + i * rowH + rowH / 2 - 3;
@@ -134,9 +147,12 @@ export function thresholdSVG({ rows, mid = 0, higherBetter = false, xlabel = '',
   });
   s += `<line x1="${x0}" x2="${x1}" y1="${yb + 2}" y2="${yb + 2}" stroke="currentColor"/>`;
   niceTicks(lo, hi, false).forEach(v => { s += `<line x1="${sx(v)}" x2="${sx(v)}" y1="${yb + 2}" y2="${yb + 6}" stroke="currentColor"/><text x="${sx(v)}" y="${yb + 18}" text-anchor="middle">${v}</text>`; });
-  if (xlabel) s += `<text x="${(x0 + x1) / 2}" y="${yb + 34}" text-anchor="middle" class="m">${esc(xlabel)}</text>`;
-  const lg = [[ZONE.benefit, 'Important benefit'], ...(mid > 0 ? [[ZONE.nodiff, `Little or no difference (±${mid})`]] : []), [ZONE.harm, 'Important harm']];
-  let lx = x0; lg.forEach(([c, t]) => { s += `<rect x="${lx}" y="${yb + 46}" width="14" height="12" fill="${c}" stroke="#b9c2cc"/><text x="${lx + 18}" y="${yb + 56}" class="m">${esc(t)}</text>`; lx += 26 + t.length * 6.2; });
+  if (xlabel || ths.length > 1) s += `<text x="${(x0 + x1) / 2}" y="${yb + 34}" text-anchor="middle" class="m">${esc(xlabel)}${ths.length > 1 ? ` · thresholds ±${ths.map(v => +(+v).toFixed(2)).join(', ±')}` : ''}</text>`;
+  const fm = v => +(+v).toFixed(2);
+  const lg = ths.length > 1
+    ? [[ZONES3.benefit[0], 'Small'], [ZONES3.benefit[1], 'Moderate'], [ZONES3.benefit[2], 'Large benefit'], [ZONE.nodiff, `Trivial (±${fm(mid)})`], [ZONES3.harm[0], 'Small'], [ZONES3.harm[1], 'Moderate'], [ZONES3.harm[2], 'Large harm']].filter((x, i) => ths.length > 2 || (i !== 2 && i !== 6))
+    : [[ZONE.benefit, 'Important benefit'], ...(mid > 0 ? [[ZONE.nodiff, `Little or no difference (±${fm(mid)})`]] : []), [ZONE.harm, 'Important harm']];
+  let lx = ths.length > 1 ? 8 : x0; lg.forEach(([c, t]) => { s += `<rect x="${lx}" y="${yb + 46}" width="14" height="12" fill="${c}" stroke="#b9c2cc"/><text x="${lx + 18}" y="${yb + 56}" class="m">${esc(t)}</text>`; lx += 26 + t.length * (ths.length > 1 ? 5.9 : 6.2); });
   return s + '</svg>';
 }
 

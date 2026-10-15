@@ -49,6 +49,31 @@ export function effectiveN(measure, est, lo, hi, pc, sd) {
 
 // ---------- categoría y lenguaje ----------
 // d: diferencia absoluta con signo (intervención - comparador); higherBetter: si un valor mayor es deseable
+// Umbrales positivos de la imprecisión: esquema 2 (±MID) o 3 (pequeño, moderado, grande por lado)
+export function thresholdSet(scheme, mid, moderate, large) {
+  if (!(mid > 0)) return [];
+  if (+scheme !== 3) return [mid];
+  return [mid, moderate, large].filter((v, i, a) => v > 0 && (i === 0 || v > a[i - 1]));
+}
+// número de umbrales (±t, o el nulo si no hay umbrales) que cruza el intervalo [lo, hi]
+export function crossings(lo, hi, ths) {
+  const all = ths.length ? ths.flatMap(t => [-t, t]) : [0];
+  return all.filter(t => lo < t && hi > t);
+}
+// magnitud del efecto para el marco EtD: dirección y tamaño (0 trivial, 1 pequeño, 2 moderado, 3 grande)
+export function magnitude(d, ths, higherBetter) {
+  const v = higherBetter ? d : -d, a = Math.abs(v);
+  const size = ths.filter(t => a >= t).length;
+  return { dir: size === 0 ? 'none' : v > 0 ? 'benefit' : 'harm', size: Math.min(3, size) };
+}
+// regla del intervalo de predicción: umbrales ±MID que cruza el IP y no cruza el IC (1 → −1; ≥2 → −2)
+export function piRule(ci, pi, mid) {
+  if (!pi || !isFinite(pi[0]) || !isFinite(pi[1])) return { level: 0, extra: [] };
+  const ths = mid > 0 ? [mid] : [];
+  const inCI = new Set(crossings(ci[0], ci[1], ths)), extra = crossings(pi[0], pi[1], ths).filter(t => !inCI.has(t));
+  return { level: Math.min(2, extra.length), extra };
+}
+
 export function category(d, mid, higherBetter, ciLo, ciHi) {
   const s = higherBetter ? 1 : -1;
   if (!(mid > 0)) {
@@ -81,7 +106,7 @@ const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
 export function gradePairwise(cfg) {
   const { fit, studies, measure, design = 'RCT', threshold = 'MID', mid = 0, p0 = NaN, higherBetter = true,
     robDominance = 0.65, someConcernsAsHigh = false, oisRRR = 0.25, power = 0.8, sdForOIS = NaN, eggerRes = null,
-    industrySmall = false, surrogate = false, doseResponse = false, unit = 100 } = cfg;
+    industrySmall = false, surrogate = false, doseResponse = false, unit = 100, scheme = 2, moderate = NaN, large = NaN, usePI = true } = cfg;
   const w = fit.weights, k = fit.k;
   const ab = absolute(measure, fit.est, fit.ci[0], fit.ci[1], p0);
   const scale = ab.binary ? unit : 1;
@@ -126,7 +151,19 @@ export function gradePairwise(cfg) {
       inc = 1;
       incWhy = `Point estimates on different sides of the threshold (${(same * 100).toFixed(0)}% of the weight on the side of the pooled estimate)${nonOverlap ? ', some confidence intervals do not overlap' : ''}; I² = ${I2.toFixed(0)}%. Explore a priori subgroup hypotheses before rating down`;
     }
-    out.domains.inc = { level: inc, why: incWhy, same, nonOverlap, I2 };
+    // intervalo de predicción frente a ±MID (o el nulo) en escala absoluta
+    let piAbs = null, pr = { level: 0, extra: [] };
+    if (k >= 3 && fit.method !== 'EE' && isFinite(fit.pi[0])) {
+      const a = absolute(measure, fit.est, fit.pi[0], fit.pi[1], p0);
+      piAbs = [a.lo * scale, a.hi * scale];
+      if (usePI) pr = piRule([D.lo, D.hi], piAbs, threshold === 'MID' ? mid : 0);
+    }
+    if (pr.level > inc) {
+      inc = pr.level;
+      const f = x => (Math.abs(x) < 10 ? x.toFixed(1) : x.toFixed(0));
+      incWhy = `The 95% prediction interval (${f(piAbs[0])} to ${f(piAbs[1])}${ab.binary ? ' per ' + unit : ''}) crosses ${pr.level === 2 ? 'both MID thresholds' : threshold === 'MID' && mid > 0 ? 'an MID threshold' : 'the null'} that the confidence interval of the pooled estimate does not cross (−${pr.level}); ` + incWhy.charAt(0).toLowerCase() + incWhy.slice(1);
+    } else if (piAbs && usePI) incWhy += `; 95% prediction interval ${pr.level ? `also crosses ${pr.level === 2 ? 'both MID thresholds' : 'an MID threshold'} not crossed by the CI (−${pr.level})` : 'does not cross thresholds beyond those crossed by the CI'}`;
+    out.domains.inc = { level: inc, why: incWhy, same, nonOverlap, I2, piAbs, piLevel: pr.level };
   } else out.domains.inc = { level: 0, why: incWhy };
 
   // Indirectness (Core GRADE 5)
@@ -141,7 +178,12 @@ export function gradePairwise(cfg) {
   const crosses = t => D.lo < t && D.hi > t;
   const fmt = x => (Math.abs(x) < 10 ? x.toFixed(1) : x.toFixed(0));
   const unitTxt = ab.binary ? ` per ${unit}` : '';
-  if (threshold === 'MID' && mid > 0) {
+  const ths = threshold === 'MID' ? thresholdSet(scheme, mid, moderate, large) : [];
+  if (threshold === 'MID' && mid > 0 && ths.length > 1) {
+    const cr = crossings(D.lo, D.hi, ths), n = cr.length;
+    imp = Math.min(3, n);
+    impWhy = n ? `95% CI of the absolute effect (${fmt(D.lo)} to ${fmt(D.hi)}${unitTxt}) crosses ${n} decision threshold${n > 1 ? 's' : ''} (${cr.map(t => (t > 0 ? '+' : '−') + fmt(Math.abs(t))).join(', ')}; small ±${fmt(ths[0])}, moderate ±${fmt(ths[1] ?? NaN)}, large ±${fmt(ths[2] ?? NaN)})` : '';
+  } else if (threshold === 'MID' && mid > 0) {
     const n = [-mid, mid].filter(crosses).length;
     imp = n;
     impWhy = n ? `95% CI of the absolute effect (${fmt(D.lo)} to ${fmt(D.hi)}${unitTxt}) crosses ${n === 2 ? 'both the lower and the upper MID (±' + mid + ')' : 'one MID threshold (±' + mid + ')'}` : '';
@@ -169,7 +211,7 @@ export function gradePairwise(cfg) {
       else impWhy = `95% CI (${fmt(D.lo)} to ${fmt(D.hi)}) does not cross the threshold${ntot ? '; sample size adequate' : ''}`;
     }
   }
-  out.domains.imp = { level: imp, why: impWhy, ntot, ois: oisVal };
+  out.domains.imp = { level: imp, why: impWhy, ntot, ois: oisVal, ths };
 
   // Sesgo de publicación (Core GRADE 4)
   let pub = 0, pubWhy = k >= 10 ? 'Funnel plot/Egger test do not suggest small-study effects' : 'Fewer than 10 studies: statistical assessment not feasible; undetected';
@@ -218,7 +260,8 @@ export function footnotes(g, overrides = {}) {
 //        baseline: t => p0, higherBetter, incP (0.05), robShare (0.5), oisRRR }
 export function gradeNMA(cfg, pairs) {
   const { m, rob = {}, indirect = {}, modifier = {}, mid = 0, large = 0, unit = 100, baseline, higherBetter = true,
-    incP = 0.10, robShare = 0.5, oisRRR = 0.25, power = 0.8, sd = NaN } = cfg;
+    incP = 0.10, robShare = 0.5, oisRRR = 0.25, power = 0.8, sd = NaN, scheme = 2, moderate = NaN, usePI = true } = cfg;
+  const thsN = thresholdSet(scheme, mid, moderate, large);
   const isHigh = r => /high|serious|critical/i.test(r || '');
   const isInd = v => v && !/^(0|no|false|low|)$/i.test(String(v).trim());
   const measure = m.outcome === 'binary' ? 'OR' : 'MD';
@@ -290,10 +333,24 @@ export function gradeNMA(cfg, pairs) {
     const p0 = m.outcome === 'binary' ? baseline(b) : NaN;
     const ab = absolute(measure, e, e - 1.96 * s, e + 1.96 * s, p0), sc = ab.binary ? unit : 1;
     const r = [ab.d * sc, ab.lo * sc, ab.hi * sc];
-    const ths = mid > 0 ? [-mid, mid] : [0];
-    const cross = ths.filter(t => r[1] < t && r[2] > t).length;
+    // heterogeneidad: intervalo de predicción de la estimación de red frente a ±MID
+    let piAbs = null;
+    if (m.tau2 > 0) {
+      const pi = m.predInt(a, b);
+      if (isFinite(pi[0])) { const pa = absolute(measure, e, pi[0], pi[1], p0); piAbs = [pa.lo * sc, pa.hi * sc]; }
+    }
+    if (usePI && piAbs) {
+      const pr = piRule([r[1], r[2]], piAbs, mid), already = applied.some(x => x[0] === 'inc') ? 1 : 0, lvl = Math.max(0, pr.level - already);
+      if (lvl) { c -= lvl; nr.push(['inc', `Inconsistency (−${lvl}): the 95% prediction interval of the network estimate crosses ${pr.level === 2 ? 'both MID thresholds' : mid > 0 ? 'an MID threshold' : 'the null'} that the confidence interval does not cross`]); }
+    }
     let ess = NaN, ois = NaN, impLvl = 0;
-    if (cross) {
+    if (+scheme === 3 && thsN.length > 1) {
+      const cr = crossings(r[1], r[2], thsN), lvl = Math.min(3, cr.length);
+      if (lvl) { c -= lvl; impLvl = lvl; nr.push(['imp', `Imprecision (−${lvl}): 95% CI of the absolute effect crosses ${cr.length} decision threshold${cr.length > 1 ? 's' : ''} (small ±${thsN[0]}, moderate ±${thsN[1] ?? '–'}, large ±${thsN[2] ?? '–'}${ab.binary ? ' per ' + unit : ''})`]); }
+    }
+    const ths = mid > 0 ? [-mid, mid] : [0];
+    const cross = +scheme === 3 && thsN.length > 1 ? 0 : ths.filter(t => r[1] < t && r[2] > t).length;
+    if (impLvl) { /* ya calificado con el esquema de 3 umbrales */ } else if (cross) {
       let lvl = cross;
       if (cross === 2 && large > 0 && r[1] < -large && r[2] > large) lvl = 3;
       c -= lvl; impLvl = lvl;
@@ -317,7 +374,7 @@ export function gradeNMA(cfg, pairs) {
     c = Math.max(1, c);
     const cat = category(r[0], mid, higherBetter, r[1], r[2]);
     const ndir = D ? sum(D.dr.studies.flatMap(st => m.studies[st].filter(x => x.t === a || x.t === b).map(x => +x.n))) : 0;
-    out.push({ a, b, est: e, se: s, ess, ois, impLvl, D, path, indC, indR, nsd, start, basis, c, nr, applied, r, p0, cat, ndir, kdir: D ? D.dr.k : 0, measure });
+    out.push({ a, b, est: e, se: s, ess, ois, impLvl, piAbs, ths: thsN, D, path, indC, indR, nsd, start, basis, c, nr, applied, r, p0, cat, ndir, kdir: D ? D.dr.k : 0, measure });
   }
   return { rows: out, dd, dcert };
 }
