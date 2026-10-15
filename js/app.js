@@ -1,14 +1,14 @@
-import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.16-5';
-import { escalc, rma, egger, subgroupTest } from './pairwise.js?v=2026.10.16-5';
-import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.16-5';
-import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.16-5';
-import { mountThreshold } from './thresh.js?v=2026.10.16-5';
-import { renderEtD } from './etd.js?v=2026.10.16-5';
-import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.16-5';
-import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.16-5';
-import { forestSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.16-5';
-import { median } from './stats.js?v=2026.10.16-5';
-import { HELP_HTML } from './help.js?v=2026.10.16-5';
+import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.16-6';
+import { escalc, rma, egger, subgroupTest } from './pairwise.js?v=2026.10.16-6';
+import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.16-6';
+import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.16-6';
+import { mountThreshold } from './thresh.js?v=2026.10.16-6';
+import { renderEtD } from './etd.js?v=2026.10.16-6';
+import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.16-6';
+import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.16-6';
+import { forestSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.16-6';
+import { median } from './stats.js?v=2026.10.16-6';
+import { HELP_HTML } from './help.js?v=2026.10.16-6';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -240,6 +240,7 @@ function renderOutcomeConfig(kind) {
       inp.addEventListener('click', e => { if (inp.dataset.oc === 'include') e.stopPropagation(); });
       inp.addEventListener('change', () => {
         c[inp.dataset.oc] = inp.type === 'checkbox' ? inp.checked : inp.value;
+        if (inp.dataset.oc === 'dir' && d._thr) d._thr.setDesirable(c.dir === 'higher');
         if (inp.dataset.oc === 'p0method' || inp.dataset.oc === 'p0manual') {
           if (kind === 'pw') { const v = p0Value(c); c.p0 = v === '' ? '' : +(+v).toFixed(4); }
           const man = d.querySelector('[data-oc="p0manual"]');
@@ -248,7 +249,8 @@ function renderOutcomeConfig(kind) {
         const sm = d.querySelector('summary .muted'); if (sm) sm.textContent = ocSummary(kind, c); });
     });
     const thr = d.querySelector('[data-thr]');
-    mountThreshold(thr, `oc-${kind}-${thr.dataset.thr}-`, {
+    d._thr = mountThreshold(thr, `oc-${kind}-${thr.dataset.thr}-`, {
+      desirable: c.dir === 'higher',
       unitFn: () => +$(kind === 'pw' ? '#pw-unit' : '#nm-unit').value, mode: c.binary ? 'bin' : 'cont', dis: c.dis, sd: c.sd, smd: c.measure === 'SMD',
       apply: (t, info) => {
         [c.mid, c.mod, c.large] = t; if (info.mode === 'bin') c.dis = info.dis; else c.sd = info.sd;

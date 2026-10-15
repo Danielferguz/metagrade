@@ -1,7 +1,7 @@
 // NMA frecuentista basado en contrastes (GLS, equivalente a netmeta), efectos aleatorios con tau² común (REML),
 // covarianza exacta de ensayos multibrazo, Q por diseño (diseño-por-tratamiento), node-splitting por retro-cálculo,
 // P-scores. Port de engine.py (NMA de vacunas HBV).
-import { inv, mul, mulv, T, dot, blockDiag, goldenMin, pnorm, pchisq, qt, sum } from './stats.js?v=2026.10.16-5';
+import { inv, mul, mulv, T, dot, blockDiag, goldenMin, pnorm, pchisq, qt, sum } from './stats.js?v=2026.10.16-6';
 
 export function armStats(arms, outcome, cc = 0.5) {
   // arms: [{t, r, n}] binario | [{t, m, sd, n}] continuo
