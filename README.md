@@ -52,3 +52,7 @@ Guyatt G, et al. Core GRADE 1–7. BMJ 2025 · Brignardello-Petersen R, et al. G
 ## Licencia
 
 MIT
+
+## Publicar una versión nueva
+
+Después de cambiar el código, ejecute `python3 tools/bump_version.py AAAA.MM.DD-N`. Esto añade `?v=…` a todos los módulos y a la hoja de estilos para que los navegadores no sigan usando archivos antiguos en caché; la versión aparece en el pie de página.

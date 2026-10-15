@@ -1,13 +1,13 @@
-import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js';
-import { escalc, rma, egger, subgroupTest } from './pairwise.js';
-import { NMA, isConnected, armBaseline } from './nma.js';
-import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js';
-import { renderEtD } from './etd.js';
-import { bindFigs, effPt, figSettings } from './figs.js';
-import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js';
-import { forestSVG, networkSVG, funnelSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js';
-import { median } from './stats.js';
-import { HELP_HTML } from './help.js';
+import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.15-3';
+import { escalc, rma, egger, subgroupTest } from './pairwise.js?v=2026.10.15-3';
+import { NMA, isConnected, armBaseline } from './nma.js?v=2026.10.15-3';
+import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.15-3';
+import { renderEtD } from './etd.js?v=2026.10.15-3';
+import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.15-3';
+import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.15-3';
+import { forestSVG, networkSVG, funnelSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.15-3';
+import { median } from './stats.js?v=2026.10.15-3';
+import { HELP_HTML } from './help.js?v=2026.10.15-3';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
