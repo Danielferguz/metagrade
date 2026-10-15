@@ -150,3 +150,9 @@ tr.clickable { cursor: pointer; } tr.clickable:hover td { background: var(--soft
 .thr svg.plot { max-width: 680px; }
 figure.fig { max-width: 100%; }
 figure.fig .figbar { max-width: inherit; }
+.outcfg { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+.outcfg:empty { display: none; }
+details.ocfg { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin: 6px 0; background: var(--card); }
+details.ocfg[open] { background: var(--soft); }
+details.ocfg summary { cursor: pointer; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+details.ocfg .form { margin-top: 8px; }

@@ -1,14 +1,14 @@
-import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.16-2';
-import { escalc, rma, egger, subgroupTest } from './pairwise.js?v=2026.10.16-2';
-import { NMA, isConnected, armBaseline } from './nma.js?v=2026.10.16-2';
-import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.16-2';
-import { mountThreshold } from './thresh.js?v=2026.10.16-2';
-import { renderEtD } from './etd.js?v=2026.10.16-2';
-import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.16-2';
-import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.16-2';
-import { forestSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.16-2';
-import { median } from './stats.js?v=2026.10.16-2';
-import { HELP_HTML } from './help.js?v=2026.10.16-2';
+import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.16-3';
+import { escalc, rma, egger, subgroupTest } from './pairwise.js?v=2026.10.16-3';
+import { NMA, isConnected, armBaseline } from './nma.js?v=2026.10.16-3';
+import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.16-3';
+import { mountThreshold } from './thresh.js?v=2026.10.16-3';
+import { renderEtD } from './etd.js?v=2026.10.16-3';
+import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.16-3';
+import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.16-3';
+import { forestSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.16-3';
+import { median } from './stats.js?v=2026.10.16-3';
+import { HELP_HTML } from './help.js?v=2026.10.16-3';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -25,7 +25,7 @@ const PALETTES = {
 };
 const fillFor = (cat, c, pal = PALETTES[state.palette]) => c <= 1 ? pal.verylow : (pal[cat] || {})[c];
 
-const state = { cache: { pw: {}, nm: {} }, sheets: null, sheet: null, map: {}, rows: [], kind: 'pairwise', type: {}, sof: load('mg-sof', []), palette: load('mg-pal', 'default'), lastPw: null, lastNm: null };
+const state = { ocfg: {}, cache: { pw: {}, nm: {} }, sheets: null, sheet: null, map: {}, rows: [], kind: 'pairwise', type: {}, sof: load('mg-sof', []), palette: load('mg-pal', 'default'), lastPw: null, lastNm: null };
 function load(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }
 function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin almacenamiento */ } }
 
@@ -67,7 +67,7 @@ function renderOTabs(kind) {
 async function loadFile(file) {
   try {
     const { sheets } = await readFile(file);
-    state.sheets = sheets; state.cache = { pw: {}, nm: {} }; $('#pw-otabs').innerHTML = ''; $('#nm-otabs').innerHTML = '';
+    state.sheets = sheets; state.cache = { pw: {}, nm: {} }; state.ocfg = {}; $('#pw-otabs').innerHTML = ''; $('#nm-otabs').innerHTML = '';
     const names = Object.keys(sheets);
     $('#sheet').innerHTML = names.map(n => `<option>${esc(n)}</option>`).join('');
     $('#sheet').parentElement.hidden = names.length < 2;
@@ -130,7 +130,7 @@ function refreshData() {
   if ($('#pw-outcome') && outs.length) { $('#pw-outcome').value = $('#outcome-filter').value || outs[0]; $('#nm-outcome').value = $('#pw-outcome').value; }
 }
 
-$('#go-analysis').addEventListener('click', () => { setupAnalysis(); showTab('analisis'); });
+$('#go-analysis').addEventListener('click', () => { setupAnalysis(); renderOutcomeConfig(state.kind === 'nma' ? 'nm' : 'pw'); showTab('analisis'); });
 
 // ---------------- análisis: preparación ----------------
 function setupAnalysis() {
@@ -163,22 +163,88 @@ mountThreshold($('#pw-thr'), '', { unit: 'pw-unit', mid: 'pw-mid', mod: 'pw-t2',
 mountThreshold($('#nm-thr'), 'nm-', { unit: 'nm-unit', mid: 'nm-mid', mod: 'nm-mod', large: 'nm-large' });
 const DT = (dis, unit) => [0.0135, 0.0321, 0.0625].map(c => +Math.min(unit, c * unit / dis).toFixed(2));
 // configuración por desenlace desde columnas opcionales del archivo
-function applyOutcomeSettings(kind) {
-  const r = state.rows[0] || {}, pre = kind === 'pw' ? '#pw-' : '#nm-';
-  const unit = +$(pre + 'unit').value;
-  if (r.o_dir) $(pre + 'dir').value = /^(high|desir|mayor|higher)/i.test(r.o_dir) ? 'higher' : 'lower';
-  if (r.o_dis > 0) { const v = DT(r.o_dis, unit); $(pre + 'mid').value = v[0]; $(kind === 'pw' ? '#pw-t2' : '#nm-mod').value = v[1]; $(kind === 'pw' ? '#pw-t3' : '#nm-large').value = v[2]; }
-  else if (r.o_mid > 0) { $(pre + 'mid').value = r.o_mid; $(kind === 'pw' ? '#pw-t2' : '#nm-mod').value = ''; $(kind === 'pw' ? '#pw-t3' : '#nm-large').value = ''; }
+// ---------- configuración por desenlace (desplegables en el paso 2) ----------
+const IMP_OPTS = ['Critical', 'Important', 'Surrogate'];
+const normImp = v => (/crit/i.test(v || '') ? 'Critical' : /surrog|subrog/i.test(v || '') ? 'Surrogate' : /import/i.test(v || '') ? 'Important' : 'Critical');
+function outcomeRows(o) { return normalize(state.raw, state.map).filter(r => !state.map.outcome || r.outcome === o); }
+function defaultCfg(kind, o) {
+  const rows = outcomeRows(o), r = rows.find(x => x.o_dir || x.o_mid || x.o_dis || x.o_importance) || rows[0] || {};
+  const t = detectType(state.map), pre = kind === 'pw' ? '#pw-' : '#nm-', unit = +$(pre + 'unit').value;
+  const binary = kind === 'pw' ? ['binary', 'ratio-ci'].includes(t.data) || (t.data === 'generic' && false) : t.outcome === 'binary';
+  const c = { include: true, importance: normImp(r.o_importance), dir: r.o_dir ? (/^(high|desir|mayor)/i.test(r.o_dir) ? 'higher' : 'lower') : $(pre + 'dir').value,
+    mid: '', mod: '', large: '', dis: r.o_dis > 0 ? r.o_dis : '', sd: '', binary, n: kind === 'nm' ? new Set(rows.map(x => x.study)).size : rows.length };
+  if (r.o_dis > 0) [c.mid, c.mod, c.large] = DT(r.o_dis, unit);
+  else if (r.o_mid > 0) c.mid = r.o_mid;
+  else c.mid = +$(pre + 'mid').value || '';
   if (kind === 'pw') {
-    if (r.o_p0 > 0) $('#pw-p0').value = r.o_p0;
-    if (r.o_int) $('#pw-int').value = r.o_int; if (r.o_comp) $('#pw-comp').value = r.o_comp;
+    const opts = { binary: ['RR', 'OR', 'RD'], continuous: ['MD', 'SMD', 'ROM'], generic: ['RR', 'OR', 'HR', 'MD', 'SMD'], 'ratio-ci': ['HR', 'OR', 'RR'] }[t.data] || ['RR'];
+    c.measures = opts; c.measure = opts[0];
+    const p = rows.map(x => x.e2 / x.n2).filter(isFinite);
+    c.p0 = r.o_p0 > 0 ? r.o_p0 : p.length ? +median(p).toFixed(3) : '';
+    c.int = r.o_int || $('#pw-int').value; c.comp = r.o_comp || $('#pw-comp').value;
   }
-  return r.o_importance || '';
+  return c;
 }
-async function runAll(kind) {
+function outcomeList() { return state.map.outcome ? [...new Set(normalize(state.raw, state.map).map(r => r.outcome))] : []; }
+const ocSummary = (kind, c) => `· ${c.n} ${kind === 'nm' ? 'estudios' : 'filas'} · ${c.importance} · ${c.dir === 'higher' ? '↑ deseable' : '↓ indeseable'}${kind === 'pw' ? ' · ' + c.measure : ''} · MID ${c.mid === '' ? '—' : c.mid}${c.mod ? ` / ${c.mod} / ${c.large}` : ''}`;
+function renderOutcomeConfig(kind) {
+  const el = $(kind === 'pw' ? '#pw-outcfg' : '#nm-outcfg'), outs = outcomeList();
+  if (outs.length < 2) { el.innerHTML = ''; return; }
+  const C = (state.ocfg[kind] = state.ocfg[kind] || {});
+  const picked = [...document.querySelectorAll('#outcome-pick input')].reduce((a, x) => (a[x.value] = x.checked, a), {});
+  outs.forEach(o => { if (!C[o]) { C[o] = defaultCfg(kind, o); if (picked[o] === false) C[o].include = false; } });
+  const unitLbl = kind === 'pw' ? `por ${$('#pw-unit').value}` : `por ${$('#nm-unit').value}`;
+  const fld = (o, k, label, attrs = '', unit = '') => `<label>${label}${unit ? ` <span class="unit">${unit}</span>` : ''}<input data-oc="${k}" value="${esc(C[o][k] ?? '')}" ${attrs}></label>`;
+  el.innerHTML = `<div class="row between wrap"><h3 style="margin:0">Desenlaces: configuración individual</h3><span class="row gap"><button type="button" class="ghost" data-ocall="1">Abrir todos</button><button type="button" class="ghost" data-ocall="0">Cerrar todos</button></span></div>
+  <p class="muted">Cada desenlace tiene su propia importancia, dirección, umbrales (MID, moderado, grande) y, en pares, medida, riesgo basal y nombres. Al final use «Ejecutar todos los desenlaces y añadir a SoF». La configuración global de arriba (modelo, IC, esquema de umbrales, opciones de dominios) se aplica a todos.</p>
+  ${outs.map(o => { const c = C[o], st = state.cache[kind]?.[o];
+    return `<details class="ocfg" data-out="${esc(o)}"><summary><input type="checkbox" data-oc="include" ${c.include ? 'checked' : ''} title="Incluir en «Ejecutar todos»"> <b>${esc(o)}</b>
+      <span class="muted">${esc(ocSummary(kind, c))}</span>${st ? ` <span class="pill">${st.addedSoF ? 'en SoF ✓' : 'analizado'}</span>` : ''}</summary>
+      <div class="form">
+        <label>Importancia <select data-oc="importance">${IMP_OPTS.map(x => `<option ${x === c.importance ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
+        <label>Un valor mayor es… <select data-oc="dir"><option value="lower" ${c.dir === 'lower' ? 'selected' : ''}>indeseable</option><option value="higher" ${c.dir === 'higher' ? 'selected' : ''}>deseable</option></select></label>
+        ${kind === 'pw' ? `<label>Medida <select data-oc="measure">${c.measures.map(x => `<option ${x === c.measure ? 'selected' : ''}>${x}</option>`).join('')}</select></label>` : ''}
+        ${fld(o, 'mid', 'MID (umbral pequeño)', 'type="number" step="any"', c.binary ? unitLbl : '')}
+        ${fld(o, 'mod', 'Umbral moderado', 'type="number" step="any" placeholder="opcional"')}
+        ${fld(o, 'large', 'Umbral grande', 'type="number" step="any" placeholder="opcional"')}
+        ${c.binary ? `<label>Disutilidad (GRADE-THRESHOLD) <span class="row gap"><input data-oc="dis" type="number" step="0.01" min="0.01" max="1" value="${esc(c.dis)}" placeholder="0–1" style="flex:1"><button type="button" class="ghost" data-occalc="dis">→ umbrales</button></span></label>`
+          : `<label>DE combinada (DME 0,2/0,5/0,8) <span class="row gap"><input data-oc="sd" type="number" step="any" value="${esc(c.sd)}" placeholder="DE" style="flex:1"><button type="button" class="ghost" data-occalc="sd">→ umbrales</button></span></label>`}
+        ${kind === 'pw' && c.binary ? fld(o, 'p0', 'Riesgo basal (proporción)', 'type="number" step="any" min="0" max="1"') : ''}
+        ${kind === 'pw' ? fld(o, 'int', 'Intervención') + fld(o, 'comp', 'Comparador') : ''}
+      </div>
+      <div class="row end gap"><button type="button" class="ghost" data-ocrun>Ejecutar solo este desenlace</button></div></details>`; }).join('')}`;
+  el.querySelectorAll('details.ocfg').forEach(d => {
+    const o = d.dataset.out, c = C[o];
+    d.querySelectorAll('[data-oc]').forEach(inp => {
+      inp.addEventListener('click', e => { if (inp.dataset.oc === 'include') e.stopPropagation(); });
+      inp.addEventListener('change', () => { c[inp.dataset.oc] = inp.type === 'checkbox' ? inp.checked : inp.value; const sm = d.querySelector('summary .muted'); if (sm) sm.textContent = ocSummary(kind, c); });
+    });
+    d.querySelectorAll('[data-occalc]').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.occalc === 'dis') { const v = +d.querySelector('[data-oc="dis"]').value; if (!(v > 0)) return; c.dis = v; [c.mid, c.mod, c.large] = DT(v, +$(kind === 'pw' ? '#pw-unit' : '#nm-unit').value); }
+      else { const sd = +d.querySelector('[data-oc="sd"]').value; if (!(sd > 0)) return; c.sd = sd; [c.mid, c.mod, c.large] = [0.2, 0.5, 0.8].map(k => +(c.measure === 'SMD' ? k : k * sd).toFixed(3)); }
+      renderOutcomeConfig(kind); el.querySelector(`details[data-out="${CSS.escape(o)}"]`).open = true;
+    }));
+    d.querySelector('[data-ocrun]').addEventListener('click', () => runAll(kind, [o]));
+  });
+  el.querySelectorAll('[data-ocall]').forEach(b => b.addEventListener('click', () => el.querySelectorAll('details.ocfg').forEach(d => d.open = b.dataset.ocall === '1')));
+}
+function applyCfg(kind, o) {
+  const c = state.ocfg[kind]?.[o]; if (!c) return '';
+  const set = (id, v) => { if (v !== undefined && v !== null) $(id).value = v; };
+  if (kind === 'pw') {
+    if (c.measures?.includes(c.measure)) set('#pw-measure', c.measure);
+    set('#pw-dir', c.dir); set('#pw-mid', c.mid); set('#pw-t2', c.mod); set('#pw-t3', c.large);
+    if (c.binary && c.p0 !== '') set('#pw-p0', c.p0);
+    set('#pw-int', c.int); set('#pw-comp', c.comp);
+  } else { set('#nm-dir', c.dir); set('#nm-mid', c.mid); set('#nm-mod', c.mod); set('#nm-large', c.large); }
+  return c.importance;
+}
+async function runAll(kind, only = null) {
+  const outsAll = [...$('#outcome-filter').options].map(o => o.value);
+  const C = state.ocfg[kind] || {};
   const picked = [...document.querySelectorAll('#outcome-pick input:checked')].map(x => x.value);
-  const outs = [...$('#outcome-filter').options].map(o => o.value).filter(o => !picked.length || picked.includes(o));
-  const list = outs.length ? outs : [null];
+  const outs = only || outsAll.filter(o => (C[o] ? C[o].include : (!picked.length || picked.includes(o))));
+  const list = outs.length ? outs : (outsAll.length ? [] : [null]);
   const btn = $(kind === 'pw' ? '#pw-runall' : '#nm-runall'), t0 = btn.textContent;
   for (const [i, o] of list.entries()) {
     btn.textContent = `Ejecutando ${i + 1}/${list.length}…`;
@@ -186,14 +252,15 @@ async function runAll(kind) {
     const keepRefs = kind === 'nm' ? [...$('#nm-ref').selectedOptions].map(x => x.value) : null;
     setupAnalysis();
     if (keepRefs) [...$('#nm-ref').options].forEach(x => x.selected = keepRefs.includes(x.value));
-    const imp = applyOutcomeSettings(kind);
+    if (o != null && !C[o]) { state.ocfg[kind] = state.ocfg[kind] || {}; state.ocfg[kind][o] = defaultCfg(kind, o); }
+    const imp = o != null ? applyCfg(kind, o) : '';
     state.lastPw = null; state.lastNm = null;
-    if (kind === 'pw') { if (o != null) $('#pw-outcome').value = o; runPairwise(); if (state.lastPw) { addPwToSoF(imp); } }
+    if (kind === 'pw') { if (o != null) $('#pw-outcome').value = o; runPairwise(); if (state.lastPw) addPwToSoF(imp); }
     else { if (o != null) $('#nm-outcome').value = o; runNMA(); if (state.lastNm && $('#nm-add')) addNmToSoF(imp); }
     await new Promise(r => setTimeout(r, 20));
   }
-  renderOTabs(kind === 'pw' ? 'pw' : 'nm');
-  btn.textContent = `Listo ✓ (${list.length} desenlaces en la tabla SoF)`; setTimeout(() => btn.textContent = t0, 2500);
+  renderOTabs(kind); renderOutcomeConfig(kind);
+  btn.textContent = list.length ? `Listo ✓ (${list.length} desenlace${list.length > 1 ? 's' : ''} en la tabla SoF)` : 'Ningún desenlace marcado'; setTimeout(() => btn.textContent = t0, 2500);
 }
 $('#pw-runall').addEventListener('click', () => runAll('pw'));
 $('#nm-runall').addEventListener('click', () => runAll('nm'));
