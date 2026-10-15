@@ -137,7 +137,7 @@ export function gradePairwise(cfg) {
   out.domains.ind = { level: ind, why: indWhy, share: indShare };
 
   // Imprecisión (Core GRADE 2; GRADE 34/35)
-  let imp = 0, impWhy;
+  let imp = 0, impWhy, oisVal = NaN;
   const crosses = t => D.lo < t && D.hi > t;
   const fmt = x => (Math.abs(x) < 10 ? x.toFixed(1) : x.toFixed(0));
   const unitTxt = ab.binary ? ` per ${unit}` : '';
@@ -158,18 +158,18 @@ export function gradePairwise(cfg) {
       const ratio = Math.exp(fit.ci[1] - fit.ci[0]);
       const cut = measure === 'OR' ? 2.5 : 3;
       if (rrr > 0.3) {
-        const ois = oisBinary(p0, oisRRR, 0.05, power, rel > 1);
+        const ois = oisBinary(p0, oisRRR, 0.05, power, rel > 1); oisVal = ois;
         if (ratio >= cut) { imp = 2; impWhy = `Large effect (relative change ${(rrr * 100).toFixed(0)}%) with upper/lower CI ratio ${ratio.toFixed(1)} (≥${cut}): sample size far below the optimal information size`; }
         else if (ntot && ntot < ois) { imp = 1; impWhy = `Although the CI does not cross the threshold, the effect is large (relative change ${(rrr * 100).toFixed(0)}%) and the total sample size (${ntot}) is below the optimal information size (${ois}; RRR ${oisRRR * 100}%, α 0.05, power ${power * 100}%)`; if (ntot > 0.9 * ois) out.close.push('imp'); }
         else impWhy = `CI does not cross the threshold; large effect but optimal information size met (${ntot} ≥ ${ois})`;
       } else impWhy = `95% CI (${fmt(D.lo)} to ${fmt(D.hi)}${unitTxt}) does not cross the threshold; modest effect, OIS not required`;
     } else {
-      const ois = isFinite(sdForOIS) && mid > 0 ? oisContinuous(mid, sdForOIS, 0.05, power) : 800;
+      const ois = isFinite(sdForOIS) && mid > 0 ? oisContinuous(mid, sdForOIS, 0.05, power) : 800; oisVal = ois;
       if (ntot && ntot < ois) { imp = ntot < 0.5 * ois ? 2 : 1; impWhy = `CI does not cross the threshold but the total sample size (${ntot}) is below the optimal information size (${ois}${isFinite(sdForOIS) ? '' : ', rule of thumb 400 per group'})`; }
       else impWhy = `95% CI (${fmt(D.lo)} to ${fmt(D.hi)}) does not cross the threshold${ntot ? '; sample size adequate' : ''}`;
     }
   }
-  out.domains.imp = { level: imp, why: impWhy, ntot };
+  out.domains.imp = { level: imp, why: impWhy, ntot, ois: oisVal };
 
   // Sesgo de publicación (Core GRADE 4)
   let pub = 0, pubWhy = k >= 10 ? 'Funnel plot/Egger test do not suggest small-study effects' : 'Fewer than 10 studies: statistical assessment not feasible; undetected';
@@ -292,31 +292,32 @@ export function gradeNMA(cfg, pairs) {
     const r = [ab.d * sc, ab.lo * sc, ab.hi * sc];
     const ths = mid > 0 ? [-mid, mid] : [0];
     const cross = ths.filter(t => r[1] < t && r[2] > t).length;
+    let ess = NaN, ois = NaN, impLvl = 0;
     if (cross) {
       let lvl = cross;
       if (cross === 2 && large > 0 && r[1] < -large && r[2] > large) lvl = 3;
-      c -= lvl;
+      c -= lvl; impLvl = lvl;
       nr.push(['imp', `Imprecision (−${lvl}): 95% CI of the absolute effect crosses ${cross === 2 ? 'both decision thresholds' : 'one decision threshold'} (±${mid || 0}${ab.binary ? ' per ' + unit : ''})${lvl === 3 ? ' and spans large benefit to large harm' : ''}`]);
     } else {
-      let ess = NaN, ois = NaN, why = '';
+      let why = '';
       if (measure === 'OR') {
         const rel = Math.exp(e), rrr = rel < 1 ? 1 - rel : 1 - 1 / rel, ratio = Math.exp(3.92 * s);
         if (rrr > 0.3) {
-          if (ratio >= 2.5) { c -= 2; nr.push(['imp', `Imprecision (−2): large effect with upper/lower CI ratio ${ratio.toFixed(1)} (≥2.5 for OR): optimal information size not met`]); why = 'x'; }
+          if (ratio >= 2.5) { c -= 2; impLvl = 2; nr.push(['imp', `Imprecision (−2): large effect with upper/lower CI ratio ${ratio.toFixed(1)} (≥2.5 for OR): optimal information size not met`]); why = 'x'; }
           else {
             ess = effectiveN('OR', e, e - 1.96 * s, e + 1.96 * s, p0); ois = oisBinary(p0, oisRRR, 0.05, power, rel > 1);
-            if (ess < ois) { c -= 1; nr.push(['imp', `Imprecision (−1): large effect; effective sample size of the estimate (${ess}) below the optimal information size (${ois})`]); }
+            if (ess < ois) { c -= 1; impLvl = 1; nr.push(['imp', `Imprecision (−1): large effect; effective sample size of the estimate (${ess}) below the optimal information size (${ois})`]); }
           }
         }
       } else if (isFinite(sd) && mid > 0) {
         ess = effectiveN('MD', e, e - 1.96 * s, e + 1.96 * s, NaN, sd); ois = oisContinuous(mid, sd, 0.05, power);
-        if (ess < ois) { c -= 1; nr.push(['imp', `Imprecision (−1): effective sample size (${ess}) below the optimal information size (${ois})`]); }
+        if (ess < ois) { c -= 1; impLvl = 1; nr.push(['imp', `Imprecision (−1): effective sample size (${ess}) below the optimal information size (${ois})`]); }
       }
     }
     c = Math.max(1, c);
     const cat = category(r[0], mid, higherBetter, r[1], r[2]);
     const ndir = D ? sum(D.dr.studies.flatMap(st => m.studies[st].filter(x => x.t === a || x.t === b).map(x => +x.n))) : 0;
-    out.push({ a, b, est: e, se: s, D, path, indC, indR, nsd, start, basis, c, nr, applied, r, p0, cat, ndir, kdir: D ? D.dr.k : 0, measure });
+    out.push({ a, b, est: e, se: s, ess, ois, impLvl, D, path, indC, indR, nsd, start, basis, c, nr, applied, r, p0, cat, ndir, kdir: D ? D.dr.k : 0, measure });
   }
   return { rows: out, dd, dcert };
 }

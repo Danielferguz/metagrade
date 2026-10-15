@@ -28,6 +28,13 @@ export const HELP_HTML = `
 <li><b>Red:</b> parte de la fuente que domina (&gt;60 % de contribución) o de la mayor de las dos si contribuyen de forma similar; −1 por <b>incoherencia</b> si node-split p &lt; umbral y ambas fuentes contribuyen (20–80 %).</li>
 <li><b>Imprecisión:</b> umbrales cruzados por el IC del efecto absoluto (−1/−2; −3 si va de beneficio grande a daño grande según el umbral de efecto grande). Sin cruces y efecto grande: tamaño muestral efectivo de la estimación de red frente al OIS.</li>
 </ul>
+<h3>Visualización de los dominios</h3>
+<p>Tras ejecutar el análisis aparecen paneles gráficos (inspirados en la Figura S1 de las NMA publicadas):</p>
+<ul>
+<li><b>Riesgo de sesgo:</b> barra del peso por categoría (bajo / algunas dudas / alto) con la línea de dominancia, peso de cada estudio y comparación bajo vs alto riesgo en escala absoluta. En NMA, las aristas de la red y cada comparación directa se colorean por riesgo de sesgo.</li>
+<li><b>Inconsistencia:</b> estimadores absolutos de cada estudio frente a las zonas de ±MID (verde = beneficio importante, amarillo = poca o ninguna diferencia, rojo = daño importante), peso por zona frente al criterio del 80 %, e I² como criterio secundario. En NMA, I² de cada comparación directa y gráfico directa vs indirecta vs red (node-splitting).</li>
+<li><b>Imprecisión:</b> IC 95 % del efecto absoluto frente a ±MID con la regla aplicada («cruza +MID → −1», «cruza ambos → −2»), el recuadro de certeza coloreado y, cuando corresponde, el N (o tamaño muestral efectivo en NMA) frente al OIS. En NMA, todas las comparaciones frente al comparador en un solo gráfico tipo resumen gráfico.</li>
+</ul>
 <h3>Código de colores (marco mínimamente contextualizado)</h3>
 <p>El color lo fija el estimador puntual absoluto respecto a ±MID (verde = beneficio, rojo = daño/menos eficaz, amarillo = sin diferencia importante) y la intensidad la certeza; certeza muy baja en gris. La frase en lenguaje claro sigue Core GRADE 6: «reduce / probablemente reduce / puede reducir / la evidencia es muy incierta».</p>
 

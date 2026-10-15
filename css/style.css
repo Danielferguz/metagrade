@@ -74,3 +74,15 @@ table.data th { background: var(--soft); position: sticky; top: 0; }
 .warn { background: #FFF4CE; color: #4D3B00; border-radius: 8px; padding: 8px 12px; margin: 8px 0; font-size: .88rem; }
 .err { background: #FDE2E1; color: #7A1E16; border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
 @media (max-width: 760px) { .cols2 { grid-template-columns: 1fr; } .top { padding: 10px 16px 0; } main { padding: 12px 10px; } .card { padding: 14px; } }
+.viztabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 12px; }
+.viztabs button { padding: 6px 12px; font-size: .88rem; }
+.viztabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+@media (prefers-color-scheme: dark) { .viztabs button.active { color: #0F141B; } }
+.vizpane { display: none; } .vizpane.active { display: block; }
+.rbar { display: flex; height: 14px; min-width: 180px; border-radius: 3px; overflow: hidden; border: 1px solid var(--line); }
+.wbar { display: inline-block; vertical-align: middle; width: 120px; height: 10px; background: var(--soft); border-radius: 3px; overflow: hidden; margin-right: 6px; }
+.wbar span, .rbar span { display: block; height: 100%; }
+.chip { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.wtable { margin: 8px 0; } .wtable td { vertical-align: middle; }
+.vlegend { font-size: .82rem; color: var(--muted); margin: 6px 0; }
+.vlegend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }

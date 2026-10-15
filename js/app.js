@@ -2,7 +2,7 @@ import { readFile, mapColumns, normalize, detectType, download, toCSV } from './
 import { escalc, rma, egger, subgroupTest } from './pairwise.js';
 import { NMA, isConnected, armBaseline } from './nma.js';
 import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js';
-import { forestSVG, networkSVG } from './plots.js';
+import { forestSVG, networkSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js';
 import { median } from './stats.js';
 import { HELP_HTML } from './help.js';
 
@@ -211,6 +211,7 @@ function renderPairwise(dropped, robCmp, subRes, tr) {
   if (robCmp) html += `<p class="muted"><b>Bajo vs alto riesgo de sesgo:</b> bajo ${f2(tr(robCmp.fl.est))} (${f2(tr(robCmp.fl.ci[0]))}–${f2(tr(robCmp.fl.ci[1]))}, k=${robCmp.fl.k}); alto ${f2(tr(robCmp.fh.est))} (${f2(tr(robCmp.fh.ci[0]))}–${f2(tr(robCmp.fh.ci[1]))}, k=${robCmp.fh.k}); p de interacción = ${fp(robCmp.test?.p)}. Si difieren de forma importante y hay evidencia apreciable de bajo riesgo, use solo los estudios de bajo riesgo y no baje la certeza (Core GRADE 4).</p>`;
   if (subRes) html += `<p class="muted"><b>Subgrupos:</b> ${subRes.fits.map(x => `${esc(x.sg)}: ${f2(tr(x.f.est))} (${f2(tr(x.f.ci[0]))}–${f2(tr(x.f.ci[1]))}, k=${x.f.k})`).join(' · ')}; p de interacción = ${fp(subRes.test?.p)}. Juzgue la credibilidad con ICEMAN antes de presentar estimaciones separadas.</p>`;
   html += `</div>`;
+  html += pwVizHTML(robCmp);
   // GRADE
   html += `<div class="card"><h2>Certeza de la evidencia (Core GRADE)</h2>
   <p class="muted">Umbral: <b>${cfg.threshold === 'MID' ? 'MID ±' + cfg.mid + un : 'valor nulo'}</b> · punto de partida: <b>${LEVELS[g.start]}</b>. Las calificaciones son sugerencias: modifique el nivel y la justificación si su juicio difiere.</p>
@@ -226,10 +227,83 @@ function renderPairwise(dropped, robCmp, subRes, tr) {
   <div id="pw-final"></div>
   <div class="row end"><button class="primary" id="pw-add">Añadir a la tabla SoF</button></div></div>`;
   $('#pw-results').innerHTML = html;
+  bindVizTabs($('#pw-results'));
   $('#pw-results').querySelectorAll('[data-dom],[data-why]').forEach(el => el.addEventListener('input', updatePwFinal));
   $('#pw-add').addEventListener('click', addPwToSoF);
   updatePwFinal();
 }
+// ---------- Visualización de dominios (riesgo de sesgo, inconsistencia, imprecisión) ----------
+const ROB_LBL = { high: 'High', some: 'Some concerns', low: 'Low', na: 'Not reported' };
+function robSegments(items) { // items: [{rob, w}]
+  const tot = { high: 0, some: 0, low: 0, na: 0 };
+  items.forEach(x => { tot[robClass(x.rob)] += x.w; });
+  return ['high', 'some', 'low', 'na'].map(k => ({ label: ROB_LBL[k], value: tot[k], color: ROB_COL[k], text: k === 'some' ? '#1B2430' : '#fff' }));
+}
+function robBarHTML(items) {
+  return `<div class="rbar">${robSegments(items).filter(g => g.value > 0).map(g => `<span style="width:${g.value * 100}%;background:${g.color}" title="${g.label}: ${(g.value * 100).toFixed(0)}%"></span>`).join('')}</div>`;
+}
+const robLegend = () => `<div class="row gap wrap vlegend">${['low', 'some', 'high', 'na'].map(k => `<span><i style="background:${ROB_COL[k]}"></i>${ROB_LBL[k]}</span>`).join('')}</div>`;
+function vizTabs(id, panes) {
+  return `<div class="viztabs" data-viz="${id}">${panes.map((p, i) => `<button type="button" class="${i ? '' : 'active'}" data-pane="${i}">${p[0]}</button>`).join('')}</div>
+  ${panes.map((p, i) => `<div class="vizpane${i ? '' : ' active'}" data-pane="${i}">${p[1]}</div>`).join('')}`;
+}
+function bindVizTabs(root) {
+  root.querySelectorAll('.viztabs').forEach(t => t.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    const card = t.parentElement;
+    t.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+    card.querySelectorAll(':scope > .vizpane').forEach(p => p.classList.toggle('active', p.dataset.pane === b.dataset.pane));
+  })));
+}
+function pwAbs(yi, lo, hi) {
+  const { cfg, g } = state.lastPw, sc = g.ab.binary ? cfg.unit : 1;
+  const a = absolute(cfg.measure, yi, lo, hi, cfg.p0);
+  return { d: a.d * sc, lo: a.lo * sc, hi: a.hi * sc };
+}
+function pwXLabel() {
+  const { cfg, g, int, comp } = state.lastPw;
+  return g.ab.binary ? `Absolute effect per ${cfg.unit} (${int} − ${comp})` : `${cfg.measure} (${int} − ${comp})`;
+}
+function pwVizHTML(robCmp) {
+  const P = state.lastPw, { fit, g, S, cfg } = P, w = fit.weights;
+  const mid = cfg.threshold === 'MID' ? cfg.mid : 0;
+  // Riesgo de sesgo
+  const items = S.map((s, i) => ({ rob: s.rob, w: w[i], study: s.study }));
+  const hs = g.domains.rob.highShare;
+  let rob = shareBarSVG({ segments: robSegments(items), title: `Weight of the evidence by risk of bias — ${hs > cfg.robDominance ? 'high-risk studies dominate → −1' : 'high-risk studies do not dominate → 0'}`,
+    marker: { at: cfg.robDominance, label: `Dominance threshold ${(cfg.robDominance * 100).toFixed(0)}%${cfg.someConcernsAsHigh ? ' (high + some concerns)' : ' (high risk)'}` } });
+  rob += `<table class="data wtable"><thead><tr><th>Study</th><th>Risk of bias</th><th>Weight</th></tr></thead><tbody>${items.slice().sort((a, b) => b.w - a.w).map(x => `<tr><td>${esc(x.study)}</td><td><span class="chip" style="background:${ROB_COL[robClass(x.rob)]}"></span>${esc(x.rob || '—')}</td><td><div class="wbar"><span style="width:${x.w * 100}%;background:${ROB_COL[robClass(x.rob)]}"></span></div>${(x.w * 100).toFixed(1)}%</td></tr>`).join('')}</tbody></table>`;
+  if (robCmp) {
+    const r3 = [['Low risk of bias', robCmp.fl], ['High risk of bias', robCmp.fh], ['All studies', fit]].map(([l, f], i) => ({ label: l, sub: `k = ${f.k}`, ...pwAbs(f.est, f.ci[0], f.ci[1]), bold: i === 2, fill: i < 2 ? (i ? 'F2C4C4' : 'C6E0B4') : null }));
+    rob += thresholdSVG({ rows: r3, mid, higherBetter: cfg.higherBetter, xlabel: pwXLabel(), title: `Low vs high risk of bias (interaction p = ${fp(robCmp.test?.p)})` });
+    rob += `<p class="muted">Si los estudios de bajo riesgo dan un resultado importante distinto y aportan evidencia apreciable, use solo esos estudios y no baje la certeza (Core GRADE 4).</p>`;
+  } else rob += `<p class="muted">No hay estudios de bajo y alto riesgo a la vez: no se puede comparar por riesgo de sesgo.</p>`;
+  rob += robLegend();
+  // Inconsistencia
+  let inc;
+  if (fit.k >= 2) {
+    const rows = S.map((s, i) => { const se = Math.sqrt(s.vi); return { label: s.study, ...pwAbs(s.yi, s.yi - 1.96 * se, s.yi + 1.96 * se), w: w[i], chip: ROB_COL[robClass(s.rob)] }; });
+    const piA = fit.k >= 3 ? pwAbs(fit.est, fit.pi[0], fit.pi[1]) : null;
+    rows.push({ label: 'Pooled', sub: piA ? 'band = 95% prediction interval' : '', ...g.abs, bold: true, pi: piA ? [piA.lo, piA.hi] : null });
+    inc = thresholdSVG({ rows, mid, higherBetter: cfg.higherBetter, xlabel: pwXLabel(), title: 'Study estimates against the decision threshold (absolute scale)' });
+    const zoneOf = d => { const v = cfg.higherBetter ? d : -d; return mid > 0 ? (v >= mid ? 'benefit' : v <= -mid ? 'harm' : 'nodiff') : (v > 0 ? 'benefit' : 'harm'); };
+    const zw = { benefit: 0, nodiff: 0, harm: 0 }; rows.slice(0, -1).forEach(r => { zw[zoneOf(r.d)] += r.w; });
+    const D = g.domains.inc;
+    inc += shareBarSVG({ title: `Weight by zone of the point estimate — ${(D.same * 100).toFixed(0)}% on the side of the pooled estimate${D.nonOverlap ? '; some CIs do not overlap' : '; CIs overlap'} → ${D.level ? '−1' : '0'}`,
+      segments: [['benefit', 'Important benefit'], ['nodiff', 'Little/no difference'], ['harm', 'Important harm']].filter(([k]) => mid > 0 || k !== 'nodiff').map(([k, l]) => ({ label: l, value: zw[k], color: { benefit: '#93C47D', nodiff: '#FFD966', harm: '#E59393' }[k], text: '#1B2430' })),
+      marker: { at: 0.8, label: '≥80% on one side → not serious' } });
+    inc += i2GaugeSVG(fit.I2);
+  } else inc = '<p class="muted">Un solo estudio: la inconsistencia no es evaluable.</p>';
+  const imp = '<div id="pw-impviz"></div>';
+  return `<div class="card"><h2>Visualización de los dominios GRADE</h2>${vizTabs('pw', [['Riesgo de sesgo', rob], ['Inconsistencia', inc], ['Imprecisión', imp]])}</div>`;
+}
+function pwImpViz(s) {
+  const { g, cfg } = state.lastPw, mid = cfg.threshold === 'MID' ? cfg.mid : 0, I = g.domains.imp;
+  let h = thresholdSVG({ rows: [{ label: s.intervention, sub: `vs ${s.comparator}`, ...g.abs, bold: true, fill: fillFor(s.cat, s.c), right: `${crossLabel(g.abs.lo, g.abs.hi, mid)}${I.level && !/crosses/i.test(I.why) ? ' · OIS → −' + I.level : ''}`, badge: { text: `${SYM[s.c]} ${LEVELS[s.c]}`, fill: fillFor(s.cat, s.c) } }],
+    mid, higherBetter: cfg.higherBetter, xlabel: pwXLabel(), title: `Imprecision: 95% CI of the absolute effect vs ${mid > 0 ? '±MID' : 'the null'}` });
+  if (isFinite(I.ois) && I.ntot > 0) h += oisSVG({ n: I.ntot, ois: I.ois, title: 'Optimal information size (applies when the CI does not cross the threshold and the effect is large)' });
+  return h + `<p class="muted">${esc(I.why || '')}</p>`;
+}
+
 function readOverrides() {
   const o = {};
   document.querySelectorAll('#pw-results [data-dom]').forEach(s => o[s.dataset.dom] = +s.value);
@@ -263,6 +337,7 @@ function updatePwFinal() {
   $('#pw-final').innerHTML = `<div class="row gap wrap" style="margin-top:10px"><span class="badge" style="background:#${fill}">${SYM[s.c]} ${LEVELS[s.c]}</span>
     <span>${legendText(s.cat, s.c, s.comparator)}</span></div><p><b>Frase en lenguaje claro:</b> ${esc(plain)}</p>
     <div class="notes">${s.notes.map(n => `<p>• ${esc(n)}</p>`).join('')}</div>`;
+  const vi = $('#pw-impviz'); if (vi) vi.innerHTML = pwImpViz(s);
 }
 function addPwToSoF() {
   const s = pwSummary();
@@ -300,7 +375,7 @@ function runNMA() {
     const pairs = m.T.filter(t => t !== ref).map(t => [t, ref]);
     return { ref, res: gradeNMA({ m, rob, indirect, modifier, mid, large, unit, baseline, higherBetter, incP: +$('#nm-incp').value, sd: +$('#nm-sd').value || NaN }, pairs) };
   });
-  state.lastNm = { m, blocks, outcome: $('#nm-outcome').value, unit, mid, type, higherBetter, overrides: {}, bmode, baseline };
+  state.lastNm = { m, blocks, rob, outcome: $('#nm-outcome').value, unit, mid, type, higherBetter, overrides: {}, bmode, baseline };
   renderNMA();
 }
 const shortName = t => (t.length > 28 ? t.slice(0, 26) + '…' : t);
@@ -315,14 +390,18 @@ function renderNMA() {
     <div class="kpi"><span>I² global</span><b>${pct(m.I2())}</b></div>
     <div class="kpi"><span>Inconsistencia global (diseño-por-tratamiento)</span><b>Q ${f2(dd.Q_inc)}, gl ${dd.df_inc}, p ${fp(dd.p_inc)}</b></div>
     <div class="kpi"><span>Heterogeneidad dentro de diseños</span><b>Q ${f2(dd.Q_het)}, gl ${dd.df_het}, p ${fp(dd.p_het)}</b></div></div>
-    <div class="cols2"><div>${networkSVG(m.T, m.edges(), nArms, shortName)}</div><div><h3>P-scores (solo descriptivos)</h3><table class="data"><thead><tr><th>Tratamiento</th><th>P-score</th><th>Brazos</th><th>Participantes</th></tr></thead><tbody>
+    <div class="cols2"><div>${networkSVG(m.T, m.edges(), nArms, shortName, nmEdgeColor)}<p class="muted">Color de las aristas: riesgo de sesgo de la evidencia directa (peso).</p>${robLegend()}</div><div><h3>P-scores (solo descriptivos)</h3><table class="data"><thead><tr><th>Tratamiento</th><th>P-score</th><th>Brazos</th><th>Participantes</th></tr></thead><tbody>
     ${m.T.slice().sort((a, b) => ps[b] - ps[a]).map(t => `<tr><td>${esc(t)}</td><td>${ps[t].toFixed(2)}</td><td>${sizes.k[t]}</td><td>${nArms[t]}</td></tr>`).join('')}</tbody></table>
     <p class="muted">Los rankings no sustituyen la magnitud ni la certeza: use las categorías del marco contextualizado para concluir.</p></div></div></div>`;
   // forest vs ref + perfil GRADE por comparador
   blocks.forEach((B, bi) => {
     const rows = B.res.rows;
     const fr = rows.map(r => ({ label: r.a, est: tr(r.est), lo: tr(r.est - 1.96 * r.se), hi: tr(r.est + 1.96 * r.se) }));
-    html += `<div class="card"><h2>Frente a ${esc(B.ref)}</h2>${forestSVG({ rows: fr, log: isB, measure: meas + ' (network)', leftLabel: N.higherBetter ? 'Favours ' + shortName(B.ref) : 'Favours intervention', rightLabel: N.higherBetter ? 'Favours intervention' : 'Favours ' + shortName(B.ref), title: `vs ${B.ref}` })}
+    const vrows = rows.map((r, i) => { const c = N.overrides[`${bi}|${i}`] ?? r.c, f = fillFor(r.cat, c);
+      return { label: shortName(r.a), d: r.r[0], lo: r.r[1], hi: r.r[2], fill: f, badge: { text: `${SYM[c]} ${LEVELS[c]}`, fill: f },
+        right: `${r.impLvl === 3 ? 'Large benefit to large harm → −3' : crossLabel(r.r[1], r.r[2], N.mid)}${isFinite(r.ess) && isFinite(r.ois) ? ` · ESS ${r.ess} vs OIS ${r.ois}` : ''}` }; });
+    const impViz = thresholdSVG({ rows: vrows, mid: N.mid, higherBetter: N.higherBetter, title: `Network estimates vs ${B.ref}: imprecision and certainty`, xlabel: isB ? `Absolute effect per ${unit} vs ${B.ref}` : `MD vs ${B.ref}` });
+    html += `<div class="card"><h2>Frente a ${esc(B.ref)}</h2>${impViz}${forestSVG({ rows: fr, log: isB, measure: meas + ' (network)', leftLabel: N.higherBetter ? 'Favours ' + shortName(B.ref) : 'Favours intervention', rightLabel: N.higherBetter ? 'Favours intervention' : 'Favours ' + shortName(B.ref), title: `vs ${B.ref}` })}
     <h3>Perfil de evidencia GRADE para NMA</h3><div class="tablewrap" style="max-height:none"><table class="grade-table"><thead><tr><th>Comparación</th><th>Directa</th><th>Indirecta</th><th>Red: ${meas} (IC 95 %)</th><th>Absoluto${isB ? ' por ' + unit : ''}</th><th>Certeza (editable)</th><th>Razones</th></tr></thead><tbody>
     ${rows.map((r, i) => {
       const dTxt = r.D ? `${r.kdir} ensayo(s); ${meas} ${f2(tr(r.D.dr.est))} (${f2(tr(r.D.dr.est - 1.96 * r.D.dr.se))} a ${f2(tr(r.D.dr.est + 1.96 * r.D.dr.se))})<br>${SYM[r.D.c]} ${LEVELS[r.D.c]}${r.D.reasons.length ? '<br><small>' + r.D.reasons.map(x => esc(x[1])).join('<br>') + '</small>' : ''}` : '—';
@@ -334,6 +413,7 @@ function renderNMA() {
       <td><small>${[...r.nr].map(x => esc(x[1])).join('<br>') || 'Sin bajadas adicionales en la red'}</small></td></tr>`;
     }).join('')}</tbody></table></div></div>`;
   });
+  html += nmDirectViz();
   // league table
   const L = m.T;
   html += `<div class="card"><h2>Tabla de liga (${meas}, IC 95 %; fila vs columna)</h2><div class="tablewrap"><table class="data"><thead><tr><th></th>${L.map(t => `<th>${esc(shortName(t))}</th>`).join('')}</tr></thead><tbody>
@@ -342,8 +422,34 @@ function renderNMA() {
   ${m.netsplit().map(x => `<tr><td>${esc(x.a)} vs ${esc(x.b)}</td><td>${x.k}</td><td>${f2(tr(x.dir))}</td><td>${isFinite(x.ind) ? f2(tr(x.ind)) : '—'}</td><td>${f2(tr(x.net))}</td><td>${pct(x.prop_dir)}</td><td>${fp(x.p)}</td></tr>`).join('')}</tbody></table></div>
   <div class="row end"><button class="primary" id="nm-add">Añadir matriz NMA a la tabla SoF</button></div></div>`;
   $('#nm-results').innerHTML = html;
+  bindVizTabs($('#nm-results'));
   $('#nm-results').querySelectorAll('[data-nmo]').forEach(s => s.addEventListener('change', () => { N.overrides[s.dataset.nmo] = +s.value; renderNMA(); }));
   $('#nm-add').addEventListener('click', addNmToSoF);
+}
+function nmEdgeColor(e) {
+  const N = state.lastNm, D = N && N.blocks[0].res.dcert[[e.a, e.b].sort().join(' || ')];
+  if (!D) return null;
+  const sh = robSegments(D.dr.studies.map((s, i) => ({ rob: N.rob[s], w: D.dr.weights[i] })));
+  const v = Object.fromEntries(sh.map(x => [x.label, x.value]));
+  if (v.High > 0.5) return ROB_COL.high;
+  if (v['Not reported'] > 0.5) return ROB_COL.na;
+  if (v.High > 0 || v['Some concerns'] > 0) return ROB_COL.some;
+  return ROB_COL.low;
+}
+function nmDirectViz() {
+  const N = state.lastNm, { m, blocks } = N, isB = N.type === 'binary', tr = x => (isB ? Math.exp(x) : x), meas = isB ? 'OR' : 'MD';
+  const dc = Object.entries(blocks[0].res.dcert);
+  const robT = `<table class="data wtable"><thead><tr><th>Comparación directa</th><th>Ensayos</th><th>Riesgo de sesgo (peso)</th><th>I²</th><th>Certeza directa</th></tr></thead><tbody>${dc.map(([k, D]) => {
+    const i2 = D.dr.I2, items = D.dr.studies.map((s, i) => ({ rob: N.rob[s], w: D.dr.weights[i] }));
+    return `<tr><td>${esc(k.replace(' || ', ' vs '))}</td><td>${D.dr.k}</td><td>${robBarHTML(items)}</td><td>${isFinite(i2) ? `<div class="wbar"><span style="width:${i2 * 100}%;background:${i2 > 0.5 ? '#E59393' : i2 > 0.3 ? '#FFD966' : '#93C47D'}"></span></div>${(i2 * 100).toFixed(0)}%` : '—'}</td><td><span class="badge" style="background:#${{ 4: 'C9DAEA', 3: 'DCE6F1', 2: 'ECF1F7', 1: 'D9D9D9' }[D.c]}">${SYM[D.c]} ${LEVELS[D.c]}</span>${D.reasons.length ? '<br><small>' + D.reasons.map(x => esc(x[1].split(':')[0])).join('; ') + '</small>' : ''}</td></tr>`;
+  }).join('')}</tbody></table>${robLegend()}<p class="muted">Reglas: −1 por riesgo de sesgo si &gt;50 % del peso procede de ensayos de alto riesgo; −1 por inconsistencia si I² &gt;50 % con ≥2 ensayos (revise además los forest plots).</p>`;
+  const ns = m.netsplit().filter(x => isFinite(x.ind));
+  const rows = ns.flatMap(x => [
+    { label: `${shortName(x.a)} vs ${shortName(x.b)} · direct (${(x.prop_dir * 100).toFixed(0)}%)`, est: tr(x.dir), lo: tr(x.dir - 1.96 * x.se_dir), hi: tr(x.dir + 1.96 * x.se_dir) },
+    { label: `   indirect`, est: tr(x.ind), lo: tr(x.ind - 1.96 * x.se_ind), hi: tr(x.ind + 1.96 * x.se_ind) },
+    { label: `   network · p = ${fp(x.p)}${x.p < 0.1 ? ' ⚠' : ''}`, est: tr(x.net), lo: tr(x.net - 1.96 * x.se_net), hi: tr(x.net + 1.96 * x.se_net) }]);
+  const coh = rows.length ? forestSVG({ rows, log: isB, measure: meas, leftLabel: 'lower with first treatment', rightLabel: 'higher with first treatment', title: 'Direct vs indirect evidence (node-splitting)' }) + '<p class="muted">⚠ p &lt;0,10: se baja −1 por incoherencia solo si ambas fuentes contribuyen (20–80 %).</p>' : '<p class="muted">No hay lazos cerrados: la incoherencia no es evaluable.</p>';
+  return `<div class="card"><h2>Visualización de los dominios GRADE (evidencia directa e incoherencia)</h2>${vizTabs('nm', [['Riesgo de sesgo e inconsistencia', robT], ['Incoherencia', coh]])}</div>`;
 }
 function addNmToSoF() {
   const N = state.lastNm, isB = N.type === 'binary', tr = x => (isB ? Math.exp(x) : x), meas = isB ? 'OR' : 'MD';
