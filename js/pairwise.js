@@ -103,7 +103,7 @@ export function egger(yi, vi) {
   const slope = sxy / sxx, icpt = my - slope * mx;
   const res = Y.map((y, i) => y - icpt - slope * X[i]), s2 = sum(res.map(r => r * r)) / (k - 2);
   const seI = Math.sqrt(s2 * (1 / k + mx * mx / sxx)), t = icpt / seI;
-  return { intercept: icpt, se: seI, t, p: 2 * (1 - pt(Math.abs(t), k - 2)), k };
+  return { intercept: icpt, slope, se: seI, t, p: 2 * (1 - pt(Math.abs(t), k - 2)), k, tcrit: qt(0.975, k - 2) };
 }
 
 // Diferencia de subgrupos (Q entre grupos, efectos aleatorios por subgrupo)

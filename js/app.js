@@ -5,7 +5,7 @@ import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category,
 import { renderEtD } from './etd.js';
 import { bindFigs, effPt, figSettings } from './figs.js';
 import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js';
-import { forestSVG, networkSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js';
+import { forestSVG, networkSVG, funnelSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js';
 import { median } from './stats.js';
 import { HELP_HTML } from './help.js';
 
@@ -366,7 +366,14 @@ function pwVizHTML(robCmp) {
     inc += i2GaugeSVG(fit.I2);
   } else inc = '<p class="muted">Un solo estudio: la inconsistencia no es evaluable.</p>';
   const imp = '<div id="pw-impviz"></div>';
-  return `<div class="card"><h2>Visualización de los dominios GRADE</h2>${vizTabs('pw', [['Riesgo de sesgo', rob], ['Inconsistencia', inc], ['Imprecisión', imp]])}</div>`;
+  // sesgo de publicación: funnel plot + Egger
+  const egAll = fit.k >= 3 ? egger(S.map(x => x.yi), S.map(x => x.vi)) : null;
+  const pub = fit.k >= 3 ? funnelSVG({ pts: S.map(x => ({ y: x.yi, se: Math.sqrt(x.vi), label: x.study, col: ROB_COL[robClass(x.rob)] })), center: fit.est, log: P.isRatio, eg: egAll,
+      title: `Funnel plot — ${P.outcome}`, xlabel: P.isRatio ? `${P.measure} (log scale)` : P.measure,
+      note: fit.k < 10 ? `Only ${fit.k} studies: funnel plot and Egger's test have low power (recommended ≥10 studies); interpret with caution.` : 'Dashed red line: Egger regression; grey triangle: pseudo 95% confidence limits around the pooled estimate.' })
+      + `<p class="muted">Juicio GRADE sugerido: <b>${g.domains.pub.level ? 'serio (−1)' : 'no detectado'}</b> — ${esc(g.domains.pub.why)}. La asimetría puede deberse también a heterogeneidad o a efectos de estudios pequeños verdaderos; considere además estudios no publicados, registros y financiamiento.</p>${robLegend()}`
+    : '<p class="muted">Se necesitan al menos 3 estudios para el funnel plot.</p>';
+  return `<div class="card"><h2>Visualización de los dominios GRADE</h2>${vizTabs('pw', [['Riesgo de sesgo', rob], ['Inconsistencia', inc], ['Imprecisión', imp], ['Sesgo de publicación', pub]])}</div>`;
 }
 function pwImpViz(s) {
   const { g, cfg } = state.lastPw, mid = cfg.threshold === 'MID' ? cfg.mid : 0, I = g.domains.imp;
@@ -555,7 +562,21 @@ function nmDirectViz() {
     { label: `   indirect`, est: tr(x.ind), lo: tr(x.ind - 1.96 * x.se_ind), hi: tr(x.ind + 1.96 * x.se_ind) },
     { label: `   network · p = ${fp(x.p)}${x.p < 0.1 ? ' ⚠' : ''}`, est: tr(x.net), lo: tr(x.net - 1.96 * x.se_net), hi: tr(x.net + 1.96 * x.se_net) }]);
   const coh = rows.length ? forestSVG({ rows, log: isB, measure: meas, leftLabel: 'lower with first treatment', rightLabel: 'higher with first treatment', title: 'Direct vs indirect evidence (node-splitting)' }) + '<p class="muted">⚠ p &lt;0,10: se baja −1 por incoherencia solo si ambas fuentes contribuyen (20–80 %).</p>' : '<p class="muted">No hay lazos cerrados: la incoherencia no es evaluable.</p>';
-  return `<div class="card"><h2>Visualización de los dominios GRADE (evidencia directa e incoherencia)</h2>${vizTabs('nm', [['Riesgo de sesgo e inconsistencia', robT], ['Incoherencia', coh]])}</div>`;
+  // funnel ajustado por comparación (Chaimani 2013): contraste de cada estudio menos la estimación de red de esa comparación
+  const order = [blocks[0].ref, ...m.T.filter(t => t !== blocks[0].ref)];
+  const pts = [];
+  for (const e of m.edges()) {
+    const [older, newer] = order.indexOf(e.a) < order.indexOf(e.b) ? [e.a, e.b] : [e.b, e.a];
+    const dr = m.direct(newer, older); if (!dr) continue;
+    const [net] = m.est(newer, older);
+    dr.ys.forEach((y, i) => pts.push({ y: y - net, v: dr.vs[i], se: Math.sqrt(dr.vs[i]), label: `${dr.studies[i]}: ${newer} vs ${older}`, col: ROB_COL[robClass(N.rob[dr.studies[i]])] }));
+  }
+  const egN = pts.length >= 3 ? egger(pts.map(p => p.y), pts.map(p => p.v)) : null;
+  const fun = pts.length >= 3 ? funnelSVG({ pts, center: 0, log: false, eg: egN, title: `Comparison-adjusted funnel plot — ${N.outcome}`, xlabel: `Study ${meas === 'OR' ? 'log OR' : 'MD'} minus network estimate (comparisons ordered from ${shortName(order[0])} to newer treatments)`,
+      note: pts.length < 10 ? `Only ${pts.length} study comparisons: low power; interpret with caution.` : 'Each point is a study-specific comparison centred at its network estimate; asymmetry suggests small-study effects.' })
+    + `<p class="muted">Funnel ajustado por comparación: el contraste de cada estudio (tratamiento más «nuevo» vs más «antiguo», según el orden: ${esc(order.join(' → '))}) se centra en la estimación de red de esa comparación. Egger sobre los valores centrados. Los ensayos multibrazo aportan varios puntos correlacionados.</p>${robLegend()}`
+    : '<p class="muted">Se necesitan al menos 3 comparaciones de estudios.</p>';
+  return `<div class="card"><h2>Visualización de los dominios GRADE (evidencia directa e incoherencia)</h2>${vizTabs('nm', [['Riesgo de sesgo e inconsistencia', robT], ['Incoherencia', coh], ['Sesgo de publicación (funnel ajustado)', fun]])}</div>`;
 }
 function addNmToSoF(importance) {
   const N = state.lastNm, isB = N.type === 'binary', tr = x => (isB ? Math.exp(x) : x), meas = isB ? 'OR' : 'MD';
@@ -605,14 +626,32 @@ function sofHTML() {
     });
     html += `</tbody></table><div class="notes"><p>Colours apply to the absolute effect and certainty columns (minimally contextualised framework).</p>${mids.length ? `<p>Minimal important differences: ${esc(mids.join('; '))}.</p>` : ''}${notes.map((n, i) => `<p>${'abcdefghijklmnopqrstuvwxyz'[i]}. ${esc(n)}</p>`).join('')}</div>`;
   }
-  nm.forEach(b => {
-    html += `<h3 style="margin-top:22px">Summary of findings (GRADE for network meta-analysis): ${esc(b.outcome)}</h3>` + legendHTML('the comparator', true);
-    html += `<table class="sof matrix"><thead><tr><th>Intervention</th>${b.cols.map(c => `<th>Versus ${esc(c.ref)}</th>`).join('')}</tr></thead><tbody>
-    <tr class="sec"><td>Comparator risk</td>${b.cols.map(c => `<td>${esc(c.base)}</td>`).join('')}</tr><tr class="sec"><td>MID</td>${b.cols.map(() => `<td>${esc(b.mid)}</td>`).join('')}</tr>
-    ${b.rowsOrder.map(t => `<tr><td><b>${esc(t)}</b></td>${b.cols.map(c => { const x = (b.cells[t] || {})[c.ref]; if (!x) return '<td>Comparator</td>'; const fill = fillFor(x.cat, x.c); return `<td class="c" style="background:#${fill}" bgcolor="#${fill}">${esc(x.text).replace(/\n/g, '<br>')}<br>${SYM[x.c]} ${LEVELS[x.c]}${x.letters ? ' <sup>' + x.letters + '</sup>' : ''}</td>`; }).join('')}</tr>`).join('')}
-    </tbody></table><div class="notes"><p>Each cell shows the absolute difference per ${esc(b.mid.split('per ')[1] || 'unit')} (95% CI), the network ${b.methods.type === 'binary' ? 'odds ratio' : 'mean difference'}, the direct evidence and the certainty of the evidence. Random-effects NMA (${b.k} studies; τ² = ${b.tau2.toFixed(2)}). Network estimates start from the certainty of the dominant source (direct or indirect), or the higher of the two when contributions are similar.</p>
-    <p><b>Explanations of certainty ratings:</b></p>${b.letters.map(x => `<p>${x.l}. ${esc(x.text)}.</p>`).join('')}</div>`;
-  });
+  // una tabla por red: los desenlaces que comparten tratamientos van juntos (columnas por desenlace)
+  const nets = [];
+  nm.forEach(b => { const g = nets.find(n => n.some(x => x.rowsOrder.some(t => b.rowsOrder.includes(t)))); if (g) g.push(b); else nets.push([b]); });
+  for (const nm of nets) {
+    // filas = intervenciones; columnas = desenlaces (y comparador, si hay varios)
+    const treat = [];
+    nm.forEach(b => b.rowsOrder.forEach(t => { if (!treat.includes(t)) treat.push(t); }));
+    const cols = nm.flatMap(b => b.cols.map(c => ({ b, c })));
+    const multiRef = nm.some(b => b.cols.length > 1);
+    const gl = []; const G = text => { let i = gl.indexOf(text); if (i < 0) { gl.push(text); i = gl.length - 1; } return 'abcdefghijklmnopqrstuvwxyz'[i] || String(i + 1); };
+    const refs = [...new Set(cols.map(x => x.c.ref))];
+    html += `<h3 style="margin-top:22px">Summary of findings (GRADE for network meta-analysis)</h3>` + legendHTML(refs.length === 1 ? refs[0] : 'the comparator', true);
+    html += `<div class="tablewrap" style="max-height:none"><table class="sof matrix"><thead><tr><th rowspan="${multiRef ? 2 : 1}">Intervention</th>${nm.map(b => `<th colspan="${b.cols.length}">${esc(b.outcome)}${b.importance ? `<br><small>${esc(b.importance)}</small>` : ''}${multiRef ? '' : `<br><small>vs ${esc(b.cols[0].ref)}</small>`}</th>`).join('')}</tr>
+    ${multiRef ? `<tr>${cols.map(x => `<th>vs ${esc(x.c.ref)}</th>`).join('')}</tr>` : ''}</thead><tbody>
+    <tr class="sec"><td>Comparator risk</td>${cols.map(x => `<td>${esc(x.c.base)}</td>`).join('')}</tr>
+    <tr class="sec"><td>MID</td>${cols.map(x => `<td>${esc(x.b.mid)}</td>`).join('')}</tr>
+    ${treat.map(t => `<tr><td><b>${esc(t)}</b></td>${cols.map(({ b, c }) => {
+      const x = (b.cells[t] || {})[c.ref];
+      if (!x) return `<td>${b.rowsOrder.includes(t) ? (t === c.ref ? 'Comparator' : '—') : 'Not reported'}</td>`;
+      const fill = fillFor(x.cat, x.c);
+      const lt = (x.letters || '').split(',').filter(Boolean).map(l => { const n = b.letters.find(y => y.l === l); return n ? G(n.text) : ''; }).filter(Boolean);
+      return `<td class="c" style="background:#${fill}" bgcolor="#${fill}">${esc(x.text).replace(/\n/g, '<br>')}<br>${SYM[x.c]} ${LEVELS[x.c]}${lt.length ? ' <sup>' + [...new Set(lt)].sort().join(',') + '</sup>' : ''}</td>`;
+    }).join('')}</tr>`).join('')}
+    </tbody></table></div><div class="notes"><p>Each cell shows the absolute difference (95% CI), the network ${nm.every(b => b.methods.type === 'binary') ? 'odds ratio' : nm.every(b => b.methods.type !== 'binary') ? 'mean difference' : 'odds ratio or mean difference'}, the direct evidence and the certainty of the evidence. Random-effects NMA per outcome (${nm.map(b => `${b.outcome}: ${b.k} studies, τ² = ${b.tau2.toFixed(2)}`).join('; ')}). Network estimates start from the certainty of the dominant source (direct or indirect), or the higher of the two when contributions are similar.</p>
+    <p><b>Explanations of certainty ratings:</b></p>${gl.map((t, i) => `<p>${'abcdefghijklmnopqrstuvwxyz'[i] || i + 1}. ${esc(t)}.</p>`).join('')}</div>`;
+  }
   return html || '<p class="muted">Aún no hay desenlaces en la tabla.</p>';
 }
 // tablas suplementarias: perfil de evidencia GRADE (pares) y estimados directo/indirecto/red (NMA)

@@ -205,3 +205,39 @@ export function oisSVG({ n, ois, nLabel = 'Total participants', title = 'Optimal
   s += `<text x="${x1 + 80}" y="16" text-anchor="end" class="h" style="fill:${ok ? '#2E8B57' : '#B03A2E'}">${ok ? 'OIS met' : `${(n / ois * 100).toFixed(0)}% of OIS`}</text>`;
   return s + '</svg>';
 }
+
+// Funnel plot con pseudo-IC 95 % y recta de regresión de Egger.
+// pts: [{y, se, label, col}] en escala del análisis (log para razones); center: estimador combinado;
+// eg: {intercept, se, p, k} (Egger: y/se = a + b·(1/se) ⇒ y = b + a·se)
+export function funnelSVG({ pts, center = 0, log = false, measure = '', eg = null, title = '', xlabel = '', note = '' }) {
+  const W = 760, H = 470, x0 = 70, x1 = W - 30, y0 = 50, y1 = H - 90;
+  const seMax = Math.max(...pts.map(p => p.se)) * 1.08 || 1;
+  const xs = pts.flatMap(p => [p.y]).concat([center - 1.96 * seMax, center + 1.96 * seMax]);
+  let lo = Math.min(...xs), hi = Math.max(...xs); const pad = (hi - lo) * 0.05; lo -= pad; hi += pad;
+  const sx = v => x0 + (v - lo) / (hi - lo) * (x1 - x0), sy = se => y0 + se / seMax * (y1 - y0);
+  const tf = v => (log ? Math.exp(v) : v);
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" class="plot" role="img" aria-label="${esc(title || 'Funnel plot')}">`;
+  s += `<style>text{font:12px system-ui,sans-serif;fill:currentColor}.h{font-weight:600}.m{fill:var(--muted,#666);font-size:11px}</style>`;
+  if (title) s += `<text x="8" y="18" class="h">${esc(title)}</text>`;
+  // embudo (pseudo-IC 95 %)
+  s += `<polygon points="${sx(center)},${sy(0)} ${sx(center - 1.96 * seMax)},${sy(seMax)} ${sx(center + 1.96 * seMax)},${sy(seMax)}" fill="#E7ECF2" stroke="#9AA6B5" stroke-dasharray="4 3"/>`;
+  s += `<line x1="${sx(center)}" x2="${sx(center)}" y1="${sy(0)}" y2="${sy(seMax)}" stroke="#1F3A5F" stroke-width="1.4"/>`;
+  if (log || lo < 0 && hi > 0) { const z = 0; if (z > lo && z < hi) s += `<line x1="${sx(z)}" x2="${sx(z)}" y1="${sy(0)}" y2="${sy(seMax)}" stroke="currentColor" stroke-width=".6" stroke-dasharray="2 3"/>`; }
+  // recta de Egger
+  if (eg && isFinite(eg.intercept) && isFinite(eg.slope)) {
+    const a = eg.intercept, b = eg.slope, se1 = 0, se2 = seMax;
+    s += `<line x1="${sx(b + a * se1)}" y1="${sy(se1)}" x2="${sx(b + a * se2)}" y2="${sy(se2)}" stroke="#C0392B" stroke-width="1.6" stroke-dasharray="7 4"><title>Egger regression line</title></line>`;
+  }
+  pts.forEach(p => { s += `<circle cx="${sx(p.y)}" cy="${sy(p.se)}" r="5.5" fill="${p.col || '#1F3A5F'}" stroke="#1B2430" stroke-width=".8" opacity=".9"><title>${esc(p.label)}: ${tf(p.y).toFixed(2)} (SE ${p.se.toFixed(3)})</title></circle>`; });
+  // ejes
+  s += `<line x1="${x0}" x2="${x1}" y1="${y1}" y2="${y1}" stroke="currentColor"/><line x1="${x0}" x2="${x0}" y1="${y0}" y2="${y1}" stroke="currentColor"/>`;
+  const tk = log ? niceTicks(Math.exp(lo), Math.exp(hi), true).map(Math.log) : niceTicks(lo, hi, false);
+  tk.forEach(v => { if (v < lo || v > hi) return; s += `<line x1="${sx(v)}" x2="${sx(v)}" y1="${y1}" y2="${y1 + 4}" stroke="currentColor"/><text x="${sx(v)}" y="${y1 + 17}" text-anchor="middle">${+tf(v).toFixed(2)}</text>`; });
+  niceTicks(0, seMax, false).forEach(v => { if (v > seMax) return; s += `<line x1="${x0 - 4}" x2="${x0}" y1="${sy(v)}" y2="${sy(v)}" stroke="currentColor"/><text x="${x0 - 7}" y="${sy(v) + 4}" text-anchor="end">${+v.toFixed(3)}</text>`; });
+  s += `<text x="${(x0 + x1) / 2}" y="${y1 + 36}" text-anchor="middle">${esc(xlabel || measure)}</text>`;
+  s += `<text transform="translate(18 ${(y0 + y1) / 2}) rotate(-90)" text-anchor="middle">Standard error</text>`;
+  const egTxt = eg ? `Egger's test: intercept ${eg.intercept.toFixed(2)} (95% CI ${(eg.intercept - eg.tcrit * eg.se).toFixed(2)} to ${(eg.intercept + eg.tcrit * eg.se).toFixed(2)}), p = ${eg.p < 0.001 ? '<0.001' : eg.p.toFixed(3)}; k = ${eg.k}` : 'Egger\'s test not estimable (fewer than 3 studies)';
+  s += `<text x="${x0}" y="${y1 + 58}" class="h" style="fill:${eg && eg.p < 0.1 ? '#B03A2E' : 'currentColor'}">${esc(egTxt)}</text>`;
+  if (note) s += `<text x="${x0}" y="${y1 + 76}" class="m">${esc(note)}</text>`;
+  return s + '</svg>';
+}
