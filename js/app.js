@@ -1,14 +1,14 @@
-import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.16-4';
-import { escalc, rma, egger, subgroupTest } from './pairwise.js?v=2026.10.16-4';
-import { NMA, isConnected, armBaseline } from './nma.js?v=2026.10.16-4';
-import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.16-4';
-import { mountThreshold } from './thresh.js?v=2026.10.16-4';
-import { renderEtD } from './etd.js?v=2026.10.16-4';
-import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.16-4';
-import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.16-4';
-import { forestSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.16-4';
-import { median } from './stats.js?v=2026.10.16-4';
-import { HELP_HTML } from './help.js?v=2026.10.16-4';
+import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.16-5';
+import { escalc, rma, egger, subgroupTest } from './pairwise.js?v=2026.10.16-5';
+import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.16-5';
+import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.16-5';
+import { mountThreshold } from './thresh.js?v=2026.10.16-5';
+import { renderEtD } from './etd.js?v=2026.10.16-5';
+import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.16-5';
+import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.16-5';
+import { forestSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.16-5';
+import { median } from './stats.js?v=2026.10.16-5';
+import { HELP_HTML } from './help.js?v=2026.10.16-5';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -169,6 +169,21 @@ const normImp = v => (/crit/i.test(v || '') ? 'Critical' : /surrog|subrog/i.test
 const SINGLE = '__single__';
 const oName = (kind, o) => (o === SINGLE ? ($(kind === 'pw' ? '#pw-outcome' : '#nm-outcome').value || 'Outcome') : o);
 function outcomeRows(o) { return normalize(state.raw, state.map).filter(r => o === SINGLE || !state.map.outcome || r.outcome === o); }
+// riesgo basal del comparador: opciones calculadas a partir de los brazos control del desenlace
+const P0_LABEL = { median: 'Mediana del riesgo en los grupos comparadores', largest: 'Grupo comparador del estudio más grande', p25: 'Percentil 25 del riesgo en los grupos comparadores', pt: 'Proporción combinada (efectos aleatorios)', manual: 'Manual (p. ej., cohorte o registro representativo)' };
+function ctrlStats(rows) {
+  const ok = rows.filter(x => isFinite(x.e2) && x.n2 > 0), p = ok.map(x => x.e2 / x.n2);
+  if (!p.length) return null;
+  const big = ok.reduce((a, b) => (b.n2 > a.n2 ? b : a));
+  return { median: median(p), largest: big.e2 / big.n2, largestName: big.study, p25: quantile(p, 0.25), k: p.length };
+}
+const P0_EN = { median: 'median risk in the comparator groups', largest: 'comparator group of the largest study', p25: '25th percentile of comparator-group risks', lo: 'lower limit of the pooled comparator-arm proportion', hi: 'upper limit of the pooled comparator-arm proportion', pt: 'pooled comparator-arm proportion (random effects)', manual: 'external source (manual)' };
+function p0Source(outcome) {
+  const C = state.ocfg.pw || {}, c = C[outcome] || (Object.keys(C).length === 1 && C['__single__']);
+  if (!c || !c.p0method) return '';
+  return P0_EN[c.p0method] + (c.p0method === 'largest' && c.p0stats ? ` (${c.p0stats.largestName})` : '');
+}
+function p0Value(c) { return c.p0method === 'manual' || !c.p0stats ? c.p0manual : c.p0stats[c.p0method]; }
 function defaultCfg(kind, o) {
   const rows = outcomeRows(o), r = rows.find(x => x.o_dir || x.o_mid || x.o_dis || x.o_importance) || rows[0] || {};
   const t = detectType(state.map), pre = kind === 'pw' ? '#pw-' : '#nm-', unit = +$(pre + 'unit').value;
@@ -178,17 +193,20 @@ function defaultCfg(kind, o) {
   if (r.o_dis > 0) [c.mid, c.mod, c.large] = DT(r.o_dis, unit);
   else if (r.o_mid > 0) c.mid = r.o_mid;
   else c.mid = +$(pre + 'mid').value || '';
+  if (kind === 'nm' && c.binary) { c.p0method = r.o_p0 > 0 ? 'manual' : $('#nm-base').value === 'manual' ? 'pt' : $('#nm-base').value; c.p0manual = r.o_p0 > 0 ? r.o_p0 : ''; }
   if (kind === 'pw') {
     const opts = { binary: ['RR', 'OR', 'RD'], continuous: ['MD', 'SMD', 'ROM'], generic: ['RR', 'OR', 'HR', 'MD', 'SMD'], 'ratio-ci': ['HR', 'OR', 'RR'] }[t.data] || ['RR'];
     c.measures = opts; c.measure = opts[0];
-    const p = rows.map(x => x.e2 / x.n2).filter(isFinite);
-    c.p0 = r.o_p0 > 0 ? r.o_p0 : p.length ? +median(p).toFixed(3) : '';
+    c.p0stats = ctrlStats(rows);
+    c.p0manual = r.o_p0 > 0 ? r.o_p0 : '';
+    c.p0method = r.o_p0 > 0 || !c.p0stats ? 'manual' : 'median';
+    c.p0 = p0Value(c) === '' ? '' : +(+p0Value(c)).toFixed(4);
     c.int = r.o_int || $('#pw-int').value; c.comp = r.o_comp || $('#pw-comp').value;
   }
   return c;
 }
 function outcomeList() { const o = state.map.outcome ? [...new Set(normalize(state.raw, state.map).map(r => r.outcome))] : []; return o.length >= 2 ? o : [SINGLE]; }
-const ocSummary = (kind, c) => `· ${c.n} ${kind === 'nm' ? 'estudios' : 'filas'} · ${c.importance} · ${c.dir === 'higher' ? '↑ deseable' : '↓ indeseable'}${kind === 'pw' ? ' · ' + c.measure : ''} · MID ${c.mid === '' ? '—' : c.mid}${c.mod ? ` / ${c.mod} / ${c.large}` : ''}`;
+const ocSummary = (kind, c) => `· ${c.n} ${kind === 'nm' ? 'estudios' : 'filas'} · ${c.importance} · ${c.dir === 'higher' ? '↑ deseable' : '↓ indeseable'}${kind === 'pw' ? ' · ' + c.measure : ''} · MID ${c.mid === '' ? '—' : c.mid}${c.mod ? ` / ${c.mod} / ${c.large}` : ''}${c.binary && c.p0method ? ` · riesgo basal: ${{ median: 'mediana', largest: 'estudio más grande', p25: 'p25', pt: 'combinado', manual: 'manual' }[c.p0method]}${kind === 'pw' && c.p0 !== '' ? ' ' + (c.p0 * 100).toFixed(1) + '%' : ''}` : ''}`;
 function renderOutcomeConfig(kind) {
   const el = $(kind === 'pw' ? '#pw-outcfg' : '#nm-outcfg'), outs = outcomeList();
   const C = (state.ocfg[kind] = state.ocfg[kind] || {});
@@ -208,7 +226,10 @@ function renderOutcomeConfig(kind) {
         ${fld(o, 'mid', 'MID (umbral pequeño)', 'type="number" step="any"', c.binary ? unitLbl : '')}
         ${fld(o, 'mod', 'Umbral moderado', 'type="number" step="any" placeholder="opcional"')}
         ${fld(o, 'large', 'Umbral grande', 'type="number" step="any" placeholder="opcional"')}
-        ${kind === 'pw' && c.binary ? fld(o, 'p0', 'Riesgo basal (proporción)', 'type="number" step="any" min="0" max="1"') : ''}
+        ${kind === 'pw' && c.binary ? `<label>Riesgo basal del comparador <select data-oc="p0method">${['median', 'largest', 'p25', 'manual'].filter(m => m === 'manual' || c.p0stats).map(m => `<option value="${m}" ${m === c.p0method ? 'selected' : ''}>${P0_LABEL[m]}${m !== 'manual' ? ` (${(c.p0stats[m] * 100).toFixed(1)}%${m === 'largest' ? ', ' + esc(c.p0stats.largestName) : ''})` : ''}</option>`).join('')}</select></label>
+          <label>Riesgo basal (proporción) <input data-oc="p0manual" type="number" step="any" min="0" max="1" value="${esc(c.p0method === 'manual' ? c.p0manual : c.p0)}" ${c.p0method === 'manual' ? '' : 'disabled'}></label>` : ''}
+        ${kind === 'nm' && c.binary ? `<label>Riesgo basal del comparador <select data-oc="p0method">${['pt', 'median', 'largest', 'p25', 'manual'].map(m => `<option value="${m}" ${m === c.p0method ? 'selected' : ''}>${P0_LABEL[m].replace('grupos comparadores', 'brazos del comparador').replace('Grupo comparador', 'Brazo del comparador')}</option>`).join('')}</select></label>
+          <label>Riesgo basal manual (proporción) <input data-oc="p0manual" type="number" step="any" min="0" max="1" value="${esc(c.p0manual)}" ${c.p0method === 'manual' ? '' : 'disabled'}></label>` : ''}
         ${kind === 'pw' ? fld(o, 'int', 'Intervención') + fld(o, 'comp', 'Comparador') : ''}
       </div>
       <details class="thr-oc" open><summary>Umbrales de este desenlace: GRADE-THRESHOLD (disutilidad) o DME 0,2 / 0,5 / 0,8</summary><div class="thr" data-thr="${oi}"></div></details>
@@ -217,7 +238,14 @@ function renderOutcomeConfig(kind) {
     const o = d.dataset.out, c = C[o];
     d.querySelectorAll('[data-oc]').forEach(inp => {
       inp.addEventListener('click', e => { if (inp.dataset.oc === 'include') e.stopPropagation(); });
-      inp.addEventListener('change', () => { c[inp.dataset.oc] = inp.type === 'checkbox' ? inp.checked : inp.value; const sm = d.querySelector('summary .muted'); if (sm) sm.textContent = ocSummary(kind, c); });
+      inp.addEventListener('change', () => {
+        c[inp.dataset.oc] = inp.type === 'checkbox' ? inp.checked : inp.value;
+        if (inp.dataset.oc === 'p0method' || inp.dataset.oc === 'p0manual') {
+          if (kind === 'pw') { const v = p0Value(c); c.p0 = v === '' ? '' : +(+v).toFixed(4); }
+          const man = d.querySelector('[data-oc="p0manual"]');
+          if (man) { man.disabled = c.p0method !== 'manual'; if (kind === 'pw' && c.p0method !== 'manual') man.value = c.p0; }
+        }
+        const sm = d.querySelector('summary .muted'); if (sm) sm.textContent = ocSummary(kind, c); });
     });
     const thr = d.querySelector('[data-thr]');
     mountThreshold(thr, `oc-${kind}-${thr.dataset.thr}-`, {
@@ -239,7 +267,10 @@ function applyCfg(kind, o) {
     set('#pw-dir', c.dir); set('#pw-mid', c.mid); set('#pw-t2', c.mod); set('#pw-t3', c.large);
     if (c.binary && c.p0 !== '') set('#pw-p0', c.p0);
     set('#pw-int', c.int); set('#pw-comp', c.comp);
-  } else { set('#nm-dir', c.dir); set('#nm-mid', c.mid); set('#nm-mod', c.mod); set('#nm-large', c.large); }
+  } else {
+    set('#nm-dir', c.dir); set('#nm-mid', c.mid); set('#nm-mod', c.mod); set('#nm-large', c.large);
+    if (c.binary && c.p0method) { set('#nm-base', c.p0method); if (c.p0method === 'manual') set('#nm-p0', c.p0manual); }
+  }
   return c.importance;
 }
 async function runAll(kind, only = null) {
@@ -491,7 +522,7 @@ function pwSummary() {
     type: 'pairwise', outcome: P.outcome, intervention: P.int, comparator: P.comp, participants: `${ntot || '–'} (${fit.k} ${des === 'RCT' ? (fit.k > 1 ? 'RCTs' : 'RCT') : des})`, relative: rel,
     risk0: g.ab.binary ? `${f1(cfg.p0 * cfg.unit)}${un}` : '—', risk1: g.ab.binary ? `${f1(g.ab.p1 * cfg.unit)}${un}` : '—',
     absolute: absTxt, c, cat, notes, plain: plainStatement(cat, c, P.int, lcOut(P.outcome), cfg.threshold, cfg.higherBetter ? -g.abs.d : g.abs.d).replace(/an? (important )?(reduction|increase)/, (m0) => m0),
-    importance: P.importance || '', k: fit.k, ntot, design: cfg.design,
+    importance: P.importance || '', k: fit.k, ntot, design: cfg.design, p0src: g.ab.binary ? p0Source(P.outcome) : '',
     domains: Object.fromEntries(['rob', 'inc', 'ind', 'imp', 'pub', 'up'].map(d => [d, { level: o[d] != null ? o[d] : d === 'up' ? g.up.level : g.domains[d].level, why: o[d + '_why'] ?? (d === 'up' ? g.up.why : g.domains[d].why) }])),
     plainRaw: { cat, c, d: g.abs.d }, magThs: thresholdSet(3, cfg.threshold === 'MID' ? cfg.mid : 0, cfg.moderate, cfg.large), d: g.abs.d, mid: cfg.threshold === 'MID' ? `${cfg.mid}${un}` : 'null', higherBetter: cfg.higherBetter,
     methods: { measure, method: P.method, test: P.test, threshold: cfg.threshold, design: cfg.design, scheme: cfg.scheme, usePI: cfg.usePI },
@@ -731,7 +762,7 @@ function sofHTML() {
       if (s.mid !== 'null') mids.push(`${s.outcome} ${s.mid}`);
       html += `<tr><td>${esc(s.outcome)}</td><td>${esc(s.participants)}</td><td>${esc(s.relative)}</td><td>${esc(s.risk0)}</td><td>${esc(s.risk1)}</td><td class="c" style="background:#${fill}" bgcolor="#${fill}">${esc(s.absolute)}</td><td class="c" style="background:#${fill}" bgcolor="#${fill}">${SYM[s.c]}<br>${LEVELS[s.c]}${lt ? ' <sup>' + lt + '</sup>' : ''}</td><td>${esc(s.plain)}</td></tr>`;
     });
-    html += `</tbody></table><div class="notes"><p>Colours apply to the absolute effect and certainty columns (minimally contextualised framework).</p>${mids.length ? `<p>Minimal important differences: ${esc(mids.join('; '))}.</p>` : ''}${notes.map((n, i) => `<p>${'abcdefghijklmnopqrstuvwxyz'[i]}. ${esc(n)}</p>`).join('')}</div>`;
+    html += `</tbody></table><div class="notes"><p>Colours apply to the absolute effect and certainty columns (minimally contextualised framework).</p>${mids.length ? `<p>Minimal important differences: ${esc(mids.join('; '))}.</p>` : ''}${pw.some(x => x.p0src) ? `<p>Baseline (comparator) risk: ${esc(pw.filter(x => x.p0src).map(x => `${x.outcome}, ${x.risk0} (${x.p0src})`).join('; '))}.</p>` : ''}${notes.map((n, i) => `<p>${'abcdefghijklmnopqrstuvwxyz'[i]}. ${esc(n)}</p>`).join('')}</div>`;
   }
   // una tabla por red: los desenlaces que comparten tratamientos van juntos (columnas por desenlace)
   const nets = [];
@@ -757,6 +788,7 @@ function sofHTML() {
       return `<td class="c" style="background:#${fill}" bgcolor="#${fill}">${esc(x.text).replace(/\n/g, '<br>')}<br>${SYM[x.c]} ${LEVELS[x.c]}${lt.length ? ' <sup>' + [...new Set(lt)].sort().join(',') + '</sup>' : ''}</td>`;
     }).join('')}</tr>`).join('')}
     </tbody></table></div><div class="notes"><p>Each cell shows the absolute difference (95% CI), the network ${nm.every(b => b.methods.type === 'binary') ? 'odds ratio' : nm.every(b => b.methods.type !== 'binary') ? 'mean difference' : 'odds ratio or mean difference'}, the direct evidence and the certainty of the evidence. Random-effects NMA per outcome (${nm.map(b => `${b.outcome}: ${b.k} studies, τ² = ${b.tau2.toFixed(2)}`).join('; ')}). Network estimates start from the certainty of the dominant source (direct or indirect), or the higher of the two when contributions are similar.</p>
+    ${nm.some(b => b.methods.type === 'binary') ? `<p>Comparator risk: ${esc(nm.filter(b => b.methods.type === 'binary').map(b => `${b.outcome}, ${P0_EN[b.methods.bmode] || b.methods.bmode}`).join('; '))}.</p>` : ''}
     <p><b>Explanations of certainty ratings:</b></p>${gl.map((t, i) => `<p>${'abcdefghijklmnopqrstuvwxyz'[i] || i + 1}. ${esc(t)}.</p>`).join('')}</div>`;
   }
   return html || '<p class="muted">Aún no hay desenlaces en la tabla.</p>';
@@ -775,7 +807,7 @@ function profileHTML() {
     html += `<p><b>Supplementary table. GRADE evidence profile: ${esc(I)} compared with ${esc(C)}</b></p><table class="suppl"><thead><tr><th>Outcome (importance)</th><th>No. of studies (participants)</th><th>Study design</th><th>Risk of bias</th><th>Inconsistency</th><th>Indirectness</th><th>Imprecision</th><th>Publication bias</th><th>Other considerations</th><th>Relative effect (95% CI)</th><th>Absolute effect (95% CI)</th><th>Certainty</th></tr></thead><tbody>
     ${items.map(x => `<tr><td>${esc(x.outcome)}${x.importance ? ` (${esc(x.importance)})` : ''}</td><td>${x.k} (${x.ntot || '–'})</td><td>${x.design === 'RCT' ? 'Randomised trials' : 'Non-randomised studies'}</td><td>${dom('rob', x)}</td><td>${dom('inc', x)}</td><td>${dom('ind', x)}</td><td>${dom('imp', x)}</td><td>${dom('pub', x)}</td>
       <td>${x.domains.up && x.domains.up.level ? `Rated up +${x.domains.up.level}<sup>${L(x.domains.up.why || 'Rated up')}</sup>` : 'None'}</td><td>${esc(x.relative)}</td><td>${esc(x.absolute)}</td><td>${SYM[x.c]} ${LEVELS[x.c]}</td></tr>`).join('')}</tbody></table>
-    <div class="notes"><p>CI = confidence interval. Absolute effects calculated with the baseline risk of the comparator group. Thresholds: ${esc(items.filter(x => x.mid !== 'null').map(x => `${x.outcome} ${x.mid}`).join('; ') || 'null effect')}.</p>${notes.map((n, i) => `<p>${'abcdefghijklmnopqrstuvwxyz'[i]}. ${esc(n)}.</p>`).join('')}</div><br>`;
+    <div class="notes"><p>CI = confidence interval. Absolute effects calculated with the baseline risk of the comparator group${items.some(x => x.p0src) ? ` (${esc(items.filter(x => x.p0src).map(x => `${x.outcome}: ${x.risk0}, ${x.p0src}`).join('; '))})` : ''}. Thresholds: ${esc(items.filter(x => x.mid !== 'null').map(x => `${x.outcome} ${x.mid}`).join('; ') || 'null effect')}.</p>${notes.map((n, i) => `<p>${'abcdefghijklmnopqrstuvwxyz'[i]}. ${esc(n)}.</p>`).join('')}</div><br>`;
   }
   nm.forEach(b => { b.suppl.forEach(t => { html += t.html + '<br>'; }); if (b.nsHtml) html += b.nsHtml + '<br>'; });
   return html || '<p class="muted">Añada desenlaces a la tabla SoF para generar las tablas suplementarias.</p>';

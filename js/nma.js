@@ -1,7 +1,7 @@
 // NMA frecuentista basado en contrastes (GLS, equivalente a netmeta), efectos aleatorios con tau² común (REML),
 // covarianza exacta de ensayos multibrazo, Q por diseño (diseño-por-tratamiento), node-splitting por retro-cálculo,
 // P-scores. Port de engine.py (NMA de vacunas HBV).
-import { inv, mul, mulv, T, dot, blockDiag, goldenMin, pnorm, pchisq, qt, sum } from './stats.js?v=2026.10.16-4';
+import { inv, mul, mulv, T, dot, blockDiag, goldenMin, pnorm, pchisq, qt, sum } from './stats.js?v=2026.10.16-5';
 
 export function armStats(arms, outcome, cc = 0.5) {
   // arms: [{t, r, n}] binario | [{t, m, sd, n}] continuo
@@ -181,11 +181,19 @@ export function isConnected(studies) {
 }
 
 // Riesgo basal de un brazo: proporción combinada (logit, DL) o mediana
+// cuantil (tipo 7, interpolación lineal, como R por defecto)
+export function quantile(xs, q) {
+  const v = xs.filter(isFinite).sort((x, y) => x - y), k = v.length;
+  if (!k) return NaN; const h = (k - 1) * q, lo = Math.floor(h);
+  return v[lo] + (h - lo) * ((v[Math.min(lo + 1, k - 1)]) - v[lo]);
+}
 export function armBaseline(studies, t, which = 'pt') {
   const a = [];
   for (const arms of Object.values(studies)) arms.forEach(x => { if (x.t === t) a.push([+x.r, +x.n]); });
   if (!a.length) return NaN;
   if (which === 'median') { const ps = a.map(([r, n]) => r / n).sort((x, y) => x - y); const k = ps.length; return k % 2 ? ps[(k - 1) / 2] : (ps[k / 2 - 1] + ps[k / 2]) / 2; }
+  if (which === 'p25') return quantile(a.map(([r, n]) => r / n), 0.25);
+  if (which === 'largest') { const [r, n] = a.reduce((x, y) => (y[1] > x[1] ? y : x)); return r / n; }
   const y = a.map(([r, n]) => Math.log((r + 0.5) / (n - r + 0.5))), v = a.map(([r, n]) => 1 / (r + 0.5) + 1 / (n - r + 0.5));
   const w = v.map(x => 1 / x), m = sum(w.map((x, i) => x * y[i])) / sum(w);
   const Q = sum(w.map((x, i) => x * (y[i] - m) ** 2)), df = y.length - 1;
