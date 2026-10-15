@@ -294,21 +294,25 @@ export function gradeNMA(cfg, pairs) {
   };
   const out = [];
   for (const [a, b] of pairs) {
-    const kk = key(a, b), [e, s] = m.est(a, b), D = dcert[kk];
+    const kk = key(a, b), [e, s] = m.est(a, b), D0 = dcert[kk];
+    // orientar la evidencia directa como a vs b (las aristas se guardan en orden alfabético)
+    const D = D0 ? { ...D0, dr: m.direct(a, b) } : null;
     // indirecta: lazo de primer orden dominante o camino más corto
     let path = null;
     const common = Object.keys(adj[a] || {}).filter(c => c !== b && adj[b] && adj[b][c] != null);
     if (common.length) { const c = common.reduce((x, y) => (adj[a][x] + adj[b][x] <= adj[a][y] + adj[b][y] ? x : y)); path = [a, c, b]; }
     else path = shortest(a, b, kk);
-    let indC = null; const indR = [];
+    let indC = null; const indR = []; let loop = [];
     if (path) {
       const edges = path.slice(1).map((x, i) => key(path[i], x));
+      loop = path.slice(1).map((x, i) => ({ a: path[i], b: x, c: dcert[key(path[i], x)].c, reasons: dcert[key(path[i], x)].reasons, k: dcert[key(path[i], x)].dr.k }));
       indC = Math.min(...edges.map(x => dcert[x].c));
       indR.push(['path', `${path.length === 3 ? 'First-order loop' : 'Higher-order path'}: ${path.join(' → ')} (lowest direct certainty ${LEVELS[indC]})`]);
       const mods = new Set(edges.flatMap(x => dcert[x].dr.studies.map(st => modifier[st]).filter(v => v != null && v !== '')));
       if (mods.size > 1) { indC = Math.max(1, indC - 1); indR.push(['intr', `Intransitivity (−1): the indirect path combines trials with different levels of the effect modifier (${[...mods].join(', ')})`]); }
     }
-    const nsd = ns[kk];
+    const ns0 = ns[kk];
+    const nsd = ns0 && ns0.a !== a ? { ...ns0, a, b, dir: -ns0.dir, ind: -ns0.ind, net: -ns0.net, diff: -ns0.diff } : ns0;
     const hasInd = path && (!D || (nsd && isFinite(nsd.ind)));
     let start, basis;
     if (D && hasInd) {
@@ -372,9 +376,29 @@ export function gradeNMA(cfg, pairs) {
       }
     }
     c = Math.max(1, c);
+    // pasos A2 y B3 (Izcovich 2023): imprecisión de los estimados directo e indirecto; solo se usan si hay incoherencia
+    const impOf = (est, se) => {
+      if (!isFinite(est) || !isFinite(se)) return null;
+      const q = absolute(measure, est, est - 1.96 * se, est + 1.96 * se, p0), rr = [q.d * sc, q.lo * sc, q.hi * sc];
+      let lvl;
+      if (+scheme === 3 && thsN.length > 1) lvl = Math.min(3, crossings(rr[1], rr[2], thsN).length);
+      else { const n = ths.filter(t => rr[1] < t && rr[2] > t).length; lvl = n === 2 && large > 0 && rr[1] < -large && rr[2] > large ? 3 : n; }
+      return { est, se, r: rr, lvl };
+    };
+    const dImp = D ? impOf(D.dr.est, D.dr.se) : null;
+    const dFinal = dImp ? Math.max(1, D.c - dImp.lvl) : null;
+    const iImp = !D ? impOf(e, s) : nsd && isFinite(nsd.ind) ? impOf(nsd.ind, nsd.se_ind) : null;
+    const iFinal = iImp && indC != null ? Math.max(1, indC - iImp.lvl) : null;
+    // paso D: mejor estimado; si directo e indirecto son incoherentes, el de mayor certeza final
+    const incoherent = !!(D && hasInd && nsd && isFinite(nsd.p) && nsd.p < incP);
+    let best = { src: 'network', c, est: e, se: s, r };
+    if (incoherent) {
+      const cand = [best, dFinal != null ? { src: 'direct', c: dFinal, est: dImp.est, se: dImp.se, r: dImp.r } : null, iFinal != null ? { src: 'indirect', c: iFinal, est: iImp.est, se: iImp.se, r: iImp.r } : null].filter(Boolean);
+      best = cand.reduce((x, y) => (y.c > x.c ? y : x));
+    }
     const cat = category(r[0], mid, higherBetter, r[1], r[2]);
     const ndir = D ? sum(D.dr.studies.flatMap(st => m.studies[st].filter(x => x.t === a || x.t === b).map(x => +x.n))) : 0;
-    out.push({ a, b, est: e, se: s, ess, ois, impLvl, piAbs, ths: thsN, D, path, indC, indR, nsd, start, basis, c, nr, applied, r, p0, cat, ndir, kdir: D ? D.dr.k : 0, measure });
+    out.push({ a, b, est: e, se: s, ess, ois, impLvl, piAbs, ths: thsN, loop, dImp, dFinal, iImp, iFinal, incoherent, best, bestCat: category(best.r[0], mid, higherBetter, best.r[1], best.r[2]), D, path, indC, indR, nsd, start, basis, c, nr, applied, r, p0, cat, ndir, kdir: D ? D.dr.k : 0, measure });
   }
   return { rows: out, dd, dcert };
 }

@@ -58,6 +58,14 @@ const ALIAS = {
   mean: ['mean', 'media', 'm'],
   sd: ['sd', 'de'],
   modifier: ['modifier', 'modificador', 'population', 'poblacion', 'población', 'effect_modifier'],
+  // configuración opcional por desenlace (repetida en las filas del desenlace)
+  o_importance: ['importance', 'importancia'],
+  o_dir: ['direction', 'direccion', 'dirección'],
+  o_mid: ['mid', 'dmi'],
+  o_dis: ['disutility', 'disutilidad'],
+  o_p0: ['baseline_risk', 'riesgo_basal', 'p0'],
+  o_int: ['intervention_name', 'nombre_intervencion'],
+  o_comp: ['comparator_name', 'nombre_comparador'],
 };
 
 export function mapColumns(rows) {
@@ -70,7 +78,7 @@ export function mapColumns(rows) {
 
 export function normalize(rows, map) {
   const num = v => { if (v === '' || v == null) return NaN; const x = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.')); return x; };
-  const NUM = new Set(['e1', 'n1', 'e2', 'n2', 'm1', 'sd1', 'm2', 'sd2', 'yi', 'sei', 'est', 'lower', 'upper', 'n', 'r', 'mean', 'sd']);
+  const NUM = new Set(['e1', 'n1', 'e2', 'n2', 'm1', 'sd1', 'm2', 'sd2', 'yi', 'sei', 'est', 'lower', 'upper', 'n', 'r', 'mean', 'sd', 'o_mid', 'o_dis', 'o_p0']);
   return rows.map(r => {
     const o = {};
     for (const [k, c] of Object.entries(map)) o[k] = NUM.has(k) ? num(r[c]) : String(r[c] ?? '').trim();

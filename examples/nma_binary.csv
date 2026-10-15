@@ -1,28 +1,82 @@
-study,treatment,responders,n,rob,modifier
-Trial 01 (2008),Placebo,50,159,Low,Pre-dialysis
-Trial 01 (2008),Drug A,101,176,Low,Pre-dialysis
-Trial 02 (2009),Placebo,39,143,Some concerns,Dialysis
-Trial 02 (2009),Drug A,17,45,Some concerns,Dialysis
-Trial 03 (2010),Placebo,29,45,Some concerns,Pre-dialysis
-Trial 03 (2010),Drug A,176,208,Some concerns,Pre-dialysis
-Trial 04 (2011),Placebo,33,72,Low,Dialysis
-Trial 04 (2011),Drug B,129,169,Low,Dialysis
-Trial 05 (2012),Placebo,18,41,High,Pre-dialysis
-Trial 05 (2012),Drug B,77,123,High,Pre-dialysis
-Trial 06 (2013),Drug A,105,170,Some concerns,Dialysis
-Trial 06 (2013),Drug B,99,157,Some concerns,Dialysis
-Trial 07 (2014),Drug A,55,83,Low,Pre-dialysis
-Trial 07 (2014),Drug C,44,87,Low,Pre-dialysis
-Trial 08 (2015),Placebo,33,65,Some concerns,Dialysis
-Trial 08 (2015),Drug C,52,116,Some concerns,Dialysis
-Trial 09 (2016),Drug B,57,128,Some concerns,Pre-dialysis
-Trial 09 (2016),Drug D,52,93,Some concerns,Pre-dialysis
-Trial 10 (2017),Drug B,38,61,High,Dialysis
-Trial 10 (2017),Drug D,74,129,High,Dialysis
-Trial 11 (2018),Placebo,31,80,Some concerns,Pre-dialysis
-Trial 11 (2018),Drug A,79,151,Some concerns,Pre-dialysis
-Trial 11 (2018),Drug E,71,123,Some concerns,Pre-dialysis
-Trial 12 (2019),Drug C,98,215,Some concerns,Dialysis
-Trial 12 (2019),Drug E,135,199,Some concerns,Dialysis
-Trial 13 (2020),Placebo,126,197,Low,Pre-dialysis
-Trial 13 (2020),Drug D,111,150,Low,Pre-dialysis
+study,outcome,treatment,responders,n,rob,modifier,importance,direction,mid,disutility
+Trial 01 (2008),Response,Placebo,50,159,Low,Pre-dialysis,Critical,higher,5,
+Trial 01 (2008),Response,Drug A,101,176,Low,Pre-dialysis,Critical,higher,5,
+Trial 02 (2009),Response,Placebo,39,143,Some concerns,Dialysis,Critical,higher,5,
+Trial 02 (2009),Response,Drug A,17,45,Some concerns,Dialysis,Critical,higher,5,
+Trial 03 (2010),Response,Placebo,29,45,Some concerns,Pre-dialysis,Critical,higher,5,
+Trial 03 (2010),Response,Drug A,176,208,Some concerns,Pre-dialysis,Critical,higher,5,
+Trial 04 (2011),Response,Placebo,33,72,Low,Dialysis,Critical,higher,5,
+Trial 04 (2011),Response,Drug B,129,169,Low,Dialysis,Critical,higher,5,
+Trial 05 (2012),Response,Placebo,18,41,High,Pre-dialysis,Critical,higher,5,
+Trial 05 (2012),Response,Drug B,77,123,High,Pre-dialysis,Critical,higher,5,
+Trial 06 (2013),Response,Drug A,105,170,Some concerns,Dialysis,Critical,higher,5,
+Trial 06 (2013),Response,Drug B,99,157,Some concerns,Dialysis,Critical,higher,5,
+Trial 07 (2014),Response,Drug A,55,83,Low,Pre-dialysis,Critical,higher,5,
+Trial 07 (2014),Response,Drug C,44,87,Low,Pre-dialysis,Critical,higher,5,
+Trial 08 (2015),Response,Placebo,33,65,Some concerns,Dialysis,Critical,higher,5,
+Trial 08 (2015),Response,Drug C,52,116,Some concerns,Dialysis,Critical,higher,5,
+Trial 09 (2016),Response,Drug B,57,128,Some concerns,Pre-dialysis,Critical,higher,5,
+Trial 09 (2016),Response,Drug D,52,93,Some concerns,Pre-dialysis,Critical,higher,5,
+Trial 10 (2017),Response,Drug B,38,61,High,Dialysis,Critical,higher,5,
+Trial 10 (2017),Response,Drug D,74,129,High,Dialysis,Critical,higher,5,
+Trial 11 (2018),Response,Placebo,31,80,Some concerns,Pre-dialysis,Critical,higher,5,
+Trial 11 (2018),Response,Drug A,79,151,Some concerns,Pre-dialysis,Critical,higher,5,
+Trial 11 (2018),Response,Drug E,71,123,Some concerns,Pre-dialysis,Critical,higher,5,
+Trial 12 (2019),Response,Drug C,98,215,Some concerns,Dialysis,Critical,higher,5,
+Trial 12 (2019),Response,Drug E,135,199,Some concerns,Dialysis,Critical,higher,5,
+Trial 13 (2020),Response,Placebo,126,197,Low,Pre-dialysis,Critical,higher,5,
+Trial 13 (2020),Response,Drug D,111,150,Low,Pre-dialysis,Critical,higher,5,
+Trial 01 (2008),Serious adverse events,Placebo,26,159,Low,Pre-dialysis,Critical,lower,2,
+Trial 01 (2008),Serious adverse events,Drug A,35,176,Low,Pre-dialysis,Critical,lower,2,
+Trial 02 (2009),Serious adverse events,Placebo,14,143,Some concerns,Dialysis,Critical,lower,2,
+Trial 02 (2009),Serious adverse events,Drug A,5,45,Some concerns,Dialysis,Critical,lower,2,
+Trial 03 (2010),Serious adverse events,Placebo,5,45,Some concerns,Pre-dialysis,Critical,lower,2,
+Trial 03 (2010),Serious adverse events,Drug A,27,208,Some concerns,Pre-dialysis,Critical,lower,2,
+Trial 04 (2011),Serious adverse events,Placebo,6,72,Low,Dialysis,Critical,lower,2,
+Trial 04 (2011),Serious adverse events,Drug B,29,169,Low,Dialysis,Critical,lower,2,
+Trial 05 (2012),Serious adverse events,Placebo,4,41,High,Pre-dialysis,Critical,lower,2,
+Trial 05 (2012),Serious adverse events,Drug B,17,123,High,Pre-dialysis,Critical,lower,2,
+Trial 06 (2013),Serious adverse events,Drug A,12,170,Some concerns,Dialysis,Critical,lower,2,
+Trial 06 (2013),Serious adverse events,Drug B,24,157,Some concerns,Dialysis,Critical,lower,2,
+Trial 07 (2014),Serious adverse events,Drug A,8,83,Low,Pre-dialysis,Critical,lower,2,
+Trial 07 (2014),Serious adverse events,Drug C,3,87,Low,Pre-dialysis,Critical,lower,2,
+Trial 08 (2015),Serious adverse events,Placebo,8,65,Some concerns,Dialysis,Critical,lower,2,
+Trial 08 (2015),Serious adverse events,Drug C,10,116,Some concerns,Dialysis,Critical,lower,2,
+Trial 09 (2016),Serious adverse events,Drug B,12,128,Some concerns,Pre-dialysis,Critical,lower,2,
+Trial 09 (2016),Serious adverse events,Drug D,8,93,Some concerns,Pre-dialysis,Critical,lower,2,
+Trial 10 (2017),Serious adverse events,Drug B,9,61,High,Dialysis,Critical,lower,2,
+Trial 10 (2017),Serious adverse events,Drug D,17,129,High,Dialysis,Critical,lower,2,
+Trial 11 (2018),Serious adverse events,Placebo,5,80,Some concerns,Pre-dialysis,Critical,lower,2,
+Trial 11 (2018),Serious adverse events,Drug A,15,151,Some concerns,Pre-dialysis,Critical,lower,2,
+Trial 11 (2018),Serious adverse events,Drug E,10,123,Some concerns,Pre-dialysis,Critical,lower,2,
+Trial 12 (2019),Serious adverse events,Drug C,27,215,Some concerns,Dialysis,Critical,lower,2,
+Trial 12 (2019),Serious adverse events,Drug E,23,199,Some concerns,Dialysis,Critical,lower,2,
+Trial 13 (2020),Serious adverse events,Placebo,22,197,Low,Pre-dialysis,Critical,lower,2,
+Trial 13 (2020),Serious adverse events,Drug D,26,150,Low,Pre-dialysis,Critical,lower,2,
+Trial 01 (2008),Discontinuation due to adverse events,Placebo,15,159,Low,Pre-dialysis,Important,lower,3,
+Trial 01 (2008),Discontinuation due to adverse events,Drug A,19,176,Low,Pre-dialysis,Important,lower,3,
+Trial 02 (2009),Discontinuation due to adverse events,Placebo,6,143,Some concerns,Dialysis,Important,lower,3,
+Trial 02 (2009),Discontinuation due to adverse events,Drug A,6,45,Some concerns,Dialysis,Important,lower,3,
+Trial 03 (2010),Discontinuation due to adverse events,Placebo,4,45,Some concerns,Pre-dialysis,Important,lower,3,
+Trial 03 (2010),Discontinuation due to adverse events,Drug A,13,208,Some concerns,Pre-dialysis,Important,lower,3,
+Trial 04 (2011),Discontinuation due to adverse events,Placebo,4,72,Low,Dialysis,Important,lower,3,
+Trial 04 (2011),Discontinuation due to adverse events,Drug B,16,169,Low,Dialysis,Important,lower,3,
+Trial 05 (2012),Discontinuation due to adverse events,Placebo,2,41,High,Pre-dialysis,Important,lower,3,
+Trial 05 (2012),Discontinuation due to adverse events,Drug B,8,123,High,Pre-dialysis,Important,lower,3,
+Trial 06 (2013),Discontinuation due to adverse events,Drug A,21,170,Some concerns,Dialysis,Important,lower,3,
+Trial 06 (2013),Discontinuation due to adverse events,Drug B,13,157,Some concerns,Dialysis,Important,lower,3,
+Trial 07 (2014),Discontinuation due to adverse events,Drug A,7,83,Low,Pre-dialysis,Important,lower,3,
+Trial 07 (2014),Discontinuation due to adverse events,Drug C,3,87,Low,Pre-dialysis,Important,lower,3,
+Trial 08 (2015),Discontinuation due to adverse events,Placebo,2,65,Some concerns,Dialysis,Important,lower,3,
+Trial 08 (2015),Discontinuation due to adverse events,Drug C,7,116,Some concerns,Dialysis,Important,lower,3,
+Trial 09 (2016),Discontinuation due to adverse events,Drug B,12,128,Some concerns,Pre-dialysis,Important,lower,3,
+Trial 09 (2016),Discontinuation due to adverse events,Drug D,16,93,Some concerns,Pre-dialysis,Important,lower,3,
+Trial 10 (2017),Discontinuation due to adverse events,Drug B,3,61,High,Dialysis,Important,lower,3,
+Trial 10 (2017),Discontinuation due to adverse events,Drug D,13,129,High,Dialysis,Important,lower,3,
+Trial 11 (2018),Discontinuation due to adverse events,Placebo,5,80,Some concerns,Pre-dialysis,Important,lower,3,
+Trial 11 (2018),Discontinuation due to adverse events,Drug A,10,151,Some concerns,Pre-dialysis,Important,lower,3,
+Trial 11 (2018),Discontinuation due to adverse events,Drug E,6,123,Some concerns,Pre-dialysis,Important,lower,3,
+Trial 12 (2019),Discontinuation due to adverse events,Drug C,11,215,Some concerns,Dialysis,Important,lower,3,
+Trial 12 (2019),Discontinuation due to adverse events,Drug E,28,199,Some concerns,Dialysis,Important,lower,3,
+Trial 13 (2020),Discontinuation due to adverse events,Placebo,3,197,Low,Pre-dialysis,Important,lower,3,
+Trial 13 (2020),Discontinuation due to adverse events,Drug D,9,150,Low,Pre-dialysis,Important,lower,3,

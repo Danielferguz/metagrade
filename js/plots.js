@@ -9,7 +9,8 @@ function scaleFn(lo, hi, x0, x1, log) {
 function niceTicks(lo, hi, log) {
   if (log) {
     const cand = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100];
-    return cand.filter(v => v >= lo * 0.999 && v <= hi * 1.001);
+    const t = cand.filter(v => v >= lo * 0.999 && v <= hi * 1.001);
+    return t.length > 8 ? t.filter(v => [0.01, 0.1, 1, 10, 100].includes(v) || (t.length <= 10 && [0.5, 2].includes(v))) : t;
   }
   const span = hi - lo, step = Math.pow(10, Math.floor(Math.log10(span / 4)));
   const m = span / step > 20 ? 5 : span / step > 8 ? 2 : 1, st = step * m, out = [];

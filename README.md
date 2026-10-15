@@ -14,6 +14,8 @@ Todo se calcula en el navegador: los datos no salen de tu computadora. No requie
 | GRADE por pares | Umbral MID o nulo sobre efectos absolutos; sugerencias por dominio (riesgo de sesgo por peso, inconsistencia por lado del umbral, indirectness, imprecisión con OIS y cociente de IC, sesgo de publicación, subir certeza) editables con justificación |
 | GRADE para NMA | Certeza directa, indirecta (lazo dominante + intransitividad), red (fuente dominante + incoherencia) e imprecisión absoluta con tamaño muestral efectivo y OIS (GRADE 33); calificación editable por comparación |
 | Salidas | Tabla SoF por pares y matriz SoF de NMA con leyenda de colores (paleta estándar o apta para daltonismo); Word (.doc), CSV, copiar; texto de métodos en inglés |
+| NMA paso a paso | Orden de Izcovich et al. (BMJ 2023): directa (A) → indirecta (B) → red (C) → mejor estimado (D), con diagrama por comparación y tabla suplementaria tipo BMJ |
+| Figuras | Descarga SVG / PNG / TIFF con DPI incrustado, ancho de columna de revista y fuente Arial |
 | Marco EtD | Paso 4: evidencia a la decisión (por pares o múltiples intervenciones) con juicios sugeridos, recomendación y exportación a Word |
 
 ## Uso

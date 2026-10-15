@@ -8,6 +8,7 @@ const VAR = ['Varía', 'Se desconoce'];
 const CERT_ES = { 4: 'Alta', 3: 'Moderada', 2: 'Baja', 1: 'Muy baja' };
 const SIZE_ES = ['Trivial', 'Pequeño', 'Moderado', 'Grande'];
 const IMPORTANCE = ['Crítico', 'Importante', 'Subrogado'];
+const IMP_MAP = { critical: 'Crítico', 'crítico': 'Crítico', critico: 'Crítico', important: 'Importante', importante: 'Importante', surrogate: 'Subrogado', subrogado: 'Subrogado', 'not important': 'Importante' };
 
 const CRIT_PW = [
   { id: 'ben', t: 'Beneficios', q: '¿Cuán sustanciales son los beneficios ocasionados al brindar la intervención frente a brindar el comparador?', o: ['Trivial', 'Pequeño', 'Moderado', 'Grande'], x: VAR },
@@ -38,13 +39,13 @@ const persist = () => CTX.save('mg-etd', S);
 
 // ---------- sugerencias ----------
 function outcomesPW() {
-  return CTX.sof.filter(s => s.type === 'pairwise').map(s => {
+  return CTX.sof.filter(s => s.type === 'pairwise' && `${s.intervention} || ${s.comparator}` === S.cmp).map(s => {
     const ths = s.magThs && s.magThs.length ? s.magThs : [];
     const mg = isFinite(s.d) && ths.length ? magnitude(s.d, ths, s.higherBetter) : { dir: s.cat === 'benefit' ? 'benefit' : s.cat === 'harm' ? 'harm' : 'none', size: s.cat === 'nodiff' ? 0 : 1 };
-    return { ...s, mg, imp: S.importance[s.outcome] || 'Crítico' };
+    return { ...s, mg, imp: S.importance[s.outcome] || IMP_MAP[String(s.importance || '').toLowerCase()] || 'Crítico' };
   });
 }
-const sizeWord = (mg) => (mg.dir === 'none' ? 'trivial' : `${SIZE_ES[mg.size].toLowerCase()} ${mg.dir === 'benefit' ? 'beneficio' : 'daño'}`);
+const sizeWord = (mg) => (mg.dir === 'none' ? 'trivial' : `${mg.dir === 'benefit' ? 'beneficio' : 'daño'} ${SIZE_ES[mg.size].toLowerCase()}`);
 function suggestPW(O) {
   if (!O.length) return { ben: 'Se desconoce', dan: 'Se desconoce', cer: 'Ningún estudio incluido' };
   const rel = O.filter(o => o.imp !== 'Subrogado');
@@ -150,7 +151,8 @@ export function renderEtD(root, ctx) {
   S = S || ctx.load('mg-etd', null) || { head: {}, j: {}, ev: {}, cons: {}, importance: {}, mode: null };
   const pw = ctx.sof.filter(s => s.type === 'pairwise'), nm = ctx.sof.filter(s => s.type === 'nma');
   if (!S.mode) S.mode = pw.length || !nm.length ? 'pw' : 'nma';
-  if (pw.length) { S.head.intervencion ||= pw[0].intervention; S.head.comparador ||= pw[0].comparator; }
+  const cmps = [...new Set(pw.map(s => `${s.intervention} || ${s.comparator}`))];
+  if (!cmps.includes(S.cmp)) { S.cmp = cmps[0]; if (pw.length) { S.head.intervencion = pw[0].intervention; S.head.comparador = pw[0].comparator; } }
   S.head.escenario ||= ''; S.head.perspectiva ||= 'Recomendación clínica poblacional';
   const O = S.mode === 'pw' ? outcomesPW() : [];
   const crit = S.mode === 'pw' ? CRIT_PW : CRIT_NMA;
@@ -159,6 +161,7 @@ export function renderEtD(root, ctx) {
   const rec = recommendation(sg);
   root.innerHTML = `<div class="card"><div class="row between wrap"><h2>Marco de la evidencia a la decisión (EtD)</h2>
     <div class="row gap wrap"><label>Tipo <select id="etd-mode"><option value="pw" ${S.mode === 'pw' ? 'selected' : ''}>Intervención vs comparador (por pares)</option><option value="nma" ${S.mode === 'nma' ? 'selected' : ''}>Múltiples intervenciones (NMA)</option></select></label>
+    ${S.mode === 'pw' && cmps.length > 1 ? `<label>Comparación <select id="etd-cmp">${cmps.map(c => `<option value="${esc(c)}" ${c === S.cmp ? 'selected' : ''}>${esc(c.replace(' || ', ' vs '))}</option>`).join('')}</select></label>` : ''}
     <button class="ghost" id="etd-doc">Descargar Word (.doc)</button><button class="ghost" id="etd-regen">Regenerar textos</button><button class="ghost danger" id="etd-clear">Reiniciar</button></div></div>
     <p class="muted">Basado en GRADE EtD (Alonso-Coello et al., BMJ 2016) con el formato de las GPC de IETSI-EsSalud. Los desenlaces se toman de la tabla SoF (paso 3). Los juicios «sugeridos» son propuestas: el grupo elaborador decide y justifica.</p>
     <h3>Presentación</h3><div class="form">${HEAD.map(([k, l]) => `<label>${l}<input data-head="${k}" value="${esc(S.head[k] || '')}"></label>`).join('')}</div>
@@ -170,6 +173,7 @@ export function renderEtD(root, ctx) {
     <p class="muted">Sugerencia: fuerte solo con certeza moderada/alta, balance claro («Favorece…») y sin barreras de recursos, equidad, aceptabilidad o factibilidad. GRADE admite recomendaciones fuertes con certeza baja en situaciones paradigmáticas; justifíquelo.</p></div></div></div>`;
   const rerender = () => { persist(); renderEtD(root, CTX); };
   root.querySelector('#etd-mode').addEventListener('change', e => { S.mode = e.target.value; rerender(); });
+  root.querySelector('#etd-cmp')?.addEventListener('change', e => { S.cmp = e.target.value; const [i, c] = S.cmp.split(' || '); S.head.intervencion = i; S.head.comparador = c; S.j = {}; S.ev = {}; S.cons = {}; delete S.recJust; delete S.recText; delete S.recLabel; rerender(); });
   root.querySelectorAll('[data-head]').forEach(el => el.addEventListener('change', () => { S.head[el.dataset.head] = el.value; rerender(); }));
   root.querySelectorAll('[data-imp]').forEach(el => el.addEventListener('change', () => { S.importance[el.dataset.imp] = el.value; rerender(); }));
   root.querySelectorAll('input[type=radio][name^="etd-"]').forEach(el => el.addEventListener('change', () => { S.j[el.name.slice(4)] = el.value; delete S.recJust; delete S.recText; delete S.recLabel; rerender(); }));

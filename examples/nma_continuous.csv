@@ -1,22 +1,64 @@
-study,treatment,mean,sd,n,rob
-Study A 2012,Usual care,0.12,8.68,39,Low
-Study A 2012,Exercise,-5.9,11.55,69,Low
-Study B 2013,Usual care,0.05,10.97,40,Some concerns
-Study B 2013,Exercise,-4.51,11.1,55,Some concerns
-Study C 2014,Usual care,-0.21,9.41,118,High
-Study C 2014,Diet,-1.56,10.99,59,High
-Study D 2015,Usual care,1.71,8.45,111,Low
-Study D 2015,Diet,-2.62,10.83,52,Low
-Study E 2016,Exercise,-0.46,9.34,41,Some concerns
-Study E 2016,Exercise + diet,-6.91,9.28,108,Some concerns
-Study F 2017,Diet,-3.98,9.57,30,High
-Study F 2017,Exercise + diet,-6.25,8.73,111,High
-Study G 2018,Usual care,1.34,10.05,71,Low
-Study G 2018,Exercise + diet,-2.56,8.77,73,Low
-Study H 2019,Usual care,0.4,10.1,109,Some concerns
-Study H 2019,Drug,-6.56,11.37,79,Some concerns
-Study I 2020,Drug,-2.6,9.53,38,High
-Study I 2020,Exercise,-4.17,10.99,116,High
-Study J 2021,Usual care,-0.98,9.9,93,Low
-Study J 2021,Diet,-2.06,9.24,45,Low
-Study J 2021,Exercise,-4.12,9.59,110,Low
+study,outcome,treatment,mean,sd,n,rob,importance,direction,mid
+Study A 2012,Systolic blood pressure (mmHg),Usual care,0.12,8.68,39,Low,Important,lower,5
+Study A 2012,Systolic blood pressure (mmHg),Exercise,-5.9,11.55,69,Low,Important,lower,5
+Study B 2013,Systolic blood pressure (mmHg),Usual care,0.05,10.97,40,Some concerns,Important,lower,5
+Study B 2013,Systolic blood pressure (mmHg),Exercise,-4.51,11.1,55,Some concerns,Important,lower,5
+Study C 2014,Systolic blood pressure (mmHg),Usual care,-0.21,9.41,118,High,Important,lower,5
+Study C 2014,Systolic blood pressure (mmHg),Diet,-1.56,10.99,59,High,Important,lower,5
+Study D 2015,Systolic blood pressure (mmHg),Usual care,1.71,8.45,111,Low,Important,lower,5
+Study D 2015,Systolic blood pressure (mmHg),Diet,-2.62,10.83,52,Low,Important,lower,5
+Study E 2016,Systolic blood pressure (mmHg),Exercise,-0.46,9.34,41,Some concerns,Important,lower,5
+Study E 2016,Systolic blood pressure (mmHg),Exercise + diet,-6.91,9.28,108,Some concerns,Important,lower,5
+Study F 2017,Systolic blood pressure (mmHg),Diet,-3.98,9.57,30,High,Important,lower,5
+Study F 2017,Systolic blood pressure (mmHg),Exercise + diet,-6.25,8.73,111,High,Important,lower,5
+Study G 2018,Systolic blood pressure (mmHg),Usual care,1.34,10.05,71,Low,Important,lower,5
+Study G 2018,Systolic blood pressure (mmHg),Exercise + diet,-2.56,8.77,73,Low,Important,lower,5
+Study H 2019,Systolic blood pressure (mmHg),Usual care,0.4,10.1,109,Some concerns,Important,lower,5
+Study H 2019,Systolic blood pressure (mmHg),Drug,-6.56,11.37,79,Some concerns,Important,lower,5
+Study I 2020,Systolic blood pressure (mmHg),Drug,-2.6,9.53,38,High,Important,lower,5
+Study I 2020,Systolic blood pressure (mmHg),Exercise,-4.17,10.99,116,High,Important,lower,5
+Study J 2021,Systolic blood pressure (mmHg),Usual care,-0.98,9.9,93,Low,Important,lower,5
+Study J 2021,Systolic blood pressure (mmHg),Diet,-2.06,9.24,45,Low,Important,lower,5
+Study J 2021,Systolic blood pressure (mmHg),Exercise,-4.12,9.59,110,Low,Important,lower,5
+Study A 2012,"Physical function (SF-36 PCS, 0-100)",Usual care,41.68,8.41,39,Low,Critical,higher,5
+Study A 2012,"Physical function (SF-36 PCS, 0-100)",Exercise,45.5,8.4,69,Low,Critical,higher,5
+Study B 2013,"Physical function (SF-36 PCS, 0-100)",Usual care,41.42,9.26,40,Some concerns,Critical,higher,5
+Study B 2013,"Physical function (SF-36 PCS, 0-100)",Exercise,46.25,8.71,55,Some concerns,Critical,higher,5
+Study C 2014,"Physical function (SF-36 PCS, 0-100)",Usual care,38.49,8.62,118,High,Critical,higher,5
+Study C 2014,"Physical function (SF-36 PCS, 0-100)",Diet,40.05,8.76,59,High,Critical,higher,5
+Study D 2015,"Physical function (SF-36 PCS, 0-100)",Usual care,41.11,8.12,111,Low,Critical,higher,5
+Study D 2015,"Physical function (SF-36 PCS, 0-100)",Diet,42.82,9.69,52,Low,Critical,higher,5
+Study E 2016,"Physical function (SF-36 PCS, 0-100)",Exercise,44.67,9.66,41,Some concerns,Critical,higher,5
+Study E 2016,"Physical function (SF-36 PCS, 0-100)",Exercise + diet,47.09,8.65,108,Some concerns,Critical,higher,5
+Study F 2017,"Physical function (SF-36 PCS, 0-100)",Diet,43.75,8.35,30,High,Critical,higher,5
+Study F 2017,"Physical function (SF-36 PCS, 0-100)",Exercise + diet,49.65,9.87,111,High,Critical,higher,5
+Study G 2018,"Physical function (SF-36 PCS, 0-100)",Usual care,40.79,8.44,71,Low,Critical,higher,5
+Study G 2018,"Physical function (SF-36 PCS, 0-100)",Exercise + diet,43.48,9.25,73,Low,Critical,higher,5
+Study H 2019,"Physical function (SF-36 PCS, 0-100)",Usual care,38.02,9.53,109,Some concerns,Critical,higher,5
+Study H 2019,"Physical function (SF-36 PCS, 0-100)",Drug,38.87,8.1,79,Some concerns,Critical,higher,5
+Study I 2020,"Physical function (SF-36 PCS, 0-100)",Drug,42.42,8.28,38,High,Critical,higher,5
+Study I 2020,"Physical function (SF-36 PCS, 0-100)",Exercise,46.74,9.36,116,High,Critical,higher,5
+Study J 2021,"Physical function (SF-36 PCS, 0-100)",Usual care,42.42,8.51,93,Low,Critical,higher,5
+Study J 2021,"Physical function (SF-36 PCS, 0-100)",Diet,42.86,9.34,45,Low,Critical,higher,5
+Study J 2021,"Physical function (SF-36 PCS, 0-100)",Exercise,47.24,9.47,110,Low,Critical,higher,5
+Study A 2012,"Fatigue (FACIT-F, 0-52)",Usual care,31.88,8.23,39,Low,Important,higher,3
+Study A 2012,"Fatigue (FACIT-F, 0-52)",Exercise,35.23,7.48,69,Low,Important,higher,3
+Study B 2013,"Fatigue (FACIT-F, 0-52)",Usual care,29.21,8.61,40,Some concerns,Important,higher,3
+Study B 2013,"Fatigue (FACIT-F, 0-52)",Exercise,32.21,7.36,55,Some concerns,Important,higher,3
+Study C 2014,"Fatigue (FACIT-F, 0-52)",Usual care,28.03,8.65,118,High,Important,higher,3
+Study C 2014,"Fatigue (FACIT-F, 0-52)",Diet,29.12,8.0,59,High,Important,higher,3
+Study D 2015,"Fatigue (FACIT-F, 0-52)",Usual care,32.67,8.55,111,Low,Important,higher,3
+Study D 2015,"Fatigue (FACIT-F, 0-52)",Diet,33.23,7.82,52,Low,Important,higher,3
+Study E 2016,"Fatigue (FACIT-F, 0-52)",Exercise,35.41,8.62,41,Some concerns,Important,higher,3
+Study E 2016,"Fatigue (FACIT-F, 0-52)",Exercise + diet,35.58,8.37,108,Some concerns,Important,higher,3
+Study F 2017,"Fatigue (FACIT-F, 0-52)",Diet,30.99,8.62,30,High,Important,higher,3
+Study F 2017,"Fatigue (FACIT-F, 0-52)",Exercise + diet,36.36,7.55,111,High,Important,higher,3
+Study G 2018,"Fatigue (FACIT-F, 0-52)",Usual care,32.77,8.35,71,Low,Important,higher,3
+Study G 2018,"Fatigue (FACIT-F, 0-52)",Exercise + diet,36.36,7.7,73,Low,Important,higher,3
+Study H 2019,"Fatigue (FACIT-F, 0-52)",Usual care,31.07,7.98,109,Some concerns,Important,higher,3
+Study H 2019,"Fatigue (FACIT-F, 0-52)",Drug,32.67,8.16,79,Some concerns,Important,higher,3
+Study I 2020,"Fatigue (FACIT-F, 0-52)",Drug,32.69,8.22,38,High,Important,higher,3
+Study I 2020,"Fatigue (FACIT-F, 0-52)",Exercise,35.24,7.46,116,High,Important,higher,3
+Study J 2021,"Fatigue (FACIT-F, 0-52)",Usual care,26.95,8.39,93,Low,Important,higher,3
+Study J 2021,"Fatigue (FACIT-F, 0-52)",Diet,25.68,7.41,45,Low,Important,higher,3
+Study J 2021,"Fatigue (FACIT-F, 0-52)",Exercise,28.39,7.96,110,Low,Important,higher,3

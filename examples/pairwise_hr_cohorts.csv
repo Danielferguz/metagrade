@@ -1,5 +1,25 @@
-study,estimate,lower,upper,n,rob,design
-Nordic cohort 2021,0.82,0.687,0.978,4200,Serious,NRSI
-US claims 2022,0.76,0.601,0.962,2600,Serious,NRSI
-Registry Asia 2023,0.91,0.678,1.221,1500,Moderate,NRSI
-Multicentre 2024,0.7,0.455,1.077,600,Serious,NRSI
+study,outcome,estimate,lower,upper,n,rob,design,importance,direction,mid,disutility,baseline_risk,intervention_name,comparator_name
+Nordic cohort 2021,All-cause mortality,0.82,0.687,0.978,4200,Serious,NRSI,Critical,lower,,1,0.15,SGLT2 inhibitor,DPP-4 inhibitor
+US claims 2022,All-cause mortality,0.76,0.601,0.962,2600,Serious,NRSI,Critical,lower,,1,0.15,SGLT2 inhibitor,DPP-4 inhibitor
+Registry Asia 2023,All-cause mortality,0.91,0.678,1.221,1500,Moderate,NRSI,Critical,lower,,1,0.15,SGLT2 inhibitor,DPP-4 inhibitor
+Multicentre 2024,All-cause mortality,0.7,0.455,1.077,600,Serious,NRSI,Critical,lower,,1,0.15,SGLT2 inhibitor,DPP-4 inhibitor
+Nordic cohort 2021,Major adverse cardiovascular events,0.919,0.645,1.309,1237,Serious,NRSI,Critical,lower,,0.8,0.12,SGLT2 inhibitor,DPP-4 inhibitor
+US claims 2022,Major adverse cardiovascular events,0.822,0.627,1.079,5873,Serious,NRSI,Critical,lower,,0.8,0.12,SGLT2 inhibitor,DPP-4 inhibitor
+Registry Asia 2023,Major adverse cardiovascular events,0.793,0.691,0.911,3494,Moderate,NRSI,Critical,lower,,0.8,0.12,SGLT2 inhibitor,DPP-4 inhibitor
+Multicentre 2024,Major adverse cardiovascular events,0.923,0.677,1.259,5957,Serious,NRSI,Critical,lower,,0.8,0.12,SGLT2 inhibitor,DPP-4 inhibitor
+UK primary care 2024,Major adverse cardiovascular events,0.881,0.663,1.171,4563,Moderate,NRSI,Critical,lower,,0.8,0.12,SGLT2 inhibitor,DPP-4 inhibitor
+Nordic cohort 2021,Acute kidney injury,0.765,0.606,0.964,2445,Serious,NRSI,Important,lower,,0.5,0.06,SGLT2 inhibitor,DPP-4 inhibitor
+US claims 2022,Acute kidney injury,0.813,0.655,1.008,5340,Serious,NRSI,Important,lower,,0.5,0.06,SGLT2 inhibitor,DPP-4 inhibitor
+Registry Asia 2023,Acute kidney injury,0.779,0.616,0.986,1805,Moderate,NRSI,Important,lower,,0.5,0.06,SGLT2 inhibitor,DPP-4 inhibitor
+Multicentre 2024,Acute kidney injury,0.732,0.542,0.989,3911,Serious,NRSI,Important,lower,,0.5,0.06,SGLT2 inhibitor,DPP-4 inhibitor
+UK primary care 2024,Acute kidney injury,0.775,0.606,0.992,3736,Moderate,NRSI,Important,lower,,0.5,0.06,SGLT2 inhibitor,DPP-4 inhibitor
+Nordic cohort 2021,Lower-limb amputation,1.326,0.73,2.407,1969,Serious,NRSI,Critical,lower,0.3,,0.01,SGLT2 inhibitor,DPP-4 inhibitor
+US claims 2022,Lower-limb amputation,1.229,0.903,1.673,3050,Serious,NRSI,Critical,lower,0.3,,0.01,SGLT2 inhibitor,DPP-4 inhibitor
+Registry Asia 2023,Lower-limb amputation,1.374,0.952,1.983,5903,Moderate,NRSI,Critical,lower,0.3,,0.01,SGLT2 inhibitor,DPP-4 inhibitor
+Multicentre 2024,Lower-limb amputation,1.286,1.03,1.604,4558,Serious,NRSI,Critical,lower,0.3,,0.01,SGLT2 inhibitor,DPP-4 inhibitor
+UK primary care 2024,Lower-limb amputation,1.259,0.719,2.206,5916,Moderate,NRSI,Critical,lower,0.3,,0.01,SGLT2 inhibitor,DPP-4 inhibitor
+Nordic cohort 2021,Fractures,1.078,0.802,1.449,1283,Serious,NRSI,Important,lower,1,,0.04,SGLT2 inhibitor,DPP-4 inhibitor
+US claims 2022,Fractures,1.014,0.716,1.437,2373,Serious,NRSI,Important,lower,1,,0.04,SGLT2 inhibitor,DPP-4 inhibitor
+Registry Asia 2023,Fractures,1.068,0.848,1.345,3148,Moderate,NRSI,Important,lower,1,,0.04,SGLT2 inhibitor,DPP-4 inhibitor
+Multicentre 2024,Fractures,1.058,0.843,1.327,5138,Serious,NRSI,Important,lower,1,,0.04,SGLT2 inhibitor,DPP-4 inhibitor
+UK primary care 2024,Fractures,1.105,0.945,1.292,4073,Moderate,NRSI,Important,lower,1,,0.04,SGLT2 inhibitor,DPP-4 inhibitor

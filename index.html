@@ -81,6 +81,16 @@
 
 <!-- ============ ANÁLISIS ============ -->
 <section id="tab-analisis" class="tab">
+  <details class="card figset"><summary><b>Formato de figuras para revistas</b> <span class="muted">(descargas SVG / PNG / TIFF debajo de cada gráfico)</span></summary>
+    <div class="form" style="margin-top:10px">
+      <label>Ancho <select id="fig-width"><option value="single">1 columna · 85 mm (3,35 in)</option><option value="onehalf">1,5 columnas · 120 mm</option><option value="double" selected>2 columnas · 174 mm (6,85 in)</option><option value="custom">Personalizado</option></select></label>
+      <label>Ancho personalizado (mm) <input id="fig-mm" type="number" value="174" min="40" max="260"></label>
+      <label>Resolución <select id="fig-dpi"><option value="300">300 dpi (fotos / color)</option><option value="600" selected>600 dpi (combinada)</option><option value="1000">1000 dpi (líneas)</option></select></label>
+      <label>Fuente <select id="fig-font"><option value="arial">Arial</option><option value="helvetica">Helvetica</option><option value="times">Times New Roman</option></select></label>
+    </div>
+    <p class="muted" id="fig-note"></p>
+    <p class="muted">Textos en inglés, fondo blanco y texto negro (BMJ, Lancet, JAMA, Elsevier y Springer aceptan TIFF o vectorial; ≥300 dpi en color, ≥600–1000 dpi en líneas; letra final ≥6–7 pt). El PNG y el TIFF incluyen la resolución en sus metadatos.</p>
+  </details>
   <div class="empty card" id="no-data"><p>Primero sube un archivo o carga un ejemplo en la pestaña <b>Datos</b>.</p></div>
 
   <!-- PARES -->
@@ -129,7 +139,7 @@
           <label><input type="checkbox" id="pw-dose"> gradiente dosis-respuesta (no aleatorizados)</label>
         </div>
       </details>
-      <div class="row end"><button class="primary" id="pw-run">Ejecutar meta-análisis</button></div>
+      <div class="row end gap"><button class="ghost" id="pw-runall" title="Usa las columnas importance, direction, mid, disutility, baseline_risk si existen">Ejecutar todos los desenlaces y añadir a SoF</button><button class="primary" id="pw-run">Ejecutar meta-análisis</button></div>
     </div>
     <div id="pw-results"></div>
   </div>
@@ -155,7 +165,15 @@
         <label>DE combinada (continuo, para OIS) <input id="nm-sd" type="number" step="any" placeholder="opcional"></label>
         <label>Umbral p de incoherencia (node-split) <select id="nm-incp"><option value="0.10">0,10</option><option value="0.05">0,05</option></select></label>
       </div>
-      <div class="row end"><button class="primary" id="nm-run">Ejecutar NMA</button></div>
+      <details class="helper"><summary>Calcular los umbrales con GRADE-THRESHOLD (disutilidad)</summary>
+        <div class="row gap wrap">
+          <label>Disutilidad del estado (0–1) <input id="nm-dt-dis" type="number" step="any" value="1"></label>
+          <button class="ghost" id="nm-dt-calc">Calcular</button>
+          <span id="nm-dt-out" class="muted"></span>
+        </div>
+        <p class="muted">DT1 = 1,35, DT2 = 3,21 y DT3 = 6,25 por 100 ÷ disutilidad (Morgano et al., J Clin Epidemiol 2025). Rellena MID (pequeño), umbral moderado y umbral grande. Para desenlaces deseables (p. ej., respuesta), use la utilidad de alcanzar el estado.</p>
+      </details>
+      <div class="row end gap"><button class="ghost" id="nm-runall" title="Usa las columnas importance, direction, mid, disutility si existen">Ejecutar todos los desenlaces y añadir a SoF</button><button class="primary" id="nm-run">Ejecutar NMA</button></div>
     </div>
     <div id="nm-results"></div>
   </div>
@@ -175,6 +193,12 @@
     </div>
     <p class="muted">Agrega desenlaces desde la pestaña de análisis («Añadir a la tabla SoF»). Las celdas de efecto absoluto y certeza se colorean según la leyenda (marco mínimamente contextualizado).</p>
     <div id="sof"></div>
+  </div>
+  <div class="card">
+    <div class="row between wrap"><h2>Tablas suplementarias de la valoración GRADE</h2>
+      <div class="row gap wrap"><button class="ghost" id="sup-doc">Descargar Word (.doc)</button><button class="ghost" id="sup-csv">Descargar CSV</button></div></div>
+    <p class="muted">Perfil de evidencia GRADE por desenlace (meta-análisis por pares) y, para NMA, estimados directo, indirecto y de red con su certeza (formato de BMJ 2023;383:e076226, tabla suplementaria 8).</p>
+    <div id="suppl"></div>
   </div>
   <div class="card">
     <h2>Texto para la sección de métodos</h2>

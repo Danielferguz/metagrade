@@ -36,6 +36,19 @@ export const HELP_HTML = `
 <li><b>Inconsistencia:</b> estimadores absolutos de cada estudio frente a las zonas de ±MID (verde = beneficio importante, amarillo = poca o ninguna diferencia, rojo = daño importante), peso por zona frente al criterio del 80 %, e I² como criterio secundario. En NMA, I² de cada comparación directa y gráfico directa vs indirecta vs red (node-splitting).</li>
 <li><b>Imprecisión:</b> IC 95 % del efecto absoluto frente a ±MID con la regla aplicada («cruza +MID → −1», «cruza ambos → −2»), el recuadro de certeza coloreado y, cuando corresponde, el N (o tamaño muestral efectivo en NMA) frente al OIS. En NMA, todas las comparaciones frente al comparador en un solo gráfico tipo resumen gráfico.</li>
 </ul>
+<h3>NMA paso a paso (Izcovich et al., BMJ 2023;381:e074495)</h3>
+<p>Para cada comparación la app sigue el orden de la figura 1 de la guía y lo muestra en un diagrama (A→D) y en una tabla resumen (clic en una fila para ver su diagrama):</p>
+<ul>
+<li><b>A · Directa.</b> A1: riesgo de sesgo, inconsistencia, evidencia indirecta y sesgo de publicación → certeza directa <i>preliminar</i>. A2 (solo si hay incoherencia): imprecisión → certeza directa <i>final</i>.</li>
+<li><b>B · Indirecta.</b> B1: lazo de primer orden dominante (o camino de mayor orden) y la menor certeza preliminar de sus comparaciones directas. B2: intransitividad → certeza indirecta <i>preliminar</i>. B3 (solo si hay incoherencia): imprecisión → <i>final</i>.</li>
+<li><b>C · Red.</b> C1: punto de partida según la dominancia (directa &gt;60 %, indirecta &gt;60 % o la mayor si contribuyen de forma similar). C2: incoherencia (node-split) y, si está activada, heterogeneidad por intervalo de predicción. C3: imprecisión → certeza de red <i>final</i>.</li>
+<li><b>D · Mejor estimado.</b> Si directa e indirecta no son incoherentes, se usa la estimación de red. Si lo son (node-split p &lt; umbral), se presenta el estimado (red, directo o indirecto) con mayor certeza final; la tabla SoF y la matriz NMA lo indican.</li>
+</ul>
+<p><b>Tabla suplementaria</b> (formato de BMJ 2023;383:e076226): estimado directo (IC 95 %), n.º de ECA, participantes por brazo, I², certeza directa, estimado indirecto, certeza indirecta, estimado NMA y su certeza, con notas al pie (a, b, c…). En la pestaña 3 se reúnen además los <b>perfiles de evidencia GRADE</b> de los meta-análisis por pares; todo se exporta a Word (horizontal) o CSV.</p>
+<h3>Figuras para revistas</h3>
+<p>Debajo de cada gráfico: SVG (vectorial), PNG y TIFF con la resolución incrustada. Elija el ancho (1 columna 85 mm, 1,5 columnas 120 mm, 2 columnas 174 mm o personalizado), la resolución (300/600/1000 dpi) y la fuente (Arial, Helvetica o Times). Se exportan con fondo blanco y texto negro; la app indica el tamaño de letra resultante.</p>
+<h3>Varios desenlaces a la vez</h3>
+<p>«Ejecutar todos los desenlaces y añadir a SoF» analiza cada valor de la columna <code>outcome</code> con la configuración actual, más estas columnas opcionales por desenlace: <code>importance</code> (Critical / Important / Surrogate), <code>direction</code> (higher / lower), <code>mid</code>, <code>disutility</code> (calcula MID, umbral moderado y grande con GRADE-THRESHOLD), <code>baseline_risk</code>, <code>intervention_name</code>, <code>comparator_name</code>. Los ejemplos incluyen 5–7 desenlaces por base para ver completas la tabla SoF, las tablas suplementarias y el EtD.</p>
 <h3>Paso 4: marco de la evidencia a la decisión (EtD)</h3>
 <p>Toma los desenlaces de la tabla SoF y arma el EtD con el formato de las GPC de IETSI-EsSalud: presentación (pregunta, población, intervención, comparador, escenario, perspectiva, conflictos de interés), importancia de cada desenlace (crítico / importante / subrogado), y los criterios beneficios, daños, certeza, desenlaces importantes, balance, uso de recursos, equidad, aceptabilidad y factibilidad, con juicio, evidencia y consideraciones adicionales. Reglas de las sugerencias:</p>
 <ul>
@@ -60,6 +73,7 @@ export const HELP_HTML = `
 <li>Guyatt G, et al. Core GRADE 1–7. BMJ 2025;389:e081903–e083867.</li>
 <li>Brignardello-Petersen R, et al. GRADE guidelines 33: imprecision in a network meta-analysis. J Clin Epidemiol 2021;139:49-56.</li>
 <li>Puhan MA, et al. BMJ 2014;349:g5630 · Brignardello-Petersen R, et al. J Clin Epidemiol 2018;93:36-44 · BMJ 2020;371:m3900.</li>
+<li>Izcovich A, et al. A guide and pragmatic considerations for applying GRADE to network meta-analysis. BMJ 2023;381:e074495.</li>
 <li>Alonso-Coello P, et al. GRADE Evidence to Decision (EtD) frameworks 1 y 2. BMJ 2016;353:i2016, i2089.</li>
 <li>Morgano GP, et al. GRADE-THRESHOLD. J Clin Epidemiol 2025;179:111639.</li>
 <li>Yepes-Nuñez JJ, et al. Summary of findings table for NMA. J Clin Epidemiol 2019;115:1-13.</li>

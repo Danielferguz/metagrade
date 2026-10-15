@@ -13,7 +13,7 @@ for (const [k, [method, test]] of Object.entries({ pw_REMLz: ['REML', 'z'], pw_D
   const m = rma(pw.map(e => e.yi), pw.map(e => e.vi), { method, test });
   ok(k + ' est', m.est, ref[k].est); ok(k + ' lo', m.ci[0], ref[k].lo); ok(k + ' hi', m.ci[1], ref[k].hi); ok(k + ' tau2', m.tau2, ref[k].tau2); ok(k + ' I2', m.I2, ref[k].I2, 1e-4);
 }
-const st = {}; for (const r of rd('nma_binary.csv')) (st[r.study] = st[r.study] || []).push({ t: r.treatment, r: +r.responders, n: +r.n });
+const st = {}; for (const r of rd('nma_binary.csv').filter(r => !r.outcome || r.outcome === 'Response')) (st[r.study] = st[r.study] || []).push({ t: r.treatment, r: +r.responders, n: +r.n });
 const m = new NMA(st, 'binary', 'Placebo');
 ok('nma tau2', m.tau2, ref.nma.tau2, 1e-5); ok('nma Q', m.Q, ref.nma.Q, 1e-5); ok('nma p_inc', m.designDecomp().p_inc, ref.nma.p_inc, 1e-5);
 for (const [t, [e, s]] of Object.entries(ref.nma.est)) { const [je, js] = m.est(t, 'Placebo'); ok('nma logOR ' + t, je, e, 1e-5); ok('nma SE ' + t, js, s, 1e-5); }

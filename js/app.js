@@ -3,6 +3,8 @@ import { escalc, rma, egger, subgroupTest } from './pairwise.js';
 import { NMA, isConnected, armBaseline } from './nma.js';
 import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js';
 import { renderEtD } from './etd.js';
+import { bindFigs, effPt, figSettings } from './figs.js';
+import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js';
 import { forestSVG, networkSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js';
 import { median } from './stats.js';
 import { HELP_HTML } from './help.js';
@@ -11,6 +13,8 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const f2 = x => (isFinite(x) ? (Math.abs(x) >= 100 ? x.toFixed(0) : x.toFixed(2)) : '–');
 const f1 = x => (isFinite(x) ? (Math.abs(x) >= 100 ? x.toFixed(0) : Math.abs(x) >= 10 ? x.toFixed(0) : x.toFixed(1)) : '–');
+// minúscula inicial solo si no es una sigla (eGFR, KDQOL…)
+const lcOut = o => (/^[A-Za-z][a-z]/.test(o) ? o.charAt(0).toLowerCase() + o.slice(1) : o);
 const pct = x => (isFinite(x) ? (x * 100).toFixed(0) + '%' : '–');
 const fp = p => (!isFinite(p) ? '–' : p < 0.001 ? '<0.001' : p.toFixed(3));
 
@@ -84,13 +88,14 @@ function refreshData() {
   const outs = state.map.outcome ? [...new Set(all.map(r => r.outcome))] : [];
   const prevO = $('#outcome-filter').value;
   $('#outcome-wrap').hidden = outs.length < 2;
-  if (outs.length >= 2 && ![...$('#outcome-filter').options].some(o => outs.includes(o.value))) $('#outcome-filter').innerHTML = outs.map(o => `<option>${esc(o)}</option>`).join('');
+  const curOpts = [...$('#outcome-filter').options].map(o => o.value);
+  if (outs.length >= 2 && curOpts.join('\u0001') !== outs.join('\u0001')) { $('#outcome-filter').innerHTML = outs.map(o => `<option>${esc(o)}</option>`).join(''); if (outs.includes(prevO)) $('#outcome-filter').value = prevO; }
   let rows = all;
   if (outs.length >= 2) rows = rows.filter(r => r.outcome === ($('#outcome-filter').value || prevO || outs[0]));
   const subs = state.kind === 'pairwise' && state.map.subgroup ? [...new Set(rows.map(r => r.subgroup))] : [];
   $('#subgroup-wrap').hidden = subs.length < 2;
   if (subs.length >= 2) {
-    if (![...$('#subgroup-filter').options].some(o => subs.includes(o.value) || o.value === '__all')) $('#subgroup-filter').innerHTML = `<option value="__all">Todos (con prueba de subgrupos)</option>` + subs.map(o => `<option>${esc(o)}</option>`).join('');
+    if ([...$('#subgroup-filter').options].filter(o => o.value !== '__all').map(o => o.value).join('\u0001') !== subs.join('\u0001')) $('#subgroup-filter').innerHTML = `<option value="__all">Todos (con prueba de subgrupos)</option>` + subs.map(o => `<option>${esc(o)}</option>`).join('');
     const sv = $('#subgroup-filter').value;
     state.subgroups = subs;
     state.subAll = sv === '__all';
@@ -141,6 +146,48 @@ $('#dt-calc').addEventListener('click', () => {
   $('#dt-out').textContent = `DT1 ${f1(v[0])} · DT2 ${f1(v[1])} · DT3 ${f1(v[2])} por ${unit} (MID = DT1)`;
   $('#pw-mid').value = v[0].toFixed(2); $('#pw-t2').value = v[1].toFixed(2); $('#pw-t3').value = v[2].toFixed(2);
 });
+
+$('#nm-dt-calc').addEventListener('click', () => {
+  const u = +$('#nm-dt-dis').value, unit = +$('#nm-unit').value;
+  if (!(u > 0)) return;
+  const v = [0.0135, 0.0321, 0.0625].map(c => Math.min(unit, c * unit / u));
+  $('#nm-dt-out').textContent = `DT1 ${f1(v[0])} · DT2 ${f1(v[1])} · DT3 ${f1(v[2])} por ${unit} (MID = DT1)`;
+  $('#nm-mid').value = v[0].toFixed(2); $('#nm-mod').value = v[1].toFixed(2); $('#nm-large').value = v[2].toFixed(2);
+});
+const DT = (dis, unit) => [0.0135, 0.0321, 0.0625].map(c => +Math.min(unit, c * unit / dis).toFixed(2));
+// configuración por desenlace desde columnas opcionales del archivo
+function applyOutcomeSettings(kind) {
+  const r = state.rows[0] || {}, pre = kind === 'pw' ? '#pw-' : '#nm-';
+  const unit = +$(pre + 'unit').value;
+  if (r.o_dir) $(pre + 'dir').value = /^(high|desir|mayor|higher)/i.test(r.o_dir) ? 'higher' : 'lower';
+  if (r.o_dis > 0) { const v = DT(r.o_dis, unit); $(pre + 'mid').value = v[0]; $(kind === 'pw' ? '#pw-t2' : '#nm-mod').value = v[1]; $(kind === 'pw' ? '#pw-t3' : '#nm-large').value = v[2]; }
+  else if (r.o_mid > 0) { $(pre + 'mid').value = r.o_mid; $(kind === 'pw' ? '#pw-t2' : '#nm-mod').value = ''; $(kind === 'pw' ? '#pw-t3' : '#nm-large').value = ''; }
+  if (kind === 'pw') {
+    if (r.o_p0 > 0) $('#pw-p0').value = r.o_p0;
+    if (r.o_int) $('#pw-int').value = r.o_int; if (r.o_comp) $('#pw-comp').value = r.o_comp;
+  }
+  return r.o_importance || '';
+}
+async function runAll(kind) {
+  const outs = [...$('#outcome-filter').options].map(o => o.value);
+  const list = outs.length ? outs : [null];
+  const btn = $(kind === 'pw' ? '#pw-runall' : '#nm-runall'), t0 = btn.textContent;
+  for (const [i, o] of list.entries()) {
+    btn.textContent = `Ejecutando ${i + 1}/${list.length}…`;
+    if (o != null) { $('#outcome-filter').value = o; if ($('#subgroup-filter').querySelector('option[value="__all"]')) $('#subgroup-filter').value = '__all'; refreshData(); }
+    const keepRefs = kind === 'nm' ? [...$('#nm-ref').selectedOptions].map(x => x.value) : null;
+    setupAnalysis();
+    if (keepRefs) [...$('#nm-ref').options].forEach(x => x.selected = keepRefs.includes(x.value));
+    const imp = applyOutcomeSettings(kind);
+    state.lastPw = null; state.lastNm = null;
+    if (kind === 'pw') { if (o != null) $('#pw-outcome').value = o; runPairwise(); if (state.lastPw) { addPwToSoF(imp); } }
+    else { if (o != null) $('#nm-outcome').value = o; runNMA(); if (state.lastNm && $('#nm-add')) addNmToSoF(imp); }
+    await new Promise(r => setTimeout(r, 20));
+  }
+  btn.textContent = `Listo ✓ (${list.length} desenlaces en la tabla SoF)`; setTimeout(() => btn.textContent = t0, 2500);
+}
+$('#pw-runall').addEventListener('click', () => runAll('pw'));
+$('#nm-runall').addEventListener('click', () => runAll('nm'));
 
 // ---------------- meta-análisis por pares ----------------
 $('#pw-run').addEventListener('click', runPairwise);
@@ -237,10 +284,25 @@ function renderPairwise(dropped, robCmp, subRes, tr) {
   <div class="row end"><button class="primary" id="pw-add">Añadir a la tabla SoF</button></div></div>`;
   $('#pw-results').innerHTML = html;
   bindVizTabs($('#pw-results'));
+  autoFig($('#pw-results'), P.outcome);
   $('#pw-results').querySelectorAll('[data-dom],[data-why]').forEach(el => el.addEventListener('input', updatePwFinal));
   $('#pw-add').addEventListener('click', addPwToSoF);
   updatePwFinal();
 }
+// ---------- figuras con descarga en formato de revista ----------
+function autoFig(root, prefix) {
+  root.querySelectorAll('svg.plot').forEach(svg => {
+    if (svg.closest('figure.fig')) return;
+    const f = document.createElement('figure'); f.className = 'fig';
+    f.dataset.name = `${prefix}_${svg.getAttribute('aria-label') || 'figure'}`;
+    svg.replaceWith(f); f.appendChild(svg);
+    f.insertAdjacentHTML('beforeend', '<figcaption class="figbar"><span>Download (journal format):</span><button type="button" data-fig="svg">SVG</button><button type="button" data-fig="png">PNG</button><button type="button" data-fig="tiff">TIFF</button></figcaption>');
+  });
+  bindFigs(root.querySelectorAll ? root : document);
+}
+function figNote() { const st = figSettings(); $('#fig-note').textContent = `Ancho ${st.mm} mm a ${st.dpi} dpi = ${Math.round(st.mm / 25.4 * st.dpi)} px. Letra del texto principal ≈ ${effPt(900, st.mm).toFixed(1)} pt en gráficos de umbrales/forest (${effPt(620, st.mm).toFixed(1)} pt en el gráfico de red)${effPt(900, st.mm) < 6 ? ' — demasiado pequeña: use 2 columnas' : ''}.`; }
+['#fig-width', '#fig-mm', '#fig-dpi', '#fig-font'].forEach(id => $(id).addEventListener('change', figNote)); figNote();
+
 // ---------- Visualización de dominios (riesgo de sesgo, inconsistencia, imprecisión) ----------
 const ROB_LBL = { high: 'High', some: 'Some concerns', low: 'Low', na: 'Not reported' };
 function robSegments(items) { // items: [{rob, w}]
@@ -335,7 +397,9 @@ function pwSummary() {
   return {
     type: 'pairwise', outcome: P.outcome, intervention: P.int, comparator: P.comp, participants: `${ntot || '–'} (${fit.k} ${des === 'RCT' ? (fit.k > 1 ? 'RCTs' : 'RCT') : des})`, relative: rel,
     risk0: g.ab.binary ? `${f1(cfg.p0 * cfg.unit)}${un}` : '—', risk1: g.ab.binary ? `${f1(g.ab.p1 * cfg.unit)}${un}` : '—',
-    absolute: absTxt, c, cat, notes, plain: plainStatement(cat, c, P.int, P.outcome.toLowerCase(), cfg.threshold, cfg.higherBetter ? -g.abs.d : g.abs.d).replace(/an? (important )?(reduction|increase)/, (m0) => m0),
+    absolute: absTxt, c, cat, notes, plain: plainStatement(cat, c, P.int, lcOut(P.outcome), cfg.threshold, cfg.higherBetter ? -g.abs.d : g.abs.d).replace(/an? (important )?(reduction|increase)/, (m0) => m0),
+    importance: P.importance || '', k: fit.k, ntot, design: cfg.design,
+    domains: Object.fromEntries(['rob', 'inc', 'ind', 'imp', 'pub', 'up'].map(d => [d, { level: o[d] != null ? o[d] : d === 'up' ? g.up.level : g.domains[d].level, why: o[d + '_why'] ?? (d === 'up' ? g.up.why : g.domains[d].why) }])),
     plainRaw: { cat, c, d: g.abs.d }, magThs: thresholdSet(3, cfg.threshold === 'MID' ? cfg.mid : 0, cfg.moderate, cfg.large), d: g.abs.d, mid: cfg.threshold === 'MID' ? `${cfg.mid}${un}` : 'null', higherBetter: cfg.higherBetter,
     methods: { measure, method: P.method, test: P.test, threshold: cfg.threshold, design: cfg.design, scheme: cfg.scheme, usePI: cfg.usePI },
   };
@@ -343,16 +407,20 @@ function pwSummary() {
 function updatePwFinal() {
   const s = pwSummary();
   const fill = fillFor(s.cat, s.c);
-  const plain = plainStatement(s.cat, s.c, s.intervention, s.outcome.toLowerCase(), state.lastPw.cfg.threshold, s.plainRaw.d);
+  const plain = plainStatement(s.cat, s.c, s.intervention, lcOut(s.outcome), state.lastPw.cfg.threshold, s.plainRaw.d);
   $('#pw-final').innerHTML = `<div class="row gap wrap" style="margin-top:10px"><span class="badge" style="background:#${fill}">${SYM[s.c]} ${LEVELS[s.c]}</span>
     <span>${legendText(s.cat, s.c, s.comparator)}</span></div><p><b>Frase en lenguaje claro:</b> ${esc(plain)}</p>
     <div class="notes">${s.notes.map(n => `<p>• ${esc(n)}</p>`).join('')}</div>`;
-  const vi = $('#pw-impviz'); if (vi) vi.innerHTML = pwImpViz(s);
+  const vi = $('#pw-impviz'); if (vi) { vi.innerHTML = pwImpViz(s); autoFig(vi, s.outcome); }
 }
-function addPwToSoF() {
+const sameItem = (a, b) => a.type === b.type && a.outcome === b.outcome && (a.type === 'nma' || (a.intervention === b.intervention && a.comparator === b.comparator));
+function pushSoF(item) { const i = state.sof.findIndex(x => sameItem(x, item)); if (i >= 0) state.sof[i] = item; else state.sof.push(item); save('mg-sof', state.sof); }
+function addPwToSoF(importance) {
   const s = pwSummary();
-  s.plain = plainStatement(s.cat, s.c, s.intervention, s.outcome.toLowerCase(), state.lastPw.cfg.threshold, s.plainRaw.d);
-  state.sof.push(s); save('mg-sof', state.sof);
+  if (typeof importance === 'string' && importance) s.importance = importance;
+  else if (state.rows[0]?.o_importance) s.importance = state.rows[0].o_importance;
+  s.plain = plainStatement(s.cat, s.c, s.intervention, lcOut(s.outcome), state.lastPw.cfg.threshold, s.plainRaw.d);
+  pushSoF(s);
   $('#pw-add').textContent = 'Añadido ✓'; setTimeout(() => $('#pw-add') && ($('#pw-add').textContent = 'Añadir a la tabla SoF'), 1500);
 }
 
@@ -386,7 +454,7 @@ function runNMA() {
     const pairs = m.T.filter(t => t !== ref).map(t => [t, ref]);
     return { ref, res: gradeNMA({ m, rob, indirect, modifier, mid, large: scheme === 3 ? defT(large, mid, 6.25 / 1.35, isBin) : large, moderate: defT(+$('#nm-mod').value, mid, 3.21 / 1.35, isBin), scheme, usePI: $('#nm-piinc').checked, unit, baseline, higherBetter, incP: +$('#nm-incp').value, sd: +$('#nm-sd').value || NaN }, pairs) };
   });
-  state.lastNm = { m, blocks, rob, magThs, scheme, outcome: $('#nm-outcome').value, unit, mid, type, higherBetter, overrides: {}, bmode, baseline };
+  state.lastNm = { m, blocks, rob, magThs, scheme, stepSel: {}, outcome: $('#nm-outcome').value, unit, mid, type, higherBetter, overrides: {}, bmode, baseline };
   renderNMA();
 }
 const shortName = t => (t.length > 28 ? t.slice(0, 26) + '…' : t);
@@ -408,8 +476,8 @@ function renderNMA() {
   blocks.forEach((B, bi) => {
     const rows = B.res.rows;
     const fr = rows.map(r => ({ label: r.a, est: tr(r.est), lo: tr(r.est - 1.96 * r.se), hi: tr(r.est + 1.96 * r.se) }));
-    const vrows = rows.map((r, i) => { const c = N.overrides[`${bi}|${i}`] ?? r.c, f = fillFor(r.cat, c);
-      return { label: shortName(r.a), d: r.r[0], lo: r.r[1], hi: r.r[2], pi: r.piAbs, fill: f, badge: { text: `${SYM[c]} ${LEVELS[c]}`, fill: f },
+    const vrows = rows.map((r, i) => { const c = N.overrides[`${bi}|${i}`] ?? r.best.c, f = fillFor(r.bestCat, c), q = r.best.r;
+      return { label: shortName(r.a) + (r.best.src !== 'network' ? ` (${r.best.src})` : ''), d: q[0], lo: q[1], hi: q[2], pi: r.best.src === 'network' ? r.piAbs : null, fill: f, badge: { text: `${SYM[c]} ${LEVELS[c]}`, fill: f },
         right: `${N.scheme === 3 ? crossLabel(r.r[1], r.r[2], N.mid, r.ths) : r.impLvl === 3 ? 'Large benefit to large harm → −3' : crossLabel(r.r[1], r.r[2], N.mid)}${(r.nr.find(x => x[0] === 'inc') || [, ''])[1].replace(/^Inconsistency \((−\d)\).*$/, ' · PI $1')}${isFinite(r.ess) && isFinite(r.ois) ? ` · ESS ${r.ess} vs OIS ${r.ois}` : ''}` }; });
     const impViz = thresholdSVG({ rows: vrows, mid: N.mid, ths: N.scheme === 3 ? rows[0]?.ths : null, higherBetter: N.higherBetter, title: `Network estimates vs ${B.ref}: imprecision and certainty`, xlabel: isB ? `Absolute effect per ${unit} vs ${B.ref}` : `MD vs ${B.ref}` });
     html += `<div class="card"><h2>Frente a ${esc(B.ref)}</h2>${impViz}${forestSVG({ rows: fr, log: isB, measure: meas + ' (network)', leftLabel: N.higherBetter ? 'Favours ' + shortName(B.ref) : 'Favours intervention', rightLabel: N.higherBetter ? 'Favours intervention' : 'Favours ' + shortName(B.ref), title: `vs ${B.ref}` })}
@@ -417,12 +485,22 @@ function renderNMA() {
     ${rows.map((r, i) => {
       const dTxt = r.D ? `${r.kdir} ensayo(s); ${meas} ${f2(tr(r.D.dr.est))} (${f2(tr(r.D.dr.est - 1.96 * r.D.dr.se))} a ${f2(tr(r.D.dr.est + 1.96 * r.D.dr.se))})<br>${SYM[r.D.c]} ${LEVELS[r.D.c]}${r.D.reasons.length ? '<br><small>' + r.D.reasons.map(x => esc(x[1])).join('<br>') + '</small>' : ''}` : '—';
       const iTxt = r.path ? `${r.nsd && isFinite(r.nsd.ind) ? meas + ' ' + f2(tr(r.nsd.ind)) + '<br>' : ''}${SYM[r.indC]} ${LEVELS[r.indC]}<br><small>${r.indR.map(x => esc(x[1])).join('<br>')}</small>` : '—';
-      const key = `${bi}|${i}`, c = N.overrides[key] ?? r.c;
+      const key = `${bi}|${i}`, c = N.overrides[key] ?? r.best.c;
       return `<tr><td><b>${esc(r.a)}</b><br><small>vs ${esc(r.b)}</small></td><td>${dTxt}</td><td>${iTxt}</td><td>${f2(tr(r.est))} (${f2(tr(r.est - 1.96 * r.se))} a ${f2(tr(r.est + 1.96 * r.se))})<br><small>${esc(r.basis)}${r.nsd && isFinite(r.nsd.p) ? '; node-split p = ' + fp(r.nsd.p) : ''}</small></td>
       <td>${f1(r.r[0])} (${f1(r.r[1])} a ${f1(r.r[2])})${isB ? `<br><small>basal ${f1(r.p0 * unit)}</small>` : ''}</td>
-      <td><select data-nmo="${key}">${[4, 3, 2, 1].map(v => `<option value="${v}" ${v === c ? 'selected' : ''}>${LEVELS[v]}</option>`).join('')}</select><br><span class="badge" style="background:#${fillFor(r.cat, c)}">${SYM[c]}</span></td>
+      <td><select data-nmo="${key}">${[4, 3, 2, 1].map(v => `<option value="${v}" ${v === c ? 'selected' : ''}>${LEVELS[v]}</option>`).join('')}</select><br><span class="badge" style="background:#${fillFor(r.bestCat, c)}">${SYM[c]}</span>${r.best.src !== 'network' ? `<br><small>best estimate: ${r.best.src} (incoherence)</small>` : ''}</td>
       <td><small>${[...r.nr].map(x => esc(x[1])).join('<br>') || 'Sin bajadas adicionales en la red'}</small></td></tr>`;
     }).join('')}</tbody></table></div></div>`;
+    // evaluación paso a paso (Izcovich 2023) y tabla suplementaria
+    const X = nmCtx(B);
+    const sel = +(N.stepSel[bi] ?? 0);
+    html += `<div class="card" data-block="${bi}"><h2>Valoración GRADE paso a paso — frente a ${esc(B.ref)}</h2>
+      <p class="muted">Orden de Izcovich et al. (BMJ 2023): primero la evidencia directa (A), luego la indirecta (B), después la estimación de red (C) y, si hay incoherencia, se elige el mejor estimado (D).</p>
+      ${stepsTableHTML(rows, X, i => i)}
+      <div class="row gap wrap" id="flow-${bi}"><label>Diagrama de la comparación <select data-stepsel="${bi}">${rows.map((r, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${esc(r.a)} vs ${esc(r.b)}</option>`).join('')}</select></label></div>
+      ${rows[sel] ? stepFlowHTML(rows[sel], X) : ''}</div>`;
+    const ST = supplTable(B, X);
+    html += `<div class="card"><div class="row between wrap"><h2>Tabla suplementaria — frente a ${esc(B.ref)}</h2><div class="row gap"><button class="ghost" data-supdoc="${bi}">Word (.doc)</button><button class="ghost" data-supcsv="${bi}">CSV</button></div></div><div class="tablewrap" style="max-height:none">${ST.html}</div></div>`;
   });
   html += nmDirectViz();
   // league table
@@ -434,9 +512,26 @@ function renderNMA() {
   <div class="row end"><button class="primary" id="nm-add">Añadir matriz NMA a la tabla SoF</button></div></div>`;
   $('#nm-results').innerHTML = html;
   bindVizTabs($('#nm-results'));
+  autoFig($('#nm-results'), N.outcome);
+  $('#nm-results').querySelectorAll('[data-step]').forEach(tr => tr.addEventListener('click', () => { N.stepSel[tr.closest('[data-block]').dataset.block] = tr.dataset.step; renderNMA(); setTimeout(() => document.getElementById('flow-' + tr.closest('[data-block]').dataset.block)?.scrollIntoView({ block: 'nearest' }), 30); }));
+  $('#nm-results').querySelectorAll('[data-stepsel]').forEach(sel => sel.addEventListener('change', () => { N.stepSel[sel.dataset.stepsel] = sel.value; renderNMA(); }));
+  $('#nm-results').querySelectorAll('[data-supdoc]').forEach(b => b.addEventListener('click', () => supplDownload([state.lastNm.blocks[+b.dataset.supdoc]], 'doc')));
+  $('#nm-results').querySelectorAll('[data-supcsv]').forEach(b => b.addEventListener('click', () => supplDownload([state.lastNm.blocks[+b.dataset.supcsv]], 'csv')));
   $('#nm-results').querySelectorAll('[data-nmo]').forEach(s => s.addEventListener('change', () => { N.overrides[s.dataset.nmo] = +s.value; renderNMA(); }));
   $('#nm-add').addEventListener('click', addNmToSoF);
 }
+function nmCtx(B) {
+  const N = state.lastNm, isB = N.type === 'binary';
+  return { tr: x => (isB ? Math.exp(x) : x), meas: isB ? 'OR' : 'MD', isB, unit: N.unit, f2, f1, shortName, m: N.m, outcome: N.outcome, ref: B.ref };
+}
+function supplDownload(blocks, fmt) {
+  const tabs = blocks.map(B => supplTable(B, nmCtx(B)));
+  if (fmt === 'csv') {
+    const rows = tabs.flatMap((t, i) => t.rows.map(r => ({ outcome: state.lastNm.outcome, comparator: blocks[i].ref, ...r })));
+    download('supplementary_NMA_certainty.csv', toCSV(rows, ['outcome', 'comparator', 'cmp', 'dir', 'k', 'n1', 'n2', 'i2', 'dcoe', 'ind', 'icoe', 'nma', 'ncoe', 'best']), 'text/csv');
+  } else download('supplementary_NMA_certainty.doc', docWrap(tabs.map(t => t.html).join('<br>')), 'application/msword');
+}
+const docWrap = body => `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>@page{size:landscape}body{font-family:Arial,sans-serif;font-size:9pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #9aa4ae;padding:2pt 3pt;vertical-align:top;font-size:8pt;text-align:left}th{background:#DCE6F1}.notes p{margin:0;font-size:7.5pt}</style></head><body>${body}</body></html>`;
 function nmEdgeColor(e) {
   const N = state.lastNm, D = N && N.blocks[0].res.dcert[[e.a, e.b].sort().join(' || ')];
   if (!D) return null;
@@ -462,24 +557,24 @@ function nmDirectViz() {
   const coh = rows.length ? forestSVG({ rows, log: isB, measure: meas, leftLabel: 'lower with first treatment', rightLabel: 'higher with first treatment', title: 'Direct vs indirect evidence (node-splitting)' }) + '<p class="muted">⚠ p &lt;0,10: se baja −1 por incoherencia solo si ambas fuentes contribuyen (20–80 %).</p>' : '<p class="muted">No hay lazos cerrados: la incoherencia no es evaluable.</p>';
   return `<div class="card"><h2>Visualización de los dominios GRADE (evidencia directa e incoherencia)</h2>${vizTabs('nm', [['Riesgo de sesgo e inconsistencia', robT], ['Incoherencia', coh]])}</div>`;
 }
-function addNmToSoF() {
+function addNmToSoF(importance) {
   const N = state.lastNm, isB = N.type === 'binary', tr = x => (isB ? Math.exp(x) : x), meas = isB ? 'OR' : 'MD';
   const word = x => (Math.abs(x) < 0.5 ? '0' : x < 0 ? `${f1(Math.abs(x))} fewer` : `${f1(x)} more`);
   const cols = N.blocks.map(B => ({ ref: B.ref, base: isB ? `${f1(N.baseline(B.ref) * N.unit)} per ${N.unit}` : '—' }));
   const letters = {}; let li = 0;
   const cells = {};
   N.blocks.forEach((B, bi) => B.res.rows.forEach((r, i) => {
-    const c = N.overrides[`${bi}|${i}`] ?? r.c;
-    const keys = [...r.applied, ...r.nr.filter(x => x[0] !== 'cohflag')]
+    const c = N.overrides[`${bi}|${i}`] ?? r.best.c, bst = r.best, q = bst.r;
+    const keys = (bst.src === 'network' ? [...r.applied, ...r.nr.filter(x => x[0] !== 'cohflag')] : bst.src === 'direct' ? [...r.D.reasons, ['incbest', 'Direct estimate presented as best estimate: direct and indirect estimates incoherent']] : [...r.indR.filter(x => x[0] === 'intr'), ['incbest', 'Indirect estimate presented as best estimate: direct and indirect estimates incoherent']])
       .map(x => x[1].replace(/\s*\(.*?trials at high risk.*?\)$/, ''));
     const lt = keys.map(k => { const gen = k.split(':')[0]; if (!letters[gen]) letters[gen] = { l: 'abcdefghijklmnop'[li++], text: k }; return letters[gen].l; });
     (cells[r.a] = cells[r.a] || {})[B.ref] = {
-      text: `${word(r.r[0])}${isB ? '' : ''}\n(${word(r.r[1])} to ${word(r.r[2])})\n${meas} ${f2(tr(r.est))} (${f2(tr(r.est - 1.96 * r.se))} to ${f2(tr(r.est + 1.96 * r.se))})\n${r.kdir ? `${r.kdir} RCT${r.kdir > 1 ? 's' : ''}; ${r.ndir} participants` : 'Indirect evidence only'}`,
-      c, cat: r.cat, d: r.r[0], letters: [...new Set(lt)].sort().join(','),
+      text: `${word(q[0])}\n(${word(q[1])} to ${word(q[2])})\n${meas} ${f2(tr(bst.est))} (${f2(tr(bst.est - 1.96 * bst.se))} to ${f2(tr(bst.est + 1.96 * bst.se))})${bst.src !== 'network' ? ` [${bst.src}]` : ''}\n${r.kdir ? `${r.kdir} RCT${r.kdir > 1 ? 's' : ''}; ${r.ndir} participants` : 'Indirect evidence only'}`,
+      c, cat: r.bestCat, d: q[0], letters: [...new Set(lt)].sort().join(','),
     };
   }));
-  state.sof.push({ type: 'nma', outcome: N.outcome, higherBetter: N.higherBetter, magThs: N.magThs, cols, cells, rowsOrder: N.m.T, mid: `±${N.mid}${isB ? ' per ' + N.unit : ''}`, letters: Object.values(letters).map(x => ({ l: x.l, text: x.text })), tau2: N.m.tau2, k: N.m.k, methods: { type: N.type, bmode: N.bmode } });
-  save('mg-sof', state.sof);
+  const suppl = N.blocks.map(B => supplTable(B, nmCtx(B)));
+  pushSoF({ type: 'nma', outcome: N.outcome, importance: typeof importance === 'string' && importance ? importance : (state.rows[0]?.o_importance || ''), suppl: suppl.map(t => ({ html: t.html, rows: t.rows })), higherBetter: N.higherBetter, magThs: N.magThs, cols, cells, rowsOrder: N.m.T, mid: `±${N.mid}${isB ? ' per ' + N.unit : ''}`, letters: Object.values(letters).map(x => ({ l: x.l, text: x.text })), tau2: N.m.tau2, k: N.m.k, methods: { type: N.type, bmode: N.bmode } });
   $('#nm-add').textContent = 'Añadido ✓';
 }
 
@@ -496,7 +591,9 @@ function legendHTML(comparator, nma) {
 function sofHTML() {
   const pw = state.sof.filter(s => s.type === 'pairwise'), nm = state.sof.filter(s => s.type === 'nma');
   let html = '';
-  if (pw.length) {
+  const pgroups = {};
+  pw.forEach(x => (pgroups[`${x.intervention} || ${x.comparator}`] = pgroups[`${x.intervention} || ${x.comparator}`] || []).push(x));
+  for (const pw of Object.values(pgroups)) {
     const comp = pw[0].comparator, notes = [], mids = [];
     const L = n => { let i = notes.indexOf(n); if (i < 0) { notes.push(n); i = notes.length - 1; } return 'abcdefghijklmnopqrstuvwxyz'[i]; };
     html += `<h3>Summary of findings: ${esc(pw[0].intervention)} compared with ${esc(comp)}</h3>` + legendHTML(comp, false);
@@ -518,7 +615,32 @@ function sofHTML() {
   });
   return html || '<p class="muted">Aún no hay desenlaces en la tabla.</p>';
 }
-function renderSoF() { $('#sof').innerHTML = sofHTML(); $('#methods-text').value = methodsText(); }
+// tablas suplementarias: perfil de evidencia GRADE (pares) y estimados directo/indirecto/red (NMA)
+const SEVW = ['Not serious', 'Serious', 'Very serious', 'Extremely serious'];
+function profileHTML() {
+  const pw = state.sof.filter(s => s.type === 'pairwise' && s.domains), nm = state.sof.filter(s => s.type === 'nma' && s.suppl);
+  let html = '';
+  const groups = {};
+  pw.forEach(s => (groups[`${s.intervention} || ${s.comparator}`] = groups[`${s.intervention} || ${s.comparator}`] || []).push(s));
+  for (const [k, items] of Object.entries(groups)) {
+    const [I, C] = k.split(' || '), notes = [];
+    const L = t => { let i = notes.indexOf(t); if (i < 0) { notes.push(t); i = notes.length - 1; } return 'abcdefghijklmnopqrstuvwxyz'[i]; };
+    const dom = (d, x) => { const v = x.domains[d]; if (!v) return '—'; return v.level ? `${SEVW[v.level]}<sup>${L(v.why || DOMAIN_LABEL[d])}</sup>` : (d === 'pub' ? 'Undetected' : 'Not serious'); };
+    html += `<p><b>Supplementary table. GRADE evidence profile: ${esc(I)} compared with ${esc(C)}</b></p><table class="suppl"><thead><tr><th>Outcome (importance)</th><th>No. of studies (participants)</th><th>Study design</th><th>Risk of bias</th><th>Inconsistency</th><th>Indirectness</th><th>Imprecision</th><th>Publication bias</th><th>Other considerations</th><th>Relative effect (95% CI)</th><th>Absolute effect (95% CI)</th><th>Certainty</th></tr></thead><tbody>
+    ${items.map(x => `<tr><td>${esc(x.outcome)}${x.importance ? ` (${esc(x.importance)})` : ''}</td><td>${x.k} (${x.ntot || '–'})</td><td>${x.design === 'RCT' ? 'Randomised trials' : 'Non-randomised studies'}</td><td>${dom('rob', x)}</td><td>${dom('inc', x)}</td><td>${dom('ind', x)}</td><td>${dom('imp', x)}</td><td>${dom('pub', x)}</td>
+      <td>${x.domains.up && x.domains.up.level ? `Rated up +${x.domains.up.level}<sup>${L(x.domains.up.why || 'Rated up')}</sup>` : 'None'}</td><td>${esc(x.relative)}</td><td>${esc(x.absolute)}</td><td>${SYM[x.c]} ${LEVELS[x.c]}</td></tr>`).join('')}</tbody></table>
+    <div class="notes"><p>CI = confidence interval. Absolute effects calculated with the baseline risk of the comparator group. Thresholds: ${esc(items.filter(x => x.mid !== 'null').map(x => `${x.outcome} ${x.mid}`).join('; ') || 'null effect')}.</p>${notes.map((n, i) => `<p>${'abcdefghijklmnopqrstuvwxyz'[i]}. ${esc(n)}.</p>`).join('')}</div><br>`;
+  }
+  nm.forEach(b => { b.suppl.forEach(t => { html += t.html + '<br>'; }); });
+  return html || '<p class="muted">Añada desenlaces a la tabla SoF para generar las tablas suplementarias.</p>';
+}
+function renderSoF() { $('#sof').innerHTML = sofHTML(); $('#suppl').innerHTML = profileHTML(); $('#methods-text').value = methodsText(); }
+$('#sup-doc').addEventListener('click', () => download('supplementary_GRADE_tables.doc', docWrap(profileHTML()), 'application/msword'));
+$('#sup-csv').addEventListener('click', () => {
+  const pw = state.sof.filter(s => s.type === 'pairwise' && s.domains).map(x => ({ table: 'evidence profile', outcome: x.outcome, importance: x.importance, comparison: `${x.intervention} vs ${x.comparator}`, studies: x.k, participants: x.ntot, rob: SEVW[x.domains.rob.level], inconsistency: SEVW[x.domains.inc.level], indirectness: SEVW[x.domains.ind.level], imprecision: SEVW[x.domains.imp.level], publication_bias: x.domains.pub.level ? SEVW[x.domains.pub.level] : 'Undetected', relative: x.relative, absolute: x.absolute, certainty: LEVELS[x.c] }));
+  const nm = state.sof.filter(s => s.type === 'nma' && s.suppl).flatMap(b => b.suppl.flatMap((t, i) => t.rows.map(r => ({ table: 'NMA direct/indirect/network', outcome: b.outcome, importance: b.importance, comparison: `${r.cmp} vs ${b.cols[i].ref}`, studies: r.k, participants: `${r.n1}/${r.n2}`, rob: '', inconsistency: r.i2, indirectness: '', imprecision: '', publication_bias: '', relative: `direct ${r.dir}; indirect ${r.ind}; NMA ${r.nma}`, absolute: '', certainty: `direct ${r.dcoe}; indirect ${r.icoe}; NMA ${r.ncoe}` }))));
+  download('supplementary_GRADE_tables.csv', toCSV([...pw, ...nm], ['table', 'outcome', 'importance', 'comparison', 'studies', 'participants', 'rob', 'inconsistency', 'indirectness', 'imprecision', 'publication_bias', 'relative', 'absolute', 'certainty']), 'text/csv');
+});
 $('#sof-clear').addEventListener('click', () => { if (confirm('¿Vaciar la tabla SoF?')) { state.sof = []; save('mg-sof', []); renderSoF(); } });
 $('#sof-doc').addEventListener('click', () => {
   const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>body{font-family:Calibri,sans-serif;font-size:9pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #9aa4ae;padding:3pt;vertical-align:top;font-size:8pt}th{background:#1F3A5F;color:#fff}.notes p{margin:0;font-size:8pt}</style></head><body>${sofHTML()}</body></html>`;
@@ -544,7 +666,7 @@ function methodsText() {
     t.push(`Certainty of evidence. Two reviewers rated the certainty of evidence for each outcome with the GRADE approach as operationalised in Core GRADE. Evidence from ${M.design === 'RCT' ? 'randomised trials started at high certainty' : M.design === 'NRSI' ? 'non-randomised studies started at low certainty' : 'non-randomised studies assessed with ROBINS-I started at high certainty'} and could be rated down for risk of bias, inconsistency, indirectness, imprecision and publication bias${M.design === 'NRSI' ? ', or rated up for a large effect or a dose–response gradient' : ''}. We rated our certainty that the true effect ${M.threshold === 'MID' ? 'is important, using minimal important differences (MIDs) as thresholds; when the point estimate was below the MID we rated certainty in little to no important effect' : 'lies on one side of the null'}. Thresholds were applied to absolute effects, obtained by applying the pooled relative effect to the baseline risk. Risk of bias was rated down when studies at high risk of bias dominated the analysis; inconsistency was judged from the location of study estimates relative to the threshold and the overlap of confidence intervals, with I² as a secondary criterion${M.usePI ? '; we also rated down one level when the 95% prediction interval crossed an MID threshold not crossed by the confidence interval of the pooled estimate, and two levels when it crossed both' : ''}; ${M.scheme === 3 ? 'imprecision was rated down one level for each decision threshold (small, moderate and large effect, on either side of the null) crossed by the 95% CI of the absolute effect, up to three levels, or,' : 'imprecision was rated down when the 95% CI of the absolute effect crossed the threshold (two levels when it crossed both MIDs) or,'} for large effects, when the optimal information size was not met. Automated suggestions (MetaGRADE) were reviewed and modified with justification. Results are presented in summary of findings tables with a colour code combining certainty and the direction of the effect relative to the MID (minimally contextualised framework).`);
   }
   if (nm) {
-    t.push(`Network meta-analysis. We performed a frequentist contrast-based ${nm.methods.type === 'binary' ? 'odds ratio' : 'mean difference'} network meta-analysis by generalised least squares (graph-theoretical approach), accounting for the correlation of multi-arm trials, with random effects and a common between-study variance estimated by restricted maximum likelihood. Global inconsistency was assessed with the design-by-treatment decomposition of Q and local inconsistency with node-splitting (back-calculation). P-scores were used only descriptively. Certainty was rated with the GRADE approach for NMA: direct estimates were rated for risk of bias, inconsistency and indirectness; indirect estimates started from the lower certainty of the direct comparisons in the dominant first-order loop and were rated down for intransitivity; network estimates started from the certainty of the dominant source (or the higher of direct and indirect when both contributed similarly) and were rated down for incoherence and for imprecision of the absolute effect relative to the MID, using the effective sample size and the optimal information size for large effects (GRADE guidance 33). Conclusions were drawn with the minimally contextualised framework.`);
+    t.push(`Network meta-analysis. We performed a frequentist contrast-based ${nm.methods.type === 'binary' ? 'odds ratio' : 'mean difference'} network meta-analysis by generalised least squares (graph-theoretical approach), accounting for the correlation of multi-arm trials, with random effects and a common between-study variance estimated by restricted maximum likelihood. Global inconsistency was assessed with the design-by-treatment decomposition of Q and local inconsistency with node-splitting (back-calculation). P-scores were used only descriptively. Certainty was rated with the GRADE approach for NMA: direct estimates were rated for risk of bias, inconsistency and indirectness; indirect estimates started from the lower certainty of the direct comparisons in the dominant first-order loop and were rated down for intransitivity; network estimates started from the certainty of the dominant source (or the higher of direct and indirect when both contributed similarly) and were rated down for incoherence and for imprecision of the absolute effect relative to the MID, using the effective sample size and the optimal information size for large effects (GRADE guidance 33). We followed the stepwise process described by Izcovich et al. (direct estimate, indirect estimate, network estimate and selection of the best estimate); when direct and indirect estimates were incoherent, we also rated imprecision of the direct and indirect estimates and presented the estimate with the highest certainty. Conclusions were drawn with the minimally contextualised framework.`);
   }
   return t.join('\n\n');
 }
