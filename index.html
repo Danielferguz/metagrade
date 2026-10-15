@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MetaGRADE</title>
 <meta name="description" content="Meta-análisis por pares y en red (NMA) con calificación de la certeza de la evidencia según Core GRADE y GRADE para NMA. Todo se calcula en el navegador.">
-<link rel="stylesheet" href="css/style.css?v=2026.10.15-3">
+<link rel="stylesheet" href="css/style.css?v=2026.10.16-2">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 </head>
 <body>
@@ -45,9 +45,10 @@
     <div class="row gap wrap">
       <label>Hoja <select id="sheet"></select></label>
       <label>Tipo de análisis <select id="kind"><option value="pairwise">Meta-análisis por pares</option><option value="nma">Meta-análisis en red (NMA)</option></select></label>
-      <label id="outcome-wrap" hidden>Desenlace <select id="outcome-filter"></select></label>
+      <label id="outcome-wrap" hidden>Desenlace (vista previa / análisis individual) <select id="outcome-filter"></select></label>
       <label id="subgroup-wrap" hidden>Subgrupo / comparación <select id="subgroup-filter"></select></label>
     </div>
+    <div id="outcome-pick" class="opick"></div>
     <details class="mapping"><summary>Columnas reconocidas (puede corregirlas)</summary><div id="mapping" class="grid-map"></div></details>
     <div class="tablewrap"><table id="preview" class="data"></table></div>
     <div class="row end"><button id="go-analysis" class="primary">Continuar al análisis →</button></div>
@@ -118,15 +119,7 @@
         <label>Riesgo basal (proporción) <input id="pw-p0" type="number" step="any" min="0" max="1"></label>
         <label>DE para OIS continuo <input id="pw-sd" type="number" step="any" placeholder="opcional"></label>
       </div>
-      <details class="helper"><summary>Calcular la MID con GRADE-THRESHOLD (disutilidad)</summary>
-        <div class="row gap wrap">
-          <label>Disutilidad del estado (0–1) <input id="dt-dis" type="number" step="any" value="1"></label>
-          <label><input type="checkbox" id="dt-desirable"> desenlace deseable (usar utilidad)</label>
-          <button class="ghost" id="dt-calc">Calcular</button>
-          <span id="dt-out" class="muted"></span>
-        </div>
-        <p class="muted">DT1 = 1,35 por 100 ÷ disutilidad (trivial → pequeño = MID); DT2 = 3,21 (pequeño → moderado); DT3 = 6,25 (moderado → grande); «Calcular» rellena los tres umbrales (Morgano et al., J Clin Epidemiol 2025). Continuos: MID publicada o 0,2 DE.</p>
-      </details>
+      <details class="helper" id="pw-thr-d"><summary>Calcular los umbrales (MID, moderado, grande): GRADE-THRESHOLD por disutilidad o DME</summary><div id="pw-thr" class="thr"></div></details>
       <details class="helper"><summary>Opciones de los dominios GRADE</summary>
         <div class="form">
           <label>Dominancia de alto riesgo de sesgo <select id="pw-robdom"><option value="0.65">&gt;65 % del peso</option><option value="0.55">≥55 % del peso</option><option value="0.5">&gt;50 % del peso</option></select></label>
@@ -141,6 +134,7 @@
       </details>
       <div class="row end gap"><button class="ghost" id="pw-runall" title="Usa las columnas importance, direction, mid, disutility, baseline_risk si existen">Ejecutar todos los desenlaces y añadir a SoF</button><button class="primary" id="pw-run">Ejecutar meta-análisis</button></div>
     </div>
+    <div id="pw-otabs" class="otabs"></div>
     <div id="pw-results"></div>
   </div>
 
@@ -165,16 +159,10 @@
         <label>DE combinada (continuo, para OIS) <input id="nm-sd" type="number" step="any" placeholder="opcional"></label>
         <label>Umbral p de incoherencia (node-split) <select id="nm-incp"><option value="0.10">0,10</option><option value="0.05">0,05</option></select></label>
       </div>
-      <details class="helper"><summary>Calcular los umbrales con GRADE-THRESHOLD (disutilidad)</summary>
-        <div class="row gap wrap">
-          <label>Disutilidad del estado (0–1) <input id="nm-dt-dis" type="number" step="any" value="1"></label>
-          <button class="ghost" id="nm-dt-calc">Calcular</button>
-          <span id="nm-dt-out" class="muted"></span>
-        </div>
-        <p class="muted">DT1 = 1,35, DT2 = 3,21 y DT3 = 6,25 por 100 ÷ disutilidad (Morgano et al., J Clin Epidemiol 2025). Rellena MID (pequeño), umbral moderado y umbral grande. Para desenlaces deseables (p. ej., respuesta), use la utilidad de alcanzar el estado.</p>
-      </details>
+      <details class="helper" id="nm-thr-d"><summary>Calcular los umbrales (MID, moderado, grande): GRADE-THRESHOLD por disutilidad o DME</summary><div id="nm-thr" class="thr"></div></details>
       <div class="row end gap"><button class="ghost" id="nm-runall" title="Usa las columnas importance, direction, mid, disutility si existen">Ejecutar todos los desenlaces y añadir a SoF</button><button class="primary" id="nm-run">Ejecutar NMA</button></div>
     </div>
+    <div id="nm-otabs" class="otabs"></div>
     <div id="nm-results"></div>
   </div>
 </section>
@@ -216,7 +204,7 @@
   <div class="card prose" id="help"></div>
 </section>
 </main>
-<footer class="foot"><p>MetaGRADE <span id="app-version">2026.10.15-3</span> · código abierto · los cálculos se hacen en el navegador. Las calificaciones automáticas son sugerencias que dos revisores deben verificar y justificar.</p></footer>
-<script type="module" src="js/app.js?v=2026.10.15-3"></script>
+<footer class="foot"><p>MetaGRADE <span id="app-version">2026.10.16-2</span> · código abierto · los cálculos se hacen en el navegador. Las calificaciones automáticas son sugerencias que dos revisores deben verificar y justificar.</p></footer>
+<script type="module" src="js/app.js?v=2026.10.16-2"></script>
 </body>
 </html>

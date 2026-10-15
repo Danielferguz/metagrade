@@ -1,13 +1,14 @@
-import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.15-3';
-import { escalc, rma, egger, subgroupTest } from './pairwise.js?v=2026.10.15-3';
-import { NMA, isConnected, armBaseline } from './nma.js?v=2026.10.15-3';
-import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.15-3';
-import { renderEtD } from './etd.js?v=2026.10.15-3';
-import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.15-3';
-import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.15-3';
-import { forestSVG, networkSVG, funnelSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.15-3';
-import { median } from './stats.js?v=2026.10.15-3';
-import { HELP_HTML } from './help.js?v=2026.10.15-3';
+import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.16-2';
+import { escalc, rma, egger, subgroupTest } from './pairwise.js?v=2026.10.16-2';
+import { NMA, isConnected, armBaseline } from './nma.js?v=2026.10.16-2';
+import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.16-2';
+import { mountThreshold } from './thresh.js?v=2026.10.16-2';
+import { renderEtD } from './etd.js?v=2026.10.16-2';
+import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.16-2';
+import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.16-2';
+import { forestSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.16-2';
+import { median } from './stats.js?v=2026.10.16-2';
+import { HELP_HTML } from './help.js?v=2026.10.16-2';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -24,7 +25,7 @@ const PALETTES = {
 };
 const fillFor = (cat, c, pal = PALETTES[state.palette]) => c <= 1 ? pal.verylow : (pal[cat] || {})[c];
 
-const state = { sheets: null, sheet: null, map: {}, rows: [], kind: 'pairwise', type: {}, sof: load('mg-sof', []), palette: load('mg-pal', 'default'), lastPw: null, lastNm: null };
+const state = { cache: { pw: {}, nm: {} }, sheets: null, sheet: null, map: {}, rows: [], kind: 'pairwise', type: {}, sof: load('mg-sof', []), palette: load('mg-pal', 'default'), lastPw: null, lastNm: null };
 function load(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }
 function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin almacenamiento */ } }
 
@@ -50,10 +51,23 @@ document.querySelectorAll('[data-example]').forEach(b => b.addEventListener('cli
   loadFile(new File([txt], b.dataset.example.split('/').pop(), { type: 'text/csv' }));
 }));
 
+// pestañas por desenlace en el paso 2 (resultados ya calculados, sin volver a ejecutar)
+function renderOTabs(kind) {
+  const C = state.cache[kind], keys = Object.keys(C), el = $(kind === 'pw' ? '#pw-otabs' : '#nm-otabs');
+  const cur = kind === 'pw' ? state.lastPw?.outcome : state.lastNm?.outcome;
+  if (keys.length < 2) { el.innerHTML = ''; return; }
+  el.innerHTML = `<span class="muted">Desenlaces analizados:</span>${keys.map(k => `<button type="button" class="${k === cur ? 'active' : ''}" data-otab="${esc(k)}">${esc(k)}${C[k].addedSoF ? ' ✓' : ''}</button>`).join('')}`;
+  el.querySelectorAll('[data-otab]').forEach(b => b.addEventListener('click', () => {
+    const P = C[b.dataset.otab];
+    if (kind === 'pw') { state.lastPw = P; $('#pw-outcome').value = P.outcome; renderPairwise(...P.args, x => (P.isRatio ? Math.exp(x) : x)); }
+    else { state.lastNm = P; $('#nm-outcome').value = P.outcome; renderNMA(); }
+    renderOTabs(kind);
+  }));
+}
 async function loadFile(file) {
   try {
     const { sheets } = await readFile(file);
-    state.sheets = sheets;
+    state.sheets = sheets; state.cache = { pw: {}, nm: {} }; $('#pw-otabs').innerHTML = ''; $('#nm-otabs').innerHTML = '';
     const names = Object.keys(sheets);
     $('#sheet').innerHTML = names.map(n => `<option>${esc(n)}</option>`).join('');
     $('#sheet').parentElement.hidden = names.length < 2;
@@ -88,6 +102,12 @@ function refreshData() {
   const outs = state.map.outcome ? [...new Set(all.map(r => r.outcome))] : [];
   const prevO = $('#outcome-filter').value;
   $('#outcome-wrap').hidden = outs.length < 2;
+  const pick = $('#outcome-pick');
+  if (outs.length < 2) pick.innerHTML = '';
+  else if ([...pick.querySelectorAll('input')].map(x => x.value).join('\u0001') !== outs.join('\u0001')) {
+    pick.innerHTML = `<div class="row between wrap"><b>Desenlaces a analizar</b><span><button type="button" class="ghost" data-pickall="1">Todos</button> <button type="button" class="ghost" data-pickall="0">Ninguno</button></span></div><div class="picklist">${outs.map(o => `<label><input type="checkbox" value="${esc(o)}" checked> ${esc(o)} <small class="muted">(${all.filter(r => r.outcome === o).length} filas)</small></label>`).join('')}</div><p class="muted">«Ejecutar todos los desenlaces» en el paso 2 analiza solo los marcados; el selector «Desenlace» define la vista previa y el análisis individual.</p>`;
+    pick.querySelectorAll('[data-pickall]').forEach(b => b.addEventListener('click', () => pick.querySelectorAll('input').forEach(x => x.checked = b.dataset.pickall === '1')));
+  }
   const curOpts = [...$('#outcome-filter').options].map(o => o.value);
   if (outs.length >= 2 && curOpts.join('\u0001') !== outs.join('\u0001')) { $('#outcome-filter').innerHTML = outs.map(o => `<option>${esc(o)}</option>`).join(''); if (outs.includes(prevO)) $('#outcome-filter').value = prevO; }
   let rows = all;
@@ -139,21 +159,8 @@ $('#pw-scheme').addEventListener('change', syncScheme); $('#nm-scheme').addEvent
 // umbrales moderado/grande por defecto en binarios: proporciones de GRADE-THRESHOLD (DT2/DT1 = 2,38; DT3/DT1 = 4,63)
 const defT = (v, mid, f, binary) => (v > 0 ? v : binary && mid > 0 ? +(mid * f).toFixed(2) : NaN);
 $('#pw-unit').addEventListener('change', () => $('#pw-mid-unit').textContent = 'por ' + $('#pw-unit').value);
-$('#dt-calc').addEventListener('click', () => {
-  const u = +$('#dt-dis').value, unit = +$('#pw-unit').value;
-  if (!(u > 0)) return;
-  const v = [0.0135, 0.0321, 0.0625].map(c => Math.min(unit, c * unit / u));
-  $('#dt-out').textContent = `DT1 ${f1(v[0])} · DT2 ${f1(v[1])} · DT3 ${f1(v[2])} por ${unit} (MID = DT1)`;
-  $('#pw-mid').value = v[0].toFixed(2); $('#pw-t2').value = v[1].toFixed(2); $('#pw-t3').value = v[2].toFixed(2);
-});
-
-$('#nm-dt-calc').addEventListener('click', () => {
-  const u = +$('#nm-dt-dis').value, unit = +$('#nm-unit').value;
-  if (!(u > 0)) return;
-  const v = [0.0135, 0.0321, 0.0625].map(c => Math.min(unit, c * unit / u));
-  $('#nm-dt-out').textContent = `DT1 ${f1(v[0])} · DT2 ${f1(v[1])} · DT3 ${f1(v[2])} por ${unit} (MID = DT1)`;
-  $('#nm-mid').value = v[0].toFixed(2); $('#nm-mod').value = v[1].toFixed(2); $('#nm-large').value = v[2].toFixed(2);
-});
+mountThreshold($('#pw-thr'), '', { unit: 'pw-unit', mid: 'pw-mid', mod: 'pw-t2', large: 'pw-t3' });
+mountThreshold($('#nm-thr'), 'nm-', { unit: 'nm-unit', mid: 'nm-mid', mod: 'nm-mod', large: 'nm-large' });
 const DT = (dis, unit) => [0.0135, 0.0321, 0.0625].map(c => +Math.min(unit, c * unit / dis).toFixed(2));
 // configuración por desenlace desde columnas opcionales del archivo
 function applyOutcomeSettings(kind) {
@@ -169,7 +176,8 @@ function applyOutcomeSettings(kind) {
   return r.o_importance || '';
 }
 async function runAll(kind) {
-  const outs = [...$('#outcome-filter').options].map(o => o.value);
+  const picked = [...document.querySelectorAll('#outcome-pick input:checked')].map(x => x.value);
+  const outs = [...$('#outcome-filter').options].map(o => o.value).filter(o => !picked.length || picked.includes(o));
   const list = outs.length ? outs : [null];
   const btn = $(kind === 'pw' ? '#pw-runall' : '#nm-runall'), t0 = btn.textContent;
   for (const [i, o] of list.entries()) {
@@ -184,6 +192,7 @@ async function runAll(kind) {
     else { if (o != null) $('#nm-outcome').value = o; runNMA(); if (state.lastNm && $('#nm-add')) addNmToSoF(imp); }
     await new Promise(r => setTimeout(r, 20));
   }
+  renderOTabs(kind === 'pw' ? 'pw' : 'nm');
   btn.textContent = `Listo ✓ (${list.length} desenlaces en la tabla SoF)`; setTimeout(() => btn.textContent = t0, 2500);
 }
 $('#pw-runall').addEventListener('click', () => runAll('pw'));
@@ -239,7 +248,10 @@ function runPairwise() {
     subRes = { fits, test: subgroupTest(fits.map(x => x.f)) };
   }
   state.lastPw = { cfg, g, fit, S, measure, isRatio, eg, outcome: $('#pw-outcome').value, int: $('#pw-int').value, comp: $('#pw-comp').value, method, test, dataType: t.data, overrides: {} };
+  state.lastPw.args = [dropped, robCmp, subRes];
+  state.cache.pw[state.lastPw.outcome] = state.lastPw;
   renderPairwise(dropped, robCmp, subRes, tr);
+  renderOTabs('pw');
 }
 
 function domainRow(key, label, lvl, why, max = 3) {
@@ -287,6 +299,7 @@ function renderPairwise(dropped, robCmp, subRes, tr) {
   autoFig($('#pw-results'), P.outcome);
   $('#pw-results').querySelectorAll('[data-dom],[data-why]').forEach(el => el.addEventListener('input', updatePwFinal));
   $('#pw-add').addEventListener('click', addPwToSoF);
+  if (P.ov) document.querySelectorAll('#pw-results [data-dom],#pw-results [data-why]').forEach(el => { const k = el.dataset.dom ?? el.dataset.why + '_why'; if (P.ov[k] != null) el.value = P.ov[k]; });
   updatePwFinal();
 }
 // ---------- figuras con descarga en formato de revista ----------
@@ -296,6 +309,8 @@ function autoFig(root, prefix) {
     const f = document.createElement('figure'); f.className = 'fig';
     f.dataset.name = `${prefix}_${svg.getAttribute('aria-label') || 'figure'}`;
     svg.replaceWith(f); f.appendChild(svg);
+    const vbw = +(svg.getAttribute('viewBox') || '').split(/\s+/)[2];
+    if (vbw) svg.style.maxWidth = `${Math.round(vbw * 1.12)}px`;
     f.insertAdjacentHTML('beforeend', '<figcaption class="figbar"><span>Download (journal format):</span><button type="button" data-fig="svg">SVG</button><button type="button" data-fig="png">PNG</button><button type="button" data-fig="tiff">TIFF</button></figcaption>');
   });
   bindFigs(root.querySelectorAll ? root : document);
@@ -412,6 +427,7 @@ function pwSummary() {
   };
 }
 function updatePwFinal() {
+  state.lastPw.ov = readOverrides();
   const s = pwSummary();
   const fill = fillFor(s.cat, s.c);
   const plain = plainStatement(s.cat, s.c, s.intervention, lcOut(s.outcome), state.lastPw.cfg.threshold, s.plainRaw.d);
@@ -427,7 +443,7 @@ function addPwToSoF(importance) {
   if (typeof importance === 'string' && importance) s.importance = importance;
   else if (state.rows[0]?.o_importance) s.importance = state.rows[0].o_importance;
   s.plain = plainStatement(s.cat, s.c, s.intervention, lcOut(s.outcome), state.lastPw.cfg.threshold, s.plainRaw.d);
-  pushSoF(s);
+  pushSoF(s); state.lastPw.addedSoF = true;
   $('#pw-add').textContent = 'Añadido ✓'; setTimeout(() => $('#pw-add') && ($('#pw-add').textContent = 'Añadir a la tabla SoF'), 1500);
 }
 
@@ -462,7 +478,9 @@ function runNMA() {
     return { ref, res: gradeNMA({ m, rob, indirect, modifier, mid, large: scheme === 3 ? defT(large, mid, 6.25 / 1.35, isBin) : large, moderate: defT(+$('#nm-mod').value, mid, 3.21 / 1.35, isBin), scheme, usePI: $('#nm-piinc').checked, unit, baseline, higherBetter, incP: +$('#nm-incp').value, sd: +$('#nm-sd').value || NaN }, pairs) };
   });
   state.lastNm = { m, blocks, rob, magThs, scheme, stepSel: {}, outcome: $('#nm-outcome').value, unit, mid, type, higherBetter, overrides: {}, bmode, baseline };
+  state.cache.nm[state.lastNm.outcome] = state.lastNm;
   renderNMA();
+  renderOTabs('nm');
 }
 const shortName = t => (t.length > 28 ? t.slice(0, 26) + '…' : t);
 function renderNMA() {
@@ -483,11 +501,15 @@ function renderNMA() {
   blocks.forEach((B, bi) => {
     const rows = B.res.rows;
     const fr = rows.map(r => ({ label: r.a, est: tr(r.est), lo: tr(r.est - 1.96 * r.se), hi: tr(r.est + 1.96 * r.se) }));
-    const vrows = rows.map((r, i) => { const c = N.overrides[`${bi}|${i}`] ?? r.best.c, f = fillFor(r.bestCat, c), q = r.best.r;
-      return { label: shortName(r.a) + (r.best.src !== 'network' ? ` (${r.best.src})` : ''), d: q[0], lo: q[1], hi: q[2], pi: r.best.src === 'network' ? r.piAbs : null, fill: f, badge: { text: `${SYM[c]} ${LEVELS[c]}`, fill: f },
-        right: `${N.scheme === 3 ? crossLabel(r.r[1], r.r[2], N.mid, r.ths) : r.impLvl === 3 ? 'Large benefit to large harm → −3' : crossLabel(r.r[1], r.r[2], N.mid)}${(r.nr.find(x => x[0] === 'inc') || [, ''])[1].replace(/^Inconsistency \((−\d)\).*$/, ' · PI $1')}${isFinite(r.ess) && isFinite(r.ois) ? ` · ESS ${r.ess} vs OIS ${r.ois}` : ''}` }; });
-    const impViz = thresholdSVG({ rows: vrows, mid: N.mid, ths: N.scheme === 3 ? rows[0]?.ths : null, higherBetter: N.higherBetter, title: `Network estimates vs ${B.ref}: imprecision and certainty`, xlabel: isB ? `Absolute effect per ${unit} vs ${B.ref}` : `MD vs ${B.ref}` });
-    html += `<div class="card"><h2>Frente a ${esc(B.ref)}</h2>${impViz}${forestSVG({ rows: fr, log: isB, measure: meas + ' (network)', leftLabel: N.higherBetter ? 'Favours ' + shortName(B.ref) : 'Favours intervention', rightLabel: N.higherBetter ? 'Favours intervention' : 'Favours ' + shortName(B.ref), title: `vs ${B.ref}` })}
+    const sub = (q, kind, cc, lbl) => q ? { label: lbl, indent: true, kind, h: 20, d: q.r[0], lo: q.r[1], hi: q.r[2], fill: fillFor(category(q.r[0], N.mid, N.higherBetter, q.r[1], q.r[2]), cc), badge: { text: `${SYM[cc]} ${LEVELS[cc]}` } }
+      : { label: lbl, indent: true, h: 20, d: NaN, empty: kind === 'direct' ? 'No direct evidence' : 'No indirect evidence' };
+    const vrows = rows.flatMap((r, i) => { const c = N.overrides[`${bi}|${i}`] ?? r.best.c, f = fillFor(r.bestCat, c), q = r.best.r;
+      return [{ label: `${r.a} vs ${r.b}`, bold: true, h: 20, d: NaN, sep: true },
+        sub(r.dImp, 'direct', r.dFinal ?? 1, 'Direct'), sub(r.path ? r.iImp : null, 'indirect', r.iFinal ?? 1, 'Indirect'), {
+        label: 'Network' + (r.best.src !== 'network' ? ` → best: ${r.best.src}` : ''), indent: true, h: 36, d: q[0], lo: q[1], hi: q[2], pi: r.best.src === 'network' ? r.piAbs : null, fill: f, badge: { text: `${SYM[c]} ${LEVELS[c]}`, fill: f },
+        right: `${N.scheme === 3 ? crossLabel(r.r[1], r.r[2], N.mid, r.ths) : r.impLvl === 3 ? 'Large benefit to large harm → −3' : crossLabel(r.r[1], r.r[2], N.mid)}${(r.nr.find(x => x[0] === 'inc') || [, ''])[1].replace(/^Inconsistency \((−\d)\).*$/, ' · PI $1')}${isFinite(r.ess) && isFinite(r.ois) ? ` · ESS ${r.ess} vs OIS ${r.ois}` : ''}` }]; });
+    const impViz = thresholdSVG({ rows: vrows, mid: N.mid, ths: N.scheme === 3 ? rows[0]?.ths : null, higherBetter: N.higherBetter, title: `Direct (□), indirect (△) and network (●) estimates vs ${B.ref}: imprecision and certainty`, xlabel: isB ? `Absolute effect per ${unit} vs ${B.ref}` : `MD vs ${B.ref}` });
+    html += `<div class="card"><h2>Frente a ${esc(B.ref)}</h2>${impViz}${forestSVG({ rows: fr, log: isB, measure: 'Network ' + meas, leftLabel: N.higherBetter ? 'Favours ' + shortName(B.ref) : 'Favours intervention', rightLabel: N.higherBetter ? 'Favours intervention' : 'Favours ' + shortName(B.ref), title: `Network estimates vs ${B.ref}` })}
     <h3>Perfil de evidencia GRADE para NMA</h3><div class="tablewrap" style="max-height:none"><table class="grade-table"><thead><tr><th>Comparación</th><th>Directa</th><th>Indirecta</th><th>Red: ${meas} (IC 95 %)</th><th>Absoluto${isB ? ' por ' + unit : ''}</th><th>Certeza (editable)</th><th>Razones</th></tr></thead><tbody>
     ${rows.map((r, i) => {
       const dTxt = r.D ? `${r.kdir} ensayo(s); ${meas} ${f2(tr(r.D.dr.est))} (${f2(tr(r.D.dr.est - 1.96 * r.D.dr.se))} a ${f2(tr(r.D.dr.est + 1.96 * r.D.dr.se))})<br>${SYM[r.D.c]} ${LEVELS[r.D.c]}${r.D.reasons.length ? '<br><small>' + r.D.reasons.map(x => esc(x[1])).join('<br>') + '</small>' : ''}` : '—';
@@ -522,10 +544,24 @@ function renderNMA() {
   autoFig($('#nm-results'), N.outcome);
   $('#nm-results').querySelectorAll('[data-step]').forEach(tr => tr.addEventListener('click', () => { N.stepSel[tr.closest('[data-block]').dataset.block] = tr.dataset.step; renderNMA(); setTimeout(() => document.getElementById('flow-' + tr.closest('[data-block]').dataset.block)?.scrollIntoView({ block: 'nearest' }), 30); }));
   $('#nm-results').querySelectorAll('[data-stepsel]').forEach(sel => sel.addEventListener('change', () => { N.stepSel[sel.dataset.stepsel] = sel.value; renderNMA(); }));
+  $('#nm-results').querySelector('[data-nsdoc]')?.addEventListener('click', () => download('node_splitting.doc', docWrap(nsData().html), 'application/msword'));
+  $('#nm-results').querySelector('[data-nscsv]')?.addEventListener('click', () => download('node_splitting.csv', toCSV(nsData().csv, ['outcome', 'comparison', 'k', 'direct', 'indirect', 'network', 'pct_direct', 'p']), 'text/csv'));
   $('#nm-results').querySelectorAll('[data-supdoc]').forEach(b => b.addEventListener('click', () => supplDownload([state.lastNm.blocks[+b.dataset.supdoc]], 'doc')));
   $('#nm-results').querySelectorAll('[data-supcsv]').forEach(b => b.addEventListener('click', () => supplDownload([state.lastNm.blocks[+b.dataset.supcsv]], 'csv')));
   $('#nm-results').querySelectorAll('[data-nmo]').forEach(s => s.addEventListener('change', () => { N.overrides[s.dataset.nmo] = +s.value; renderNMA(); }));
   $('#nm-add').addEventListener('click', addNmToSoF);
+}
+// node-splitting: filas para el gráfico y tabla (inglés, para material suplementario)
+function nsData(N = state.lastNm) {
+  const { m } = N, isB = N.type === 'binary', tr = x => (isB ? Math.exp(x) : x), meas = isB ? 'OR' : 'MD';
+  const tri = (e, se) => (isFinite(e) && isFinite(se) ? [tr(e), tr(e - 1.96 * se), tr(e + 1.96 * se)] : null);
+  const ns = m.netsplit();
+  const rows = ns.map(x => ({ label: `${shortName(x.a)} vs ${shortName(x.b)}`, k: x.k, dir: tri(x.dir, x.se_dir), ind: tri(x.ind, x.se_ind), net: tri(x.net, x.se_net), pdir: x.prop_dir, p: x.p }));
+  const c = v => (v ? `${f2(v[0])} (${f2(v[1])} to ${f2(v[2])})` : '–');
+  const html = `<p class="stitle2"><b>Node-splitting (back-calculation) for ${esc(N.outcome)}: direct, indirect and network estimates, ${meas} (95% CI)</b></p><table class="suppl"><thead><tr><th>Comparison</th><th>k (direct)</th><th>Direct</th><th>Indirect</th><th>Network</th><th>% direct</th><th>p</th></tr></thead><tbody>
+    ${ns.map((x, i) => `<tr><td>${esc(x.a)} vs ${esc(x.b)}</td><td>${x.k}</td><td>${c(rows[i].dir)}</td><td>${c(rows[i].ind)}</td><td>${c(rows[i].net)}</td><td>${pct(x.prop_dir)}</td><td>${fp(x.p)}</td></tr>`).join('')}</tbody></table>
+    <div class="notes"><p>k = number of trials with direct evidence; % direct = contribution of the direct estimate to the network estimate; p = test of disagreement between direct and indirect estimates. Random-effects model, τ² = ${m.tau2.toFixed(3)}.</p></div>`;
+  return { rows, html, csv: ns.map((x, i) => ({ outcome: N.outcome, comparison: `${x.a} vs ${x.b}`, k: x.k, direct: c(rows[i].dir), indirect: c(rows[i].ind), network: c(rows[i].net), pct_direct: pct(x.prop_dir), p: fp(x.p) })) };
 }
 function nmCtx(B) {
   const N = state.lastNm, isB = N.type === 'binary';
@@ -556,12 +592,11 @@ function nmDirectViz() {
     const i2 = D.dr.I2, items = D.dr.studies.map((s, i) => ({ rob: N.rob[s], w: D.dr.weights[i] }));
     return `<tr><td>${esc(k.replace(' || ', ' vs '))}</td><td>${D.dr.k}</td><td>${robBarHTML(items)}</td><td>${isFinite(i2) ? `<div class="wbar"><span style="width:${i2 * 100}%;background:${i2 > 0.5 ? '#E59393' : i2 > 0.3 ? '#FFD966' : '#93C47D'}"></span></div>${(i2 * 100).toFixed(0)}%` : '—'}</td><td><span class="badge" style="background:#${{ 4: 'C9DAEA', 3: 'DCE6F1', 2: 'ECF1F7', 1: 'D9D9D9' }[D.c]}">${SYM[D.c]} ${LEVELS[D.c]}</span>${D.reasons.length ? '<br><small>' + D.reasons.map(x => esc(x[1].split(':')[0])).join('; ') + '</small>' : ''}</td></tr>`;
   }).join('')}</tbody></table>${robLegend()}<p class="muted">Reglas: −1 por riesgo de sesgo si &gt;50 % del peso procede de ensayos de alto riesgo; −1 por inconsistencia si I² &gt;50 % con ≥2 ensayos (revise además los forest plots).</p>`;
-  const ns = m.netsplit().filter(x => isFinite(x.ind));
-  const rows = ns.flatMap(x => [
-    { label: `${shortName(x.a)} vs ${shortName(x.b)} · direct (${(x.prop_dir * 100).toFixed(0)}%)`, est: tr(x.dir), lo: tr(x.dir - 1.96 * x.se_dir), hi: tr(x.dir + 1.96 * x.se_dir) },
-    { label: `   indirect`, est: tr(x.ind), lo: tr(x.ind - 1.96 * x.se_ind), hi: tr(x.ind + 1.96 * x.se_ind) },
-    { label: `   network · p = ${fp(x.p)}${x.p < 0.1 ? ' ⚠' : ''}`, est: tr(x.net), lo: tr(x.net - 1.96 * x.se_net), hi: tr(x.net + 1.96 * x.se_net) }]);
-  const coh = rows.length ? forestSVG({ rows, log: isB, measure: meas, leftLabel: 'lower with first treatment', rightLabel: 'higher with first treatment', title: 'Direct vs indirect evidence (node-splitting)' }) + '<p class="muted">⚠ p &lt;0,10: se baja −1 por incoherencia solo si ambas fuentes contribuyen (20–80 %).</p>' : '<p class="muted">No hay lazos cerrados: la incoherencia no es evaluable.</p>';
+  const NS = nsData();
+  const coh = NS.rows.some(r => r.ind) ? nodesplitSVG({ rows: NS.rows, log: isB, measure: meas, title: `Node-splitting: direct, indirect and network estimates — ${N.outcome}`, pcut: +$('#nm-incp').value || 0.1 })
+      + `<p class="muted">p &lt; ${$('#nm-incp').value}: se baja −1 por incoherencia solo si ambas fuentes contribuyen (20–80 % de evidencia directa).</p>`
+      + `<div class="row between wrap"><h3>Tabla de node-splitting (material suplementario)</h3><div class="row gap"><button class="ghost" data-nsdoc>Word (.doc)</button><button class="ghost" data-nscsv>CSV</button></div></div><div class="tablewrap" style="max-height:none">${NS.html}</div>`
+    : '<p class="muted">No hay lazos cerrados: la incoherencia no es evaluable.</p>';
   // funnel ajustado por comparación (Chaimani 2013): contraste de cada estudio menos la estimación de red de esa comparación
   const order = [blocks[0].ref, ...m.T.filter(t => t !== blocks[0].ref)];
   const pts = [];
@@ -595,7 +630,8 @@ function addNmToSoF(importance) {
     };
   }));
   const suppl = N.blocks.map(B => supplTable(B, nmCtx(B)));
-  pushSoF({ type: 'nma', outcome: N.outcome, importance: typeof importance === 'string' && importance ? importance : (state.rows[0]?.o_importance || ''), suppl: suppl.map(t => ({ html: t.html, rows: t.rows })), higherBetter: N.higherBetter, magThs: N.magThs, cols, cells, rowsOrder: N.m.T, mid: `±${N.mid}${isB ? ' per ' + N.unit : ''}`, letters: Object.values(letters).map(x => ({ l: x.l, text: x.text })), tau2: N.m.tau2, k: N.m.k, methods: { type: N.type, bmode: N.bmode } });
+  pushSoF({ type: 'nma', outcome: N.outcome, importance: typeof importance === 'string' && importance ? importance : (state.rows[0]?.o_importance || ''), suppl: suppl.map(t => ({ html: t.html, rows: t.rows })), nsHtml: nsData().html, higherBetter: N.higherBetter, magThs: N.magThs, cols, cells, rowsOrder: N.m.T, mid: `±${N.mid}${isB ? ' per ' + N.unit : ''}`, letters: Object.values(letters).map(x => ({ l: x.l, text: x.text })), tau2: N.m.tau2, k: N.m.k, methods: { type: N.type, bmode: N.bmode } });
+  state.lastNm.addedSoF = true;
   $('#nm-add').textContent = 'Añadido ✓';
 }
 
@@ -670,7 +706,7 @@ function profileHTML() {
       <td>${x.domains.up && x.domains.up.level ? `Rated up +${x.domains.up.level}<sup>${L(x.domains.up.why || 'Rated up')}</sup>` : 'None'}</td><td>${esc(x.relative)}</td><td>${esc(x.absolute)}</td><td>${SYM[x.c]} ${LEVELS[x.c]}</td></tr>`).join('')}</tbody></table>
     <div class="notes"><p>CI = confidence interval. Absolute effects calculated with the baseline risk of the comparator group. Thresholds: ${esc(items.filter(x => x.mid !== 'null').map(x => `${x.outcome} ${x.mid}`).join('; ') || 'null effect')}.</p>${notes.map((n, i) => `<p>${'abcdefghijklmnopqrstuvwxyz'[i]}. ${esc(n)}.</p>`).join('')}</div><br>`;
   }
-  nm.forEach(b => { b.suppl.forEach(t => { html += t.html + '<br>'; }); });
+  nm.forEach(b => { b.suppl.forEach(t => { html += t.html + '<br>'; }); if (b.nsHtml) html += b.nsHtml + '<br>'; });
   return html || '<p class="muted">Añada desenlaces a la tabla SoF para generar las tablas suplementarias.</p>';
 }
 function renderSoF() { $('#sof').innerHTML = sofHTML(); $('#suppl').innerHTML = profileHTML(); $('#methods-text').value = methodsText(); }

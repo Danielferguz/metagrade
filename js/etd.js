@@ -1,7 +1,7 @@
 // Marco de la evidencia a la decisión (EtD; Alonso-Coello et al., BMJ 2016), con el formato de las GPC de IETSI-EsSalud.
 // Toma los desenlaces de la tabla SoF, propone juicios (beneficios, daños, certeza, balance) y redacta la recomendación.
-import { SYM, magnitude } from './grade.js?v=2026.10.15-3';
-import { download } from './io.js?v=2026.10.15-3';
+import { SYM, magnitude } from './grade.js?v=2026.10.16-2';
+import { download } from './io.js?v=2026.10.16-2';
 
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const VAR = ['Varía', 'Se desconoce'];

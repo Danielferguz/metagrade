@@ -20,8 +20,10 @@ function niceTicks(lo, hi, log) {
 
 // rows: [{label, est, lo, hi, w (0-1), rob}] en escala natural (ratio si log=true); pooled: {est, lo, hi, pi:[lo,hi]}
 export function forestSVG({ rows, pooled, log, measure, leftLabel = 'Favours intervention', rightLabel = 'Favours control', title = '' }) {
-  const W = 860, rowH = 22, top = 46, n = rows.length, H = top + (n + 3) * rowH + 40;
-  const x0 = 380, x1 = 640;
+  const compact = !rows.some(r => r.w != null || r.rob);
+  const lw = Math.max(70, Math.min(260, 7 * Math.max(...rows.map(r => String(r.label).length), 5)));
+  const W = compact ? lw + 470 : 860, rowH = 22, top = 46, n = rows.length, H = top + (n + (pooled ? 3 : 1.2)) * rowH + 40;
+  const x0 = compact ? lw + 14 : 380, x1 = compact ? lw + 274 : 640;
   const vals = rows.flatMap(r => [r.lo, r.hi]).concat(pooled ? [pooled.lo, pooled.hi] : []).filter(v => isFinite(v) && (!log || v > 0));
   let lo = Math.min(...vals), hi = Math.max(...vals);
   if (log) { lo = Math.min(lo, 0.9); hi = Math.max(hi, 1.1); lo = Math.max(lo, 0.005); hi = Math.min(hi, 200); }
@@ -31,9 +33,9 @@ export function forestSVG({ rows, pooled, log, measure, leftLabel = 'Favours int
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" class="plot" role="img" aria-label="Forest plot">`;
   s += `<style>text{font:12px system-ui,sans-serif;fill:currentColor}.h{font-weight:600}.m{fill:var(--muted,#666)}</style>`;
   if (title) s += `<text x="8" y="16" class="h">${esc(title)}</text>`;
-  s += `<text x="8" y="38" class="h">Study</text><text x="250" y="38" class="h">Weight</text><text x="${x1 + 20}" y="38" class="h">${esc(measure)} (95% CI)</text>`;
+  s += `<text x="8" y="38" class="h">${compact ? 'Intervention' : 'Study'}</text>${compact ? '' : '<text x="250" y="38" class="h">Weight</text>'}<text x="${x1 + 20}" y="38" class="h">${esc(measure)} (95% CI)</text>`;
   const ref = log ? 1 : 0;
-  s += `<line x1="${sx(ref)}" x2="${sx(ref)}" y1="${top - 6}" y2="${top + (n + 1.6) * rowH}" stroke="currentColor" stroke-width="1"/>`;
+  s += `<line x1="${sx(ref)}" x2="${sx(ref)}" y1="${top - 6}" y2="${top + (n + (pooled ? 1.6 : 0.2)) * rowH}" stroke="currentColor" stroke-width="1"/>`;
   rows.forEach((r, i) => {
     const y = top + i * rowH + 10, sz = 4 + 10 * Math.sqrt(r.w || 0);
     s += `<text x="8" y="${y + 4}">${esc(r.label)}</text><text x="250" y="${y + 4}" class="m">${r.w != null ? (r.w * 100).toFixed(1) + '%' : ''}</text>`;
@@ -55,7 +57,7 @@ export function forestSVG({ rows, pooled, log, measure, leftLabel = 'Favours int
     }
     if (pooled.het) s += `<text x="8" y="${y + 2 * rowH + 4}" class="m">${esc(pooled.het)}</text>`;
   }
-  const ya = top + (n + 2.4) * rowH + 6;
+  const ya = top + (n + (pooled ? 2.4 : 0.4)) * rowH + 6;
   s += `<line x1="${x0}" x2="${x1}" y1="${ya}" y2="${ya}" stroke="currentColor"/>`;
   niceTicks(lo, hi, log).forEach(v => { s += `<line x1="${sx(v)}" x2="${sx(v)}" y1="${ya}" y2="${ya + 4}" stroke="currentColor"/><text x="${sx(v)}" y="${ya + 16}" text-anchor="middle">${v}</text>`; });
   s += `<text x="${sx(ref) - 6}" y="${ya + 32}" text-anchor="end" class="m">← ${esc(leftLabel)}</text><text x="${sx(ref) + 6}" y="${ya + 32}" class="m">${esc(rightLabel)} →</text>`;
@@ -108,11 +110,13 @@ export function thresholdSVG({ rows, mid = 0, ths = null, higherBetter = false, 
   mid = ths[0] || 0;
   const tmax = ths.length ? ths[ths.length - 1] : 0;
   const W = 900, rowH = 30, top = title ? 34 : 14, n = rows.length, x0 = 230, x1 = 570;
+  const ys = []; let acc = top; rows.forEach(r => { const h = r.h || rowH; ys.push(acc + h / 2 - 3); acc += h; });
+  const bodyH = acc - top;
   const vals = rows.flatMap(r => [r.lo, r.hi, ...(r.pi || [])]).filter(isFinite);
   let lo = Math.min(...vals, mid > 0 ? -(ths.length > 1 ? 1.15 * tmax : 1.6 * mid) : 0), hi = Math.max(...vals, mid > 0 ? (ths.length > 1 ? 1.15 * tmax : 1.6 * mid) : 0);
   const pad = (hi - lo) * 0.06 || 1; lo -= pad; hi += pad;
   const sx = scaleFn(lo, hi, x0, x1, false), cl = v => Math.max(x0, Math.min(x1, sx(v)));
-  const yb = top + n * rowH, H = yb + 70;
+  const yb = top + bodyH, H = yb + 70;
   const good = higherBetter ? 1 : -1;
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" class="plot" role="img" aria-label="${esc(title || 'Threshold plot')}">`;
   s += `<style>text{font:12px system-ui,sans-serif;fill:currentColor}.h{font-weight:600}.m{fill:var(--muted,#666);font-size:11px}.z{fill:#1B2430;font-size:11px}</style>`;
@@ -120,7 +124,7 @@ export function thresholdSVG({ rows, mid = 0, ths = null, higherBetter = false, 
   // zonas
   const L = mid > 0 ? -mid : 0, R = mid > 0 ? mid : 0;
   const zLeft = good > 0 ? 'harm' : 'benefit', zRight = good > 0 ? 'benefit' : 'harm';
-  const zr = (a, b, c) => { const xa = cl(a), xb = cl(b); if (xb > xa) s += `<rect x="${xa}" y="${top - 6}" width="${xb - xa}" height="${n * rowH + 6}" fill="${c}"/>`; };
+  const zr = (a, b, c) => { const xa = cl(a), xb = cl(b); if (xb > xa) s += `<rect x="${xa}" y="${top - 6}" width="${xb - xa}" height="${bodyH + 6}" fill="${c}"/>`; };
   if (ths.length > 1) {
     const edges = [lo, ...ths.slice().reverse().map(t => -t)];
     edges.forEach((a, i) => zr(a, edges[i + 1] ?? L, ZONES3[zLeft][ths.length - 1 - i] || ZONES3[zLeft][0]));
@@ -131,20 +135,25 @@ export function thresholdSVG({ rows, mid = 0, ths = null, higherBetter = false, 
   (mid > 0 ? ths.flatMap(t => [-t, t]) : [0]).forEach(t => { s += `<line x1="${cl(t)}" x2="${cl(t)}" y1="${top - 6}" y2="${yb}" stroke="#5B6675" stroke-dasharray="4 3"/>`; });
   if (mid > 0) s += `<line x1="${sx(0)}" x2="${sx(0)}" y1="${top - 6}" y2="${yb}" stroke="#5B6675" stroke-width=".6"/>`;
   rows.forEach((r, i) => {
-    const y = top + i * rowH + rowH / 2 - 3;
+    const y = ys[i];
+    if (r.sep && i) s += `<line x1="8" x2="${W - 8}" y1="${y - (r.h || rowH) / 2 + 1}" y2="${y - (r.h || rowH) / 2 + 1}" stroke="#b9c2cc" stroke-width=".7"/>`;
     if (r.chip) s += `<circle cx="${x0 - 12}" cy="${y}" r="5" fill="${r.chip}"><title>Risk of bias</title></circle>`;
-    s += `<text x="8" y="${y + 4}" class="${r.bold ? 'h' : ''}">${esc(r.label)}</text>`;
+    s += `<text x="${r.indent ? 22 : 8}" y="${y + 4}" class="${r.bold ? 'h' : r.indent ? 'm' : ''}">${esc(r.label)}</text>`;
     if (r.sub) s += `<text x="8" y="${y + 16}" class="m">${esc(r.sub)}</text>`;
-    if (!isFinite(r.d)) return;
+    if (!isFinite(r.d)) { if (r.empty) s += `<text x="${(x0 + x1) / 2}" y="${y + 4}" text-anchor="middle" class="m">${esc(r.empty)}</text>`; return; }
     if (r.pi) s += `<line x1="${cl(r.pi[0])}" x2="${cl(r.pi[1])}" y1="${y}" y2="${y}" stroke="#1F3A5F" stroke-width="7" opacity=".18"><title>95% prediction interval</title></line>`;
     s += `<line x1="${cl(r.lo)}" x2="${cl(r.hi)}" y1="${y}" y2="${y}" stroke="#1B2430" stroke-width="${r.bold ? 2.4 : 1.4}"/>`;
     [r.lo, r.hi].forEach(v => { if (v >= lo && v <= hi) s += `<line x1="${sx(v)}" x2="${sx(v)}" y1="${y - 4}" y2="${y + 4}" stroke="#1B2430"/>`; });
     const rad = r.w != null ? 3 + 8 * Math.sqrt(r.w) : r.bold ? 7 : 5.5;
-    s += r.bold && !r.fill ? `<polygon points="${sx(r.d) - 8},${y} ${sx(r.d)},${y - 6} ${sx(r.d) + 8},${y} ${sx(r.d)},${y + 6}" fill="#1F3A5F"/>`
+    if (r.kind === 'direct' || r.kind === 'indirect') {
+      const X = sx(r.d), col = r.fill ? '#' + r.fill : '#FFFFFF';
+      s += r.kind === 'direct' ? `<rect x="${X - 5}" y="${y - 5}" width="10" height="10" fill="${col}" stroke="#1B2430"/>` : `<polygon points="${X},${y - 6} ${X + 6},${y + 5} ${X - 6},${y + 5}" fill="${col}" stroke="#1B2430"/>`;
+    } else s += r.bold && !r.fill ? `<polygon points="${sx(r.d) - 8},${y} ${sx(r.d)},${y - 6} ${sx(r.d) + 8},${y} ${sx(r.d)},${y + 6}" fill="#1F3A5F"/>`
       : `<circle cx="${sx(r.d)}" cy="${y}" r="${rad}" fill="${r.fill ? '#' + r.fill : '#1F3A5F'}" stroke="#1B2430" stroke-width="1"/>`;
-    s += `<text x="${x1 + 12}" y="${y + 4}" class="${r.bold ? 'h' : ''}">${signed(r.d)} (${signed(r.lo)} to ${signed(r.hi)})</text>`;
+    s += `<text x="${x1 + 12}" y="${y + 4}" class="${r.bold ? 'h' : r.kind ? 'm' : ''}">${signed(r.d)} (${signed(r.lo)} to ${signed(r.hi)})</text>`;
     if (r.right) s += `<text x="${x1 + 12}" y="${y + 16}" class="m">${esc(r.right)}</text>`;
-    if (r.badge) s += `<rect x="${W - 132}" y="${y - 11}" width="124" height="20" rx="4" fill="#${r.badge.fill}" stroke="#b9c2cc"/><text x="${W - 70}" y="${y + 3}" text-anchor="middle" class="z">${esc(r.badge.text)}</text>`;
+    if (r.badge && r.kind) s += `<text x="${W - 70}" y="${y + 4}" text-anchor="middle" class="m">${esc(r.badge.text)}</text>`;
+    else if (r.badge) s += `<rect x="${W - 132}" y="${y - 11}" width="124" height="20" rx="4" fill="#${r.badge.fill}" stroke="#b9c2cc"/><text x="${W - 70}" y="${y + 3}" text-anchor="middle" class="z">${esc(r.badge.text)}</text>`;
   });
   s += `<line x1="${x0}" x2="${x1}" y1="${yb + 2}" y2="${yb + 2}" stroke="currentColor"/>`;
   niceTicks(lo, hi, false).forEach(v => { s += `<line x1="${sx(v)}" x2="${sx(v)}" y1="${yb + 2}" y2="${yb + 6}" stroke="currentColor"/><text x="${sx(v)}" y="${yb + 18}" text-anchor="middle">${v}</text>`; });
@@ -239,5 +248,48 @@ export function funnelSVG({ pts, center = 0, log = false, measure = '', eg = nul
   const egTxt = eg ? `Egger's test: intercept ${eg.intercept.toFixed(2)} (95% CI ${(eg.intercept - eg.tcrit * eg.se).toFixed(2)} to ${(eg.intercept + eg.tcrit * eg.se).toFixed(2)}), p = ${eg.p < 0.001 ? '<0.001' : eg.p.toFixed(3)}; k = ${eg.k}` : 'Egger\'s test not estimable (fewer than 3 studies)';
   s += `<text x="${x0}" y="${y1 + 58}" class="h" style="fill:${eg && eg.p < 0.1 ? '#B03A2E' : 'currentColor'}">${esc(egTxt)}</text>`;
   if (note) s += `<text x="${x0}" y="${y1 + 76}" class="m">${esc(note)}</text>`;
+  return s + '</svg>';
+}
+
+// Node-splitting gráfico: por comparación, estimado directo (□), indirecto (△) y de red (◆) con columnas
+// k directa, Directa, Indirecta, Red (IC 95 %), % directa y p. rows: [{label, k, dir:[e,lo,hi], ind:[e,lo,hi]|null, net:[e,lo,hi], pdir, p}]
+export function nodesplitSVG({ rows, log = false, measure = 'OR', title = '', pcut = 0.1 }) {
+  const rowH = 30, top = title ? 56 : 36, n = rows.length;
+  const lw = Math.max(110, Math.min(260, 6.6 * Math.max(...rows.map(r => r.label.length), 10)));
+  const kx = lw + 18, x0 = lw + 44, x1 = x0 + 230, c1 = x1 + 16, c2 = c1 + 128, c3 = c2 + 128, c4 = c3 + 136, c5 = c4 + 58, W = c5 + 52;
+  const vals = rows.flatMap(r => [r.dir, r.ind, r.net].filter(Boolean).flatMap(v => [v[1], v[2]])).filter(v => isFinite(v) && (!log || v > 0));
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (log) { lo = Math.max(Math.min(lo, 0.9), 0.01); hi = Math.min(Math.max(hi, 1.1), 100); } else { lo = Math.min(lo, 0); hi = Math.max(hi, 0); const pd = (hi - lo) * 0.05; lo -= pd; hi += pd; }
+  const sx = scaleFn(lo, hi, x0, x1, log), cl = v => Math.max(x0, Math.min(x1, sx(Math.max(v, log ? 1e-9 : -Infinity))));
+  const f = v => (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(2)), ci = v => (v ? `${f(v[0])} (${f(v[1])}, ${f(v[2])})` : '–');
+  const H = top + n * rowH + 84;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" class="plot" role="img" aria-label="${esc(title || 'Node-splitting')}">`;
+  s += `<style>text{font:11.5px system-ui,sans-serif;fill:currentColor}.h{font-weight:600}.m{fill:var(--muted,#666);font-size:11px}.r{fill:#B03A2E;font-weight:700}</style>`;
+  if (title) s += `<text x="8" y="16" class="h">${esc(title)}</text>`;
+  const hy = top - 12;
+  s += `<text x="8" y="${hy}" class="h">Comparison</text><text x="${kx}" y="${hy}" class="h" text-anchor="middle">k</text><text x="${(x0 + x1) / 2}" y="${hy}" class="h" text-anchor="middle">${esc(measure)} (95% CI)</text>`;
+  s += `<text x="${c1}" y="${hy}" class="h">Direct</text><text x="${c2}" y="${hy}" class="h">Indirect</text><text x="${c3}" y="${hy}" class="h">Network</text><text x="${c4}" y="${hy}" class="h">% direct</text><text x="${c5}" y="${hy}" class="h">p</text>`;
+  const ref = log ? 1 : 0;
+  s += `<line x1="${sx(ref)}" x2="${sx(ref)}" y1="${top - 4}" y2="${top + n * rowH}" stroke="currentColor" stroke-width=".8"/>`;
+  rows.forEach((r, i) => {
+    const y = top + i * rowH + rowH / 2;
+    if (i % 2 === 0) s += `<rect x="4" y="${y - rowH / 2}" width="${W - 8}" height="${rowH}" fill="#8896A8" opacity=".08"/>`;
+    s += `<text x="8" y="${y + 4}">${esc(r.label)}</text><text x="${kx}" y="${y + 4}" text-anchor="middle">${r.k}</text>`;
+    const draw = (v, dy, shape, col) => {
+      if (!v || !isFinite(v[0])) return;
+      const yy = y + dy, X = sx(v[0]);
+      s += `<line x1="${cl(v[1])}" x2="${cl(v[2])}" y1="${yy}" y2="${yy}" stroke="${col}" stroke-width="1.4"/>`;
+      s += shape === 'sq' ? `<rect x="${X - 3.5}" y="${yy - 3.5}" width="7" height="7" fill="${col}"/>` : shape === 'tri' ? `<polygon points="${X},${yy - 4.5} ${X + 4.5},${yy + 3.5} ${X - 4.5},${yy + 3.5}" fill="${col}"/>` : `<polygon points="${X - 5},${yy} ${X},${yy - 4} ${X + 5},${yy} ${X},${yy + 4}" fill="${col}"/>`;
+    };
+    draw(r.dir, -8, 'sq', '#1F3A5F'); draw(r.ind, 0, 'tri', '#C0631B'); draw(r.net, 8, 'dia', '#111111');
+    s += `<text x="${c1}" y="${y + 4}">${ci(r.dir)}</text><text x="${c2}" y="${y + 4}">${r.ind ? ci(r.ind) : 'no indirect'}</text><text x="${c3}" y="${y + 4}" class="h">${ci(r.net)}</text>`;
+    s += `<text x="${c4}" y="${y + 4}">${isFinite(r.pdir) ? (r.pdir * 100).toFixed(0) + '%' : '–'}</text><text x="${c5}" y="${y + 4}" class="${r.p < pcut ? 'r' : ''}">${isFinite(r.p) ? (r.p < 0.001 ? '<0.001' : r.p.toFixed(3)) : '–'}</text>`;
+  });
+  const ya = top + n * rowH + 4;
+  s += `<line x1="${x0}" x2="${x1}" y1="${ya}" y2="${ya}" stroke="currentColor"/>`;
+  niceTicks(lo, hi, log).forEach(v => { s += `<line x1="${sx(v)}" x2="${sx(v)}" y1="${ya}" y2="${ya + 4}" stroke="currentColor"/><text x="${sx(v)}" y="${ya + 16}" text-anchor="middle">${v}</text>`; });
+  const ly = ya + 38;
+  s += `<rect x="8" y="${ly - 7}" width="7" height="7" fill="#1F3A5F"/><text x="20" y="${ly}">Direct</text><polygon points="${78},${ly - 8} ${82.5},${ly} ${73.5},${ly}" fill="#C0631B"/><text x="88" y="${ly}">Indirect</text><polygon points="${150},${ly - 4} ${155},${ly - 8} ${160},${ly - 4} ${155},${ly}" fill="#111"/><text x="166" y="${ly}">Network</text>`;
+  s += `<text x="240" y="${ly}" class="m">p: disagreement between direct and indirect estimates (back-calculation); red if p &lt; ${pcut}.</text><text x="240" y="${ly + 15}" class="m">% direct: contribution of direct evidence to the network estimate.</text>`;
   return s + '</svg>';
 }

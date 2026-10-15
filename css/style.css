@@ -135,3 +135,18 @@ tr.clickable { cursor: pointer; } tr.clickable:hover td { background: var(--soft
 .suppl { border-collapse: collapse; width: 100%; font-size: .78rem; }
 .suppl th, .suppl td { border: 1px solid var(--line); padding: 4px 6px; vertical-align: top; text-align: left; }
 .suppl th { background: var(--soft); }
+.thr { margin-top: 8px; }
+.anchors { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; margin: 8px 0; }
+.anchors .anc { text-align: left; padding: 6px 8px; font-size: .82rem; line-height: 1.25; }
+.anchors .anc small { display: block; color: var(--muted); font-size: .72rem; }
+.otabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 12px; position: sticky; top: 92px; z-index: 4; background: var(--bg); padding: 6px 0; }
+.otabs:empty { display: none; }
+.otabs button { padding: 6px 12px; font-size: .86rem; border-radius: 999px; }
+.otabs button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+@media (prefers-color-scheme: dark) { .otabs button.active { color: #0F141B; } }
+.opick { margin: 10px 0; }
+.opick:empty { display: none; }
+.picklist { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 14px; margin-top: 6px; }
+.thr svg.plot { max-width: 680px; }
+figure.fig { max-width: 100%; }
+figure.fig .figbar { max-width: inherit; }
