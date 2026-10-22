@@ -1,6 +1,6 @@
 // Meta-análisis por pares: escalc + rma (EE, DL, REML; Wald, Knapp-Hartung, HKSJ ad hoc).
 // Port de la implementación validada contra metafor (BAFF-APRIL, metafx.py).
-import { qnorm, pnorm, qt, pt, pchisq, sum } from './stats.js?v=2026.10.16-6';
+import { qnorm, pnorm, qt, pt, pchisq, sum } from './stats.js?v=2026.10.22-1';
 
 export const RATIO = new Set(['RR', 'OR', 'HR', 'ROM']);
 

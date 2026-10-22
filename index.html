@@ -2,21 +2,26 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>MetaGRADE</title>
 <meta name="description" content="Meta-análisis por pares y en red (NMA) con calificación de la certeza de la evidencia según Core GRADE y GRADE para NMA. Todo se calcula en el navegador.">
-<link rel="stylesheet" href="css/style.css?v=2026.10.16-6">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Source+Sans+3:wght@400;600&display=swap">
+<link rel="stylesheet" href="css/style.css?v=2026.10.22-1">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 </head>
 <body>
 <header class="top">
-  <div class="brand"><span class="logo" aria-hidden="true">⨁</span><div><h1>MetaGRADE</h1><p>Meta-análisis por pares y en red con certeza de la evidencia (Core GRADE · GRADE para NMA)</p></div></div>
+  <div class="brand">
+    <svg viewBox="0 0 46 40" aria-hidden="true"><rect x="2" y="16" width="4" height="22" rx="1" fill="#4D4D4D"/><rect x="9" y="12" width="4" height="26" rx="1" fill="#4D4D4D"/><rect x="16" y="9" width="4" height="29" rx="1" fill="#5BA7B8"/><rect x="23" y="22" width="4" height="16" rx="1" fill="#5BA7B8"/><rect x="30" y="28" width="4" height="10" rx="1" fill="#4D4D4D"/><path d="M8 4 C20 4 22 18 28 22 S38 30 42 28" fill="none" stroke="#4D4D4D" stroke-width="1.6"/><circle cx="8" cy="5" r="4" fill="#8B2E3B"/><circle cx="28" cy="21" r="3" fill="#4D4D4D"/><circle cx="42" cy="28" r="3" fill="#5BA7B8"/></svg>
+    <div><h1><span class="epi">Meta</span><span class="data">GRADE</span></h1><p>Un módulo de <b>EPI-LAB</b> · Meta-análisis y certeza de la evidencia</p></div>
+  </div>
   <nav class="tabs" role="tablist">
-    <button role="tab" data-tab="datos" class="active">1 · Datos</button>
-    <button role="tab" data-tab="analisis">2 · Análisis y GRADE</button>
-    <button role="tab" data-tab="sof">3 · Tabla SoF y exportar</button>
-    <button role="tab" data-tab="etd">4 · Marco EtD</button>
-    <button role="tab" data-tab="ayuda">Métodos y ayuda</button>
+    <button role="tab" data-tab="datos" class="active"><span class="n">1</span>Datos</button>
+    <button role="tab" data-tab="analisis"><span class="n">2</span>Análisis y GRADE</button>
+    <button role="tab" data-tab="sof"><span class="n">3</span>Tabla SoF y exportar</button>
+    <button role="tab" data-tab="etd"><span class="n">4</span>Marco EtD</button>
+    <button role="tab" data-tab="ayuda"><span class="n">?</span>Métodos y ayuda</button>
   </nav>
 </header>
 
@@ -204,7 +209,7 @@
   <div class="card prose" id="help"></div>
 </section>
 </main>
-<footer class="foot"><p>MetaGRADE <span id="app-version">2026.10.16-6</span> · © Daniel Fernández-Guzmán · <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="noopener">CC BY-NC-ND 4.0</a> · cite MetaGRADE si lo usa · los cálculos se hacen en el navegador. Las calificaciones automáticas son sugerencias que dos revisores deben verificar y justificar.</p></footer>
-<script type="module" src="js/app.js?v=2026.10.16-6"></script>
+<footer class="foot"><p>MetaGRADE <span id="app-version">2026.10.22-1</span> · © Daniel Fernández-Guzmán · <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="noopener">CC BY-NC-ND 4.0</a> · cite MetaGRADE si lo usa · los cálculos se hacen en el navegador. Las calificaciones automáticas son sugerencias que dos revisores deben verificar y justificar.</p></footer>
+<script type="module" src="js/app.js?v=2026.10.22-1"></script>
 </body>
 </html>

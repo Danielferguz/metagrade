@@ -1,14 +1,14 @@
-import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.16-6';
-import { escalc, rma, egger, subgroupTest } from './pairwise.js?v=2026.10.16-6';
-import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.16-6';
-import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.16-6';
-import { mountThreshold } from './thresh.js?v=2026.10.16-6';
-import { renderEtD } from './etd.js?v=2026.10.16-6';
-import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.16-6';
-import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.16-6';
-import { forestSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.16-6';
-import { median } from './stats.js?v=2026.10.16-6';
-import { HELP_HTML } from './help.js?v=2026.10.16-6';
+import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.22-1';
+import { escalc, rma, egger, subgroupTest } from './pairwise.js?v=2026.10.22-1';
+import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.22-1';
+import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.22-1';
+import { mountThreshold } from './thresh.js?v=2026.10.22-1';
+import { renderEtD } from './etd.js?v=2026.10.22-1';
+import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.22-1';
+import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.22-1';
+import { forestSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.22-1';
+import { median } from './stats.js?v=2026.10.22-1';
+import { HELP_HTML } from './help.js?v=2026.10.22-1';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
