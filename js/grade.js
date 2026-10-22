@@ -1,6 +1,6 @@
 // Calificación de la certeza: Core GRADE (pares) y GRADE para NMA.
 // Las reglas producen SUGERENCIAS trazables; el usuario puede modificar cada dominio.
-import { qnorm, sum } from './stats.js?v=2026.10.16-6';
+import { qnorm, sum } from './stats.js?v=2026.10.22-1';
 
 export const LEVELS = { 4: 'High', 3: 'Moderate', 2: 'Low', 1: 'Very low' };
 export const SYM = { 4: '⨁⨁⨁⨁', 3: '⨁⨁⨁◯', 2: '⨁⨁◯◯', 1: '⨁◯◯◯' };
