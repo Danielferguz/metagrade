@@ -1,14 +1,14 @@
-import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.22-1';
-import { escalc, rma, egger, subgroupTest } from './pairwise.js?v=2026.10.22-1';
-import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.22-1';
-import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.22-1';
-import { mountThreshold } from './thresh.js?v=2026.10.22-1';
-import { renderEtD } from './etd.js?v=2026.10.22-1';
-import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.22-1';
-import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.22-1';
-import { forestSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.22-1';
-import { median } from './stats.js?v=2026.10.22-1';
-import { HELP_HTML } from './help.js?v=2026.10.22-1';
+import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.24-1';
+import { escalc, rma, egger, subgroupTest, metaReg, designMatrix } from './pairwise.js?v=2026.10.24-1';
+import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.24-1';
+import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.24-1';
+import { mountThreshold } from './thresh.js?v=2026.10.24-1';
+import { renderEtD } from './etd.js?v=2026.10.24-1';
+import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.24-1';
+import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.24-1';
+import { forestSVG, bubbleSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.24-1';
+import { median } from './stats.js?v=2026.10.24-1';
+import { HELP_HTML } from './help.js?v=2026.10.24-1';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -77,7 +77,7 @@ async function loadFile(file) {
 }
 $('#sheet').addEventListener('change', e => selectSheet(e.target.value));
 function selectSheet(name) {
-  state.sheet = name; state.raw = state.sheets[name] || [];
+  state.sheet = name; state.raw = state.sheets[name] || []; state.subvar = state.regvar = undefined;
   state.map = mapColumns(state.raw);
   state.type = detectType(state.map);
   state.kind = state.type.kind === 'nma' ? 'nma' : 'pairwise';
@@ -146,6 +146,10 @@ function setupAnalysis() {
       $('#pw-p0').value = p.length ? median(p).toFixed(3) : '';
     }
     $('#pw-p0').closest('label').hidden = t.data === 'continuous';
+    const dc = dataCols(), opts2 = cur => '<option value="">— ninguno —</option>' + dc.map(c => `<option ${c === cur ? 'selected' : ''}>${esc(c)}</option>`).join('');
+    const keep = v => (v !== undefined && (v === '' || dc.includes(v)) ? v : null);
+    $('#pw-subvar').innerHTML = opts2(keep(state.subvar) ?? (state.subAll && state.map.subgroup ? state.map.subgroup : ''));
+    $('#pw-regvar').innerHTML = opts2(keep(state.regvar) ?? '');
     $('#pw-results').innerHTML = '';
   } else {
     $('#nm-type').value = t.outcome || 'binary';
@@ -313,6 +317,63 @@ function pwStudies(rows, measure, dataType) {
     return e && isFinite(e.yi) ? { study: r.study || '?', yi: e.yi, vi: e.vi, rob: r.rob, indirect: r.indirect, n, subgroup: r.subgroup, raw: r } : { study: r.study, dropped: e ? e.dropped || 'datos incompletos' : 'datos incompletos' };
   });
 }
+// ---------- subgrupos, meta-regresión, columnas de grupo y estratos por diseño ----------
+const hiddenCols = new Set(['study', 'outcome', 'e1', 'n1', 'e2', 'n2', 'm1', 'sd1', 'm2', 'sd2', 'est', 'lower', 'upper', 'yi', 'sei', 'indirect', 'o_importance', 'o_dir', 'o_mid', 'o_dis', 'o_p0', 'o_int', 'o_comp']);
+function dataCols() { const used = new Set(Object.entries(state.map).filter(([k]) => hiddenCols.has(k)).map(([, c]) => c)); return Object.keys(state.raw[0] || {}).filter(c => !used.has(c)); }
+$('#pw-subvar').addEventListener('change', e => { state.subvar = e.target.value; });
+$('#pw-regvar').addEventListener('change', e => { state.regvar = e.target.value; });
+const colOf = (s, col) => String(s.raw?._raw?.[col] ?? '').trim();
+const NRSI_RE = /non.?random|no.?aleat|observ|cohort|case.?control|caso|nrsi|nrs\b|registr|claims|real.?world|quasi|cuasi/i, RCT_RE = /rct|random|aleat|ensayo|\beca\b|trial/i;
+const designClass = (v, fallback) => (!v ? fallback : NRSI_RE.test(v) ? 'NRSI' : RCT_RE.test(v) ? 'RCT' : 'NRSI');
+const num = v => parseFloat(String(v).replace(',', '.'));
+function subgroupAnalysis(S, col, method, test) {
+  const by = new Map(); let miss = 0;
+  S.forEach((s, i) => { const v = colOf(s, col); if (!v) miss++; const key = v || '(not reported)'; if (!by.has(key)) by.set(key, []); by.get(key).push(i); });
+  const named = [...by.keys()].filter(k => k !== '(not reported)');
+  if (named.length < 2) return { col, err: 'La variable tiene menos de 2 categorías con datos.' };
+  if (named.length > 10) return { col, err: `La variable tiene ${named.length} categorías: use la meta-regresión o agrupe las categorías.` };
+  if (named.every(k => isFinite(num(k)))) named.sort((a, b) => num(a) - num(b));
+  const fits = [...named, ...(by.has('(not reported)') ? ['(not reported)'] : [])].map(sg => { const ix = by.get(sg); return { sg, ix, na: sg === '(not reported)', f: rma(ix.map(i => S[i].yi), ix.map(i => S[i].vi), { method, test }) }; });
+  return { col, fits, miss, test: subgroupTest(fits.filter(x => !x.na).map(x => x.f)) };
+}
+function regAnalysis(S, col, type, method, test) {
+  const vals = S.map(s => colOf(s, col)), ne = vals.filter(v => v !== '');
+  const isNum = type === 'num' || (type === 'auto' && ne.length && ne.filter(v => isFinite(num(v))).length >= 0.8 * ne.length && new Set(ne).size > 2);
+  const dm = designMatrix(vals, isNum ? 'num' : 'cat');
+  if (!isNum && dm.levels.length < 2) return { col, err: 'El moderador tiene una sola categoría.' };
+  const m = metaReg(S.map(s => s.yi), S.map(s => s.vi), dm.X, { method, test });
+  if (!m) return { col, err: `Se necesitan más estudios con dato del moderador que coeficientes del modelo (hay ${vals.filter(v => v !== '').length}).` };
+  return { col, dm, m, isNum, vals };
+}
+// columnas de intervención y control del forest plot: n/N (%) en binarios, media (DE) y N en continuos, solo N en razones ajustadas
+function pwCols(dataType, S, on) {
+  if (!on) return null;
+  const I = 'Intervention', C = 'Control', ok = isFinite;
+  const ev = (e, n) => (ok(e) && n > 0 ? `${e}/${n} (${(100 * e / n).toFixed(1)})` : '–');
+  const ms = (m, sd) => (ok(m) && ok(sd) ? `${+m.toFixed(2)} (${+sd.toFixed(2)})` : '–');
+  const nn = n => (ok(n) ? String(n) : '–');
+  const tot = (ss, k) => ss.every(s => ok(s.raw[k])) ? ss.reduce((a, s) => a + s.raw[k], 0) : NaN;
+  if (dataType === 'binary') return { cols: [{ group: I, head: 'n/N (%)', w: 122 }, { group: C, head: 'n/N (%)', w: 122 }], cells: s => [ev(s.raw.e1, s.raw.n1), ev(s.raw.e2, s.raw.n2)], total: ss => [ev(tot(ss, 'e1'), tot(ss, 'n1')), ev(tot(ss, 'e2'), tot(ss, 'n2'))] };
+  if (dataType === 'continuous') return { cols: [{ group: I, head: 'Mean (SD)', w: 100 }, { group: I, head: 'N', w: 48 }, { group: C, head: 'Mean (SD)', w: 100 }, { group: C, head: 'N', w: 48 }], cells: s => [ms(s.raw.m1, s.raw.sd1), nn(s.raw.n1), ms(s.raw.m2, s.raw.sd2), nn(s.raw.n2)], total: ss => ['', nn(tot(ss, 'n1')), '', nn(tot(ss, 'n2'))] };
+  if (dataType === 'ratio-ci' && S.some(s => ok(s.raw.n1) || ok(s.raw.n2))) return { cols: [{ group: I, head: 'N', w: 64 }, { group: C, head: 'N', w: 64 }], cells: s => [nn(s.raw.n1), nn(s.raw.n2)], total: ss => [nn(tot(ss, 'n1')), nn(tot(ss, 'n2'))] };
+  return null;
+}
+const hetShort = f => (f.k > 1 ? `I² = ${isFinite(f.I2) ? f.I2.toFixed(0) : '–'}%, τ² = ${f.tau2.toFixed(3)}` : '');
+const methLabel = fit => (fit.method === 'EE' ? 'Common effect' : 'Random effects, ' + fit.method) + (fit.test !== 'z' ? ', ' + (fit.test === 'adhoc' ? 'HKSJ' : 'Knapp-Hartung') : '');
+const interTxt = (col, t) => (t ? `Test for subgroup differences (${col}): Q = ${t.Q.toFixed(2)}, df = ${t.df}, p = ${fp(t.p)}` : '');
+function designStrata(S, cfg, method, test) {
+  if (!state.map.design) return null;
+  const fb = cfg.design === 'RCT' ? 'RCT' : 'NRSI', cls = S.map(s => designClass(colOf(s, state.map.design), fb));
+  const mk = kind => {
+    const ix = S.map((_, i) => i).filter(i => cls[i] === kind); if (!ix.length) return null;
+    const ss = ix.map(i => S[i]), f = rma(ss.map(x => x.yi), ss.map(x => x.vi), { method, test });
+    const c = { ...cfg, fit: f, studies: ss, design: kind === 'RCT' ? 'RCT' : cfg.design === 'NRSI_TTE' ? 'NRSI_TTE' : 'NRSI', eggerRes: ss.length >= 10 ? egger(ss.map(x => x.yi), ss.map(x => x.vi)) : null };
+    return { kind, ix, ss, f, cfg: c, g: gradePairwise(c), ov: {} };
+  };
+  const R = mk('RCT'), N = mk('NRSI');
+  return R && N ? { list: [R, N], test: subgroupTest([R.f, N.f]) } : null;
+}
+
 function runPairwise() {
   const t = detectType(state.map), measure = $('#pw-measure').value;
   const isRatio = ['RR', 'OR', 'HR', 'ROM'].includes(measure);
@@ -345,31 +406,130 @@ function runPairwise() {
     const fl = rma(lowS.map(s => s.yi), lowS.map(s => s.vi), { method, test }), fh = rma(highS.map(s => s.yi), highS.map(s => s.vi), { method, test });
     robCmp = { fl, fh, test: subgroupTest([fl, fh]) };
   }
-  // subgrupos
-  let subRes = null;
-  if (state.subAll && state.subgroups.length >= 2) {
-    const fits = state.subgroups.map(sg => { const ss = S.filter(s => s.subgroup === sg); return ss.length ? { sg, f: rma(ss.map(s => s.yi), ss.map(s => s.vi), { method, test }) } : null; }).filter(Boolean);
-    subRes = { fits, test: subgroupTest(fits.map(x => x.f)) };
-  }
-  state.lastPw = { cfg, g, fit, S, measure, isRatio, eg, outcome: $('#pw-outcome').value, int: $('#pw-int').value, comp: $('#pw-comp').value, method, test, dataType: t.data, overrides: {} };
-  state.lastPw.args = [dropped, robCmp, subRes];
+  // subgrupos (cualquier columna) y meta-regresión
+  const subvar = $('#pw-subvar').value, regvar = $('#pw-regvar').value;
+  const subRes = subvar ? subgroupAnalysis(S, subvar, method, test) : null;
+  const regRes = regvar ? regAnalysis(S, regvar, $('#pw-regtype').value, method, test) : null;
+  const strata = $('#pw-strata').checked ? designStrata(S, cfg, method, test) : null;
+  const colSpec = pwCols(t.data, S, $('#pw-cols').checked);
+  state.lastPw = { cfg, g, fit, S, measure, isRatio, eg, outcome: $('#pw-outcome').value, int: $('#pw-int').value, comp: $('#pw-comp').value, method, test, dataType: t.data, overrides: {}, regRes, strata, colSpec, subvar, regvar };
+  state.lastPw.args = [dropped, robCmp, subRes]; state.lastPw.subRes = subRes;
   state.cache.pw[state.lastPw.outcome] = state.lastPw;
   renderPairwise(dropped, robCmp, subRes, tr);
   renderOTabs('pw');
 }
 
-function domainRow(key, label, lvl, why, max = 3) {
-  return `<tr><th>${label}</th><td><select data-dom="${key}">${[0, 1, 2, 3].slice(0, max + 1).map(v => `<option value="${v}" ${v === lvl ? 'selected' : ''}>${v === 0 ? 'No serio' : v === 1 ? 'Serio (−1)' : v === 2 ? 'Muy serio (−2)' : 'Extremadamente serio (−3)'}</option>`).join('')}</select></td><td><textarea data-why="${key}">${esc(why)}</textarea></td></tr>`;
+function domainRow(key, label, lvl, why, max = 3, pre = '') {
+  return `<tr><th>${label}</th><td><select data-${pre}dom="${key}">${[0, 1, 2, 3].slice(0, max + 1).map(v => `<option value="${v}" ${v === lvl ? 'selected' : ''}>${v === 0 ? 'No serio' : v === 1 ? 'Serio (−1)' : v === 2 ? 'Muy serio (−2)' : 'Extremadamente serio (−3)'}</option>`).join('')}</select></td><td><textarea data-${pre}why="${key}">${esc(why)}</textarea></td></tr>`;
+}
+
+// ---------- filas del forest y tarjetas de subgrupos / meta-regresión / evidencia por diseño ----------
+const fRow = (P, tr, s, w) => ({ label: s.study, est: tr(s.yi), lo: tr(s.yi - 1.96 * Math.sqrt(s.vi)), hi: tr(s.yi + 1.96 * Math.sqrt(s.vi)), w, rob: s.rob, cells: P.colSpec ? P.colSpec.cells(s) : null });
+const fPool = (P, tr, f, label, ss, het) => ({ est: tr(f.est), lo: tr(f.ci[0]), hi: tr(f.ci[1]), label, het, cells: P.colSpec ? P.colSpec.total(ss) : null });
+const nTot = ss => { const v = ss.map(s => s.n).filter(isFinite); return v.length ? v.reduce((a, b) => a + b, 0) : '–'; };
+function subRegHTML(P, tr, subRes) {
+  const { regRes } = P, lbl = P.measure, ci = f => `${f2(tr(f.est))} (${f2(tr(f.ci[0]))} a ${f2(tr(f.ci[1]))})`;
+  let h = '';
+  if (subRes) {
+    if (subRes.err) h += `<div class="warn">Subgrupos (${esc(subRes.col)}): ${esc(subRes.err)}</div>`;
+    else {
+      const t = subRes.test;
+      h += `<h3>Análisis por subgrupos — ${esc(subRes.col)}</h3><table class="data"><thead><tr><th>Subgrupo</th><th>Estudios</th><th>Participantes</th><th>${esc(lbl)} (IC 95 %)</th><th>I²</th><th>τ²</th></tr></thead><tbody>
+      ${subRes.fits.map(x => `<tr><td>${esc(x.na ? '(sin dato)' : x.sg)}</td><td>${x.f.k}</td><td>${nTot(x.ix.map(i => P.S[i]))}</td><td>${ci(x.f)}</td><td>${isFinite(x.f.I2) ? x.f.I2.toFixed(0) + '%' : '–'}</td><td>${x.f.tau2.toFixed(3)}</td></tr>`).join('')}</tbody></table>
+      <p><b>Prueba de diferencia entre subgrupos (p de interacción): ${t ? `p = ${fp(t.p)}` : '—'}</b>${t ? ` (Q entre grupos = ${t.Q.toFixed(2)}, gl = ${t.df})` : ''}. Cada subgrupo usa su propio τ²; con pocos estudios por subgrupo la prueba tiene poca potencia. ${subRes.miss ? `${subRes.miss} estudio(s) sin dato de «${esc(subRes.col)}» se muestran aparte y no entran en la prueba. ` : ''}Para presentar estimaciones separadas, juzgue la credibilidad del subgrupo con ICEMAN (hipótesis a priori, comparación dentro del estudio, diferencia coherente en magnitud y dirección).</p>`;
+    }
+  }
+  if (regRes) {
+    if (regRes.err) h += `<div class="warn">Meta-regresión (${esc(regRes.col)}): ${esc(regRes.err)}</div>`;
+    else {
+      const { m, dm, isNum } = regRes, col = regRes.col, crit = (m.ci[0][1] - m.beta[0]) / m.se[0], ratio = P.isRatio;
+      const terms = isNum ? [`Intercepto (efecto en el valor medio, ${+dm.mean.toFixed(2)})`, `Pendiente por cada +1 de ${col}${ratio ? ' (cociente de ' + lbl + ')' : ''}`] : [`Referencia: ${dm.ref}`, ...dm.terms.slice(1).map(x => x + (ratio ? ` (cociente de ${lbl})` : ''))];
+      const F = m.test !== 'z';
+      h += `<h3>Meta-regresión — moderador «${esc(col)}» (${isNum ? 'numérico' : 'categórico'})</h3>
+      <table class="data"><thead><tr><th>Término</th><th>${ratio ? 'exp(β)' : 'β'} (IC 95 %)</th><th>p</th></tr></thead><tbody>${terms.map((t, i) => `<tr><td>${esc(t)}</td><td>${f2(tr(m.beta[i]))} (${f2(tr(m.ci[i][0]))} a ${f2(tr(m.ci[i][1]))})</td><td>${fp(m.pval[i])}</td></tr>`).join('')}</tbody></table>
+      <p><b>Prueba de moderadores: ${F ? 'F' : 'QM'} = ${m.QM.toFixed(2)}, gl = ${m.m}${F ? ', ' + m.df : ''}, p = ${fp(m.QMp)}</b> · heterogeneidad residual: QE = ${m.QE.toFixed(2)} (gl = ${m.df}, p = ${fp(m.QEp)}), τ² = ${m.tau2.toFixed(3)} (sin moderador ${m.tau2_0.toFixed(3)}), I² residual = ${isFinite(m.I2) ? m.I2.toFixed(0) : '–'}% · R² = ${m.R2.toFixed(0)}% de la heterogeneidad explicada.</p>
+      <p class="muted">${m.k < 10 ? `<b>Solo ${m.k} estudios:</b> la meta-regresión tiene poca potencia y alto riesgo de falsos positivos (se recomienda ≥10 estudios por moderador); trátela como exploratoria. ` : ''}Es una asociación entre estudios (no causal) y puede estar confundida por otras características de los estudios.</p>`;
+      if (isNum) {
+        const wt = m.idx.map(j => 1 / (P.S[j].vi + m.tau2)), sw = wt.reduce((a, b) => a + b, 0);
+        h += bubbleSVG({ pts: m.idx.map((j, q) => ({ x: num(regRes.vals[j]), y: P.S[j].yi, w: wt[q] / sw, label: `${P.S[j].study}: ${f2(tr(P.S[j].yi))}` })), log: ratio, xlabel: col, ylabel: ratio ? `${lbl} (log scale)` : lbl, title: `Meta-regression: ${lbl} vs ${col}`,
+          pred: x => { const xc = x - dm.mean, est = m.beta[0] + m.beta[1] * xc, v = m.vb[0][0] + 2 * m.vb[0][1] * xc + m.vb[1][1] * xc * xc, d = crit * Math.sqrt(Math.max(v, 0)); return { est, lo: est - d, hi: est + d }; } });
+      }
+    }
+  }
+  return h ? `<div class="card"><h2>Subgrupos y meta-regresión</h2>${h}</div>` : '';
+}
+
+// Evidencia de ECA y estudios observacionales por separado: dominios GRADE de cada cuerpo de evidencia (solo meta-análisis por pares)
+const DESIGN_EN = { RCT: 'Randomised trials', NRSI: 'Observational (non-randomised) studies' };
+const DESIGN_NAME = { RCT: 'Ensayos aleatorizados (ECA)', NRSI: 'Estudios observacionales (no aleatorizados)' };
+const stratumP = st => ({ ...state.lastPw, isStratum: true, cfg: st.cfg, g: st.g, fit: st.f, S: st.ss, eg: st.cfg.eggerRes });
+function stratumOv(i) {
+  const o = {}, root = document.querySelector(`.stratum[data-st="${i}"]`);
+  root.querySelectorAll('[data-sdom]').forEach(x => o[x.dataset.sdom] = +x.value);
+  root.querySelectorAll('[data-swhy]').forEach(t => o[t.dataset.swhy + '_why'] = t.value.trim());
+  return o;
+}
+function strataHTML(P, tr) {
+  const ST = P.strata; if (!ST) return '';
+  const lbl = P.measure, fav = P.cfg.higherBetter ? [`Favours ${P.comp}`, `Favours ${P.int}`] : [`Favours ${P.int}`, `Favours ${P.comp}`];
+  const svg = forestSVG({ groups: ST.list.map(st => ({ label: DESIGN_EN[st.kind], rows: st.ss.map((s, j) => fRow(P, tr, s, st.f.weights[j])), pooled: fPool(P, tr, st.f, `Subtotal (k = ${st.f.k})`, st.ss, hetShort(st.f)) })), cols: P.colSpec?.cols || [], interaction: interTxt('study design', ST.test), weightHead: 'Weight (in design)', log: P.isRatio, measure: lbl, leftLabel: fav[0], rightLabel: fav[1], title: `${P.outcome} — by study design` });
+  const body = ST.list.map((st, i) => { const g = st.g, un = g.ab.binary ? ` por ${P.cfg.unit}` : '';
+    return `<details class="stratum" data-st="${i}" open><summary><b>${DESIGN_NAME[st.kind]}</b> <span class="muted">· ${st.f.k} estudio(s) · punto de partida: ${LEVELS[g.start]}</span></summary>
+    <table class="grade-table"><thead><tr><th style="width:160px">Dominio</th><th style="width:190px">Juicio</th><th>Justificación (aparece como nota al pie)</th></tr></thead><tbody>
+    ${domainRow('rob', 'Riesgo de sesgo', g.domains.rob.level, g.domains.rob.why, 3, 's')}${domainRow('inc', 'Inconsistencia', g.domains.inc.level, g.domains.inc.why, 3, 's')}
+    ${domainRow('ind', 'Evidencia indirecta', g.domains.ind.level, g.domains.ind.why, 3, 's')}${domainRow('imp', 'Imprecisión', g.domains.imp.level, g.domains.imp.why, 3, 's')}
+    ${domainRow('pub', 'Sesgo de publicación', g.domains.pub.level, g.domains.pub.why, 2, 's')}
+    ${g.start === 2 ? `<tr><th>Subir certeza</th><td><select data-sdom="up">${[0, 1, 2].map(v => `<option value="${v}" ${v === g.up.level ? 'selected' : ''}>${v ? '+' + v : 'No'}</option>`).join('')}</select></td><td><textarea data-swhy="up">${esc(g.up.why)}</textarea></td></tr>` : ''}
+    </tbody></table><div class="sfinal"></div></details>`; }).join('');
+  return `<div class="card" id="pw-strata-card"><h2>Evidencia por diseño: ECA vs estudios observacionales (GRADE)</h2>
+  <p class="muted">Cada cuerpo de evidencia se agrupa y se califica por separado, con sus propios dominios GRADE (como un análisis por subgrupos de diseño): los ECA parten de certeza alta y los estudios no aleatorizados de baja (alta si se evalúan con ROBINS-I y emulan un ensayo). Cuando hay ECA de certeza alta o moderada, los observacionales rara vez la modifican; si la de los ECA es baja o muy baja, la evidencia observacional puede ser más informativa. Combínelos solo con una justificación explícita. No aplica a las NMA.</p>
+  ${svg}
+  <p><b>Prueba de diferencia entre diseños (p de interacción): ${ST.test ? 'p = ' + fp(ST.test.p) : '—'}</b>${ST.test ? ` (Q = ${ST.test.Q.toFixed(2)}, gl = ${ST.test.df})` : ''}. Una diferencia importante no implica que un diseño sea «el correcto»: explore confusión residual, población, intervención y riesgo de sesgo de cada cuerpo de evidencia.</p>
+  <div id="st-sum"></div>${body}
+  <div class="row end"><button class="primary" id="st-add">Añadir ECA y observacionales a la tabla SoF</button></div></div>`;
+}
+function stratumSummaryHTML(P) {
+  const rows = P.strata.list.map(st => { const s = pwSummary(stratumP(st), st.ov), fill = fillFor(s.cat, s.c);
+    return `<tr><td>${DESIGN_NAME[st.kind]}</td><td>${esc(s.participants)}</td><td>${esc(s.relative)}</td><td>${esc(s.absolute)}</td><td><span class="badge" style="background:#${fill}">${SYM[s.c]} ${LEVELS[s.c]}</span></td></tr>`; }).join('');
+  return `<table class="data"><thead><tr><th>Cuerpo de evidencia</th><th>Participantes (estudios)</th><th>Efecto relativo</th><th>Efecto absoluto</th><th>Certeza</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function updateStratum(i) {
+  const P = state.lastPw, st = P.strata.list[i]; st.ov = stratumOv(i);
+  const s = pwSummary(stratumP(st), st.ov), fill = fillFor(s.cat, s.c), plain = plainStatement(s.cat, s.c, s.intervention, lcOut(s.outcome), P.cfg.threshold, s.plainRaw.d);
+  document.querySelector(`.stratum[data-st="${i}"] .sfinal`).innerHTML = `<div class="row gap wrap" style="margin-top:10px"><span class="badge" style="background:#${fill}">${SYM[s.c]} ${LEVELS[s.c]}</span><span>${legendText(s.cat, s.c, s.comparator)}</span></div><p><b>Frase en lenguaje claro:</b> ${esc(plain)}</p><div class="notes">${s.notes.map(n => `<p>• ${esc(n)}</p>`).join('')}</div>`;
+  $('#st-sum').innerHTML = stratumSummaryHTML(P);
+}
+function bindStrata() {
+  const P = state.lastPw; if (!P?.strata) return;
+  P.strata.list.forEach((st, i) => {
+    const root = document.querySelector(`.stratum[data-st="${i}"]`);
+    Object.entries(st.ov).forEach(([k, v]) => { const el = k.endsWith('_why') ? root.querySelector(`[data-swhy="${k.slice(0, -4)}"]`) : root.querySelector(`[data-sdom="${k}"]`); if (el) el.value = v; });
+    root.querySelectorAll('[data-sdom],[data-swhy]').forEach(el => el.addEventListener('input', () => updateStratum(i)));
+  });
+  P.strata.list.forEach((_, i) => updateStratum(i));
+  $('#st-add').addEventListener('click', addStrataToSoF);
+}
+function addStrataToSoF() {
+  const P = state.lastPw;
+  P.strata.list.forEach(st => {
+    const s = pwSummary(stratumP(st), st.ov);
+    s.plain = plainStatement(s.cat, s.c, s.intervention, lcOut(s.outcome), P.cfg.threshold, s.plainRaw.d);
+    s.importance = state.rows[0]?.o_importance || P.importance || '';
+    s.outcome = `${P.outcome} (${st.kind === 'RCT' ? 'RCTs' : 'observational'})`; s.stratum = st.kind;
+    pushSoF(s);
+  });
+  const b = $('#st-add'); b.textContent = 'Añadido ✓'; setTimeout(() => b.textContent = 'Añadir ECA y observacionales a la tabla SoF', 1500);
 }
 
 function renderPairwise(dropped, robCmp, subRes, tr) {
   const P = state.lastPw, { fit, g, S, measure, isRatio, cfg } = P;
   const lbl = isRatio ? measure : measure;
-  const rows = S.map((s, i) => ({ label: s.study, est: tr(s.yi), lo: tr(s.yi - 1.96 * Math.sqrt(s.vi)), hi: tr(s.yi + 1.96 * Math.sqrt(s.vi)), w: fit.weights[i], rob: s.rob }));
-  const het = fit.k > 1 ? `Heterogeneity: τ² = ${fit.tau2.toFixed(3)}; I² = ${fit.I2.toFixed(0)}%; Q = ${fit.QE.toFixed(2)} (p = ${fp(fit.QEp)})` : '';
-  const goodLeft = cfg.higherBetter ? isRatio ? false : false : true;
   const fav = cfg.higherBetter ? [`Favours ${P.comp}`, `Favours ${P.int}`] : [`Favours ${P.int}`, `Favours ${P.comp}`];
-  const svg = forestSVG({ rows, pooled: { est: tr(fit.est), lo: tr(fit.ci[0]), hi: tr(fit.ci[1]), pi: fit.k >= 3 ? [tr(fit.pi[0]), tr(fit.pi[1])] : null, het, label: `Pooled (${fit.method === 'EE' ? 'common effect' : 'random effects, ' + fit.method}${fit.test !== 'z' ? ', ' + (fit.test === 'adhoc' ? 'HKSJ' : 'Knapp-Hartung') : ''})` }, log: isRatio, measure: lbl, leftLabel: fav[0], rightLabel: fav[1], title: P.outcome });
+  const het = fit.k > 1 ? `Heterogeneity: τ² = ${fit.tau2.toFixed(3)}; I² = ${fit.I2.toFixed(0)}%; Q = ${fit.QE.toFixed(2)} (p = ${fp(fit.QEp)})` : '';
+  const grp = subRes && subRes.fits ? subRes.fits.map(x => ({ label: `${x.na ? 'Not reported' : x.sg}`, rows: x.ix.map((i, j) => fRow(P, tr, S[i], x.f.weights[j])), pooled: fPool(P, tr, x.f, `Subtotal (k = ${x.f.k})`, x.ix.map(i => S[i]), hetShort(x.f)) })) : null;
+  const short = !!(grp || P.colSpec);
+  const pooledAll = { ...fPool(P, tr, fit, short ? 'Overall' : `Pooled (${methLabel(fit).replace('Random effects, ', 'random effects, ').replace('Common effect', 'common effect')})`, S, short ? `${methLabel(fit)}. ${het}` : het), pi: fit.k >= 3 ? [tr(fit.pi[0]), tr(fit.pi[1])] : null };
+  const svg = forestSVG({ rows: S.map((s, i) => fRow(P, tr, s, fit.weights[i])), groups: grp, cols: P.colSpec?.cols || [], pooled: pooledAll, interaction: subRes && subRes.test ? interTxt(subRes.col, subRes.test) : '', weightHead: grp ? 'Weight (in subgroup)' : 'Weight', log: isRatio, measure: lbl, leftLabel: fav[0], rightLabel: fav[1], title: P.outcome });
   const A = g.abs, ab = g.ab, un = ab.binary ? ` por ${cfg.unit}` : '';
   let html = `<div class="card"><h2>Resultados — ${esc(P.outcome)}</h2>`;
   if (dropped.length) html += `<div class="warn">Excluidos del cálculo: ${dropped.map(d => esc(d.study) + ' (' + esc(d.dropped) + ')').join('; ')}</div>`;
@@ -381,12 +541,13 @@ function renderPairwise(dropped, robCmp, subRes, tr) {
   ${P.eg ? `<div class="kpi"><span>Egger (≥10 estudios)</span><b>p = ${fp(P.eg.p)}</b></div>` : ''}</div>`;
   html += svg;
   if (robCmp) html += `<p class="muted"><b>Bajo vs alto riesgo de sesgo:</b> bajo ${f2(tr(robCmp.fl.est))} (${f2(tr(robCmp.fl.ci[0]))}–${f2(tr(robCmp.fl.ci[1]))}, k=${robCmp.fl.k}); alto ${f2(tr(robCmp.fh.est))} (${f2(tr(robCmp.fh.ci[0]))}–${f2(tr(robCmp.fh.ci[1]))}, k=${robCmp.fh.k}); p de interacción = ${fp(robCmp.test?.p)}. Si difieren de forma importante y hay evidencia apreciable de bajo riesgo, use solo los estudios de bajo riesgo y no baje la certeza (Core GRADE 4).</p>`;
-  if (subRes) html += `<p class="muted"><b>Subgrupos:</b> ${subRes.fits.map(x => `${esc(x.sg)}: ${f2(tr(x.f.est))} (${f2(tr(x.f.ci[0]))}–${f2(tr(x.f.ci[1]))}, k=${x.f.k})`).join(' · ')}; p de interacción = ${fp(subRes.test?.p)}. Juzgue la credibilidad con ICEMAN antes de presentar estimaciones separadas.</p>`;
   html += `</div>`;
+  html += subRegHTML(P, tr, subRes);
   html += pwVizHTML(robCmp);
   // GRADE
   html += `<div class="card"><h2>Certeza de la evidencia (Core GRADE)</h2>
   <p class="muted">Umbral: <b>${cfg.threshold === 'MID' ? 'MID ±' + cfg.mid + un : 'valor nulo'}</b> · punto de partida: <b>${LEVELS[g.start]}</b>. Las calificaciones son sugerencias: modifique el nivel y la justificación si su juicio difiere.</p>
+  ${P.strata ? '<p class="close">Hay ECA y estudios observacionales: se califican por separado en la sección <a href="#pw-strata-card">Evidencia por diseño</a>; esta calificación conjunta mezcla ambos diseños.</p>' : ''}
   <table class="grade-table"><thead><tr><th style="width:160px">Dominio</th><th style="width:190px">Juicio</th><th>Justificación (aparece como nota al pie)</th></tr></thead><tbody>
   ${domainRow('rob', 'Riesgo de sesgo', g.domains.rob.level, g.domains.rob.why)}
   ${domainRow('inc', 'Inconsistencia', g.domains.inc.level, g.domains.inc.why)}
@@ -398,6 +559,7 @@ function renderPairwise(dropped, robCmp, subRes, tr) {
   ${g.close.length ? `<p class="close">Decisión cercana al límite en: ${g.close.map(d => DOMAIN_LABEL[d]).join(', ')}. Considere la certeza como un continuo y explíquelo.</p>` : ''}
   <div id="pw-final"></div>
   <div class="row end"><button class="primary" id="pw-add">Añadir a la tabla SoF</button></div></div>`;
+  html += strataHTML(P, tr);
   $('#pw-results').innerHTML = html;
   bindVizTabs($('#pw-results'));
   autoFig($('#pw-results'), P.outcome);
@@ -405,6 +567,7 @@ function renderPairwise(dropped, robCmp, subRes, tr) {
   $('#pw-add').addEventListener('click', addPwToSoF);
   if (P.ov) document.querySelectorAll('#pw-results [data-dom],#pw-results [data-why]').forEach(el => { const k = el.dataset.dom ?? el.dataset.why + '_why'; if (P.ov[k] != null) el.value = P.ov[k]; });
   updatePwFinal();
+  bindStrata();
 }
 // ---------- figuras con descarga en formato de revista ----------
 function autoFig(root, prefix) {
@@ -508,8 +671,8 @@ function readOverrides() {
   document.querySelectorAll('#pw-results [data-why]').forEach(t => o[t.dataset.why + '_why'] = t.value.trim());
   return o;
 }
-function pwSummary() {
-  const P = state.lastPw, { g, cfg, fit, isRatio, measure } = P, o = readOverrides();
+function pwSummary(P = state.lastPw, o = readOverrides()) {
+  const { g, cfg, fit, isRatio, measure } = P;
   const c = finalCertainty(g, o);
   const cat = category(g.abs.d, cfg.threshold === 'MID' ? cfg.mid : cfg.mid, cfg.higherBetter, g.abs.lo, g.abs.hi);
   const notes = footnotes(g, Object.fromEntries(Object.entries(o).map(([k, v]) => [k, v])));
@@ -521,13 +684,13 @@ function pwSummary() {
   const ntot = g.domains.imp.ntot;
   const des = { RCT: 'RCT', NRSI: 'non-randomised studies', NRSI_TTE: 'non-randomised studies' }[cfg.design];
   return {
-    type: 'pairwise', outcome: P.outcome, intervention: P.int, comparator: P.comp, participants: `${ntot || '–'} (${fit.k} ${des === 'RCT' ? (fit.k > 1 ? 'RCTs' : 'RCT') : des})`, relative: rel,
+    type: 'pairwise', outcome: P.outcome, intervention: P.int, comparator: P.comp, participants: `${ntot || '–'} (${P.strata && !P.isStratum ? P.strata.list.map(st => `${st.f.k} ${st.kind === 'RCT' ? (st.f.k > 1 ? 'RCTs' : 'RCT') : 'non-randomised'}`).join(' + ') : `${fit.k} ${des === 'RCT' ? (fit.k > 1 ? 'RCTs' : 'RCT') : des}`})`, relative: rel,
     risk0: g.ab.binary ? `${f1(cfg.p0 * cfg.unit)}${un}` : '—', risk1: g.ab.binary ? `${f1(g.ab.p1 * cfg.unit)}${un}` : '—',
     absolute: absTxt, c, cat, notes, plain: plainStatement(cat, c, P.int, lcOut(P.outcome), cfg.threshold, cfg.higherBetter ? -g.abs.d : g.abs.d).replace(/an? (important )?(reduction|increase)/, (m0) => m0),
     importance: P.importance || '', k: fit.k, ntot, design: cfg.design, p0src: g.ab.binary ? p0Source(P.outcome) : '',
     domains: Object.fromEntries(['rob', 'inc', 'ind', 'imp', 'pub', 'up'].map(d => [d, { level: o[d] != null ? o[d] : d === 'up' ? g.up.level : g.domains[d].level, why: o[d + '_why'] ?? (d === 'up' ? g.up.why : g.domains[d].why) }])),
     plainRaw: { cat, c, d: g.abs.d }, magThs: thresholdSet(3, cfg.threshold === 'MID' ? cfg.mid : 0, cfg.moderate, cfg.large), d: g.abs.d, mid: cfg.threshold === 'MID' ? `${cfg.mid}${un}` : 'null', higherBetter: cfg.higherBetter,
-    methods: { measure, method: P.method, test: P.test, threshold: cfg.threshold, design: cfg.design, scheme: cfg.scheme, usePI: cfg.usePI },
+    methods: { measure, method: P.method, test: P.test, threshold: cfg.threshold, design: cfg.design, scheme: cfg.scheme, usePI: cfg.usePI, subvar: P.subRes?.fits ? P.subvar : '', regvar: P.regRes?.m ? P.regvar : '', strata: !!P.strata },
   };
 }
 function updatePwFinal() {
@@ -843,6 +1006,9 @@ function methodsText() {
   if (pw) {
     const M = pw.methods;
     t.push(`Statistical analysis. We pooled ${{ RR: 'risk ratios', OR: 'odds ratios', HR: 'hazard ratios (generic inverse variance)', RD: 'risk differences', MD: 'mean differences', SMD: 'standardised mean differences (Hedges g)', ROM: 'ratios of means' }[M.measure]} with ${M.method === 'EE' ? 'a common-effect model' : `random-effects models (${M.method === 'REML' ? 'restricted maximum likelihood' : 'DerSimonian–Laird'} estimator of τ²)`}${M.test === 'z' ? ' and Wald-type 95% confidence intervals' : M.test === 'adhoc' ? ' and the Hartung–Knapp–Sidik–Jonkman adjustment with the ad hoc correction (q ≥ 1)' : ' and the Knapp–Hartung adjustment'}. Heterogeneity was summarised with τ², I² and 95% prediction intervals (t distribution, k−2 degrees of freedom). Small-study effects were explored with Egger's test when at least 10 studies were available.`);
+    if (M.subvar) t.push(`Subgroup analyses. We explored differences between subgroups defined by ${M.subvar} by pooling each subgroup separately (own between-study variance) and testing the between-subgroup difference (Q test, p for interaction).`);
+    if (M.regvar) t.push(`Meta-regression. We fitted a mixed-effects meta-regression with ${M.regvar} as moderator (REML estimation of residual heterogeneity; ${M.test === 'z' ? 'Wald-type tests' : 'Knapp-Hartung adjustment'}) and report the omnibus test of moderators and the proportion of heterogeneity explained (R²).`);
+    if (M.strata) t.push('Study design. Randomised trials and observational studies were pooled and rated separately: each body of evidence started at its own level (randomised high; non-randomised low, or high when assessed with ROBINS-I) and the GRADE domains were judged separately for each.');
     t.push(`Certainty of evidence. Two reviewers rated the certainty of evidence for each outcome with the GRADE approach as operationalised in Core GRADE. Evidence from ${M.design === 'RCT' ? 'randomised trials started at high certainty' : M.design === 'NRSI' ? 'non-randomised studies started at low certainty' : 'non-randomised studies assessed with ROBINS-I started at high certainty'} and could be rated down for risk of bias, inconsistency, indirectness, imprecision and publication bias${M.design === 'NRSI' ? ', or rated up for a large effect or a dose–response gradient' : ''}. We rated our certainty that the true effect ${M.threshold === 'MID' ? 'is important, using minimal important differences (MIDs) as thresholds; when the point estimate was below the MID we rated certainty in little to no important effect' : 'lies on one side of the null'}. Thresholds were applied to absolute effects, obtained by applying the pooled relative effect to the baseline risk. Risk of bias was rated down when studies at high risk of bias dominated the analysis; inconsistency was judged from the location of study estimates relative to the threshold and the overlap of confidence intervals, with I² as a secondary criterion${M.usePI ? '; we also rated down one level when the 95% prediction interval crossed an MID threshold not crossed by the confidence interval of the pooled estimate, and two levels when it crossed both' : ''}; ${M.scheme === 3 ? 'imprecision was rated down one level for each decision threshold (small, moderate and large effect, on either side of the null) crossed by the 95% CI of the absolute effect, up to three levels, or,' : 'imprecision was rated down when the 95% CI of the absolute effect crossed the threshold (two levels when it crossed both MIDs) or,'} for large effects, when the optimal information size was not met. Automated suggestions (MetaGRADE) were reviewed and modified with justification. Results are presented in summary of findings tables with a colour code combining certainty and the direction of the effect relative to the MID (minimally contextualised framework).`);
   }
   if (nm) {

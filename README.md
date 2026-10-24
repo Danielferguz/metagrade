@@ -10,6 +10,9 @@ Todo se calcula en el navegador: los datos no salen de tu computadora. No requie
 |---|---|
 | Datos | CSV o Excel; detección automática del formato; alias de columnas en español e inglés; filtros por desenlace y subgrupo |
 | Por pares | RR, OR, RD, MD, SMD, razón de medias, HR/OR/RR ajustados (varianza inversa genérica); efecto común, DL, REML; Wald, Knapp-Hartung, HKSJ ad hoc; τ², I², intervalo de predicción, Egger, bajo vs alto riesgo de sesgo, subgrupos; forest plot |
+| Subgrupos y meta-regresión (pares) | Forest plot por subgrupos (cualquier columna del archivo) con diamante propio, y p de interacción (Q entre subgrupos); meta-regresión de efectos mixtos (REML/DL; Wald, Knapp-Hartung, ad hoc) con moderador numérico (gráfico de burbujas con banda del IC) o categórico, prueba ómnibus de moderadores, QE residual y R² |
+| Columnas de grupo (pares) | Forest plot con columnas de intervención y control: n/N (%) en binarios, media (DE) y N en continuos, y solo N en razones ajustadas (columnas opcionales `n_int`, `n_comp`) |
+| Evidencia por diseño (pares) | Con la columna `design`, los ECA y los estudios observacionales se agrupan y se califican por separado (dominios GRADE y punto de partida propios), con forest por diseño, p de interacción, tabla resumen y entrada separada en la SoF. No se aplica a las NMA |
 | NMA | Modelo basado en contrastes por GLS (equivalente a netmeta), ensayos multibrazo, τ² común (REML), diseño-por-tratamiento, node-splitting, P-scores, tabla de liga, gráfico de red |
 | GRADE por pares | Umbral MID o nulo sobre efectos absolutos; sugerencias por dominio (riesgo de sesgo por peso, inconsistencia por lado del umbral, indirectness, imprecisión con OIS y cociente de IC, sesgo de publicación, subir certeza) editables con justificación |
 | GRADE para NMA | Certeza directa, indirecta (lazo dominante + intransitividad), red (fuente dominante + incoherencia) e imprecisión absoluta con tamaño muestral efectivo y OIS (GRADE 33); calificación editable por comparación |
@@ -39,7 +42,7 @@ Formatos de entrada (ver pestaña *Datos*; ejemplos en `examples/`):
 node tests/validate.mjs
 ```
 
-Compara los motores JavaScript con valores de referencia de una reimplementación de metafor (REML/DL/HKSJ) y de un motor NMA en Python equivalente a netmeta, y con los ejemplos publicados de GRADE 33 (tamaño muestral efectivo y OIS). Diferencias < 1e-5.
+Compara los motores JavaScript con valores de referencia de una reimplementación de metafor (REML/DL/HKSJ) y de un motor NMA en Python equivalente a netmeta, y con los ejemplos publicados de GRADE 33 (tamaño muestral efectivo y OIS). Diferencias < 1e-5. La meta-regresión (REML, Wald, Knapp-Hartung y ad hoc; moderador numérico y categórico) se valida con una referencia independiente en numpy/scipy (`tests/reference_reg.json`, generada con la verosimilitud restringida y GLS matricial), con diferencias < 1e-6.
 
 ## Advertencia
 

@@ -80,7 +80,7 @@ export function normalize(rows, map) {
   const num = v => { if (v === '' || v == null) return NaN; const x = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.')); return x; };
   const NUM = new Set(['e1', 'n1', 'e2', 'n2', 'm1', 'sd1', 'm2', 'sd2', 'yi', 'sei', 'est', 'lower', 'upper', 'n', 'r', 'mean', 'sd', 'o_mid', 'o_dis', 'o_p0']);
   return rows.map(r => {
-    const o = {};
+    const o = { _raw: r }; // fila original: permite agrupar o hacer meta-regresión por cualquier columna
     for (const [k, c] of Object.entries(map)) o[k] = NUM.has(k) ? num(r[c]) : String(r[c] ?? '').trim();
     return o;
   });

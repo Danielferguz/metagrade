@@ -1,7 +1,7 @@
 // node tests/validate.mjs — compara los motores JS con valores de referencia de implementaciones validadas
 // (port de metafor y motor NMA en Python equivalente a netmeta) y con ejemplos publicados de GRADE 33.
 import fs from 'fs';
-import { escalc, rma, egger } from '../js/pairwise.js';
+import { escalc, rma, egger, metaReg, designMatrix, subgroupTest } from '../js/pairwise.js';
 import { NMA } from '../js/nma.js';
 import { oisBinary, effectiveN } from '../js/grade.js';
 import { parseCSV } from '../js/io.js';
@@ -22,4 +22,22 @@ for (const [t, [e, s]] of Object.entries(ref.nma.est)) { const [je, js] = m.est(
 // GRADE 33 (Brignardello-Petersen 2021): caries APF vs NaF, RR 0.67 (0.45-0.99), pc 0.77 -> ESS 62; OIS (RRR 25%) 184
 ok('GRADE33 ESS', effectiveN('RR', Math.log(0.67), Math.log(0.45), Math.log(0.99), 0.77), 62, 0);
 ok('GRADE33 OIS', oisBinary(0.77, 0.25), 184, 0);
+// Meta-regresión (REML, Wald / Knapp-Hartung / ad hoc) frente a una referencia independiente en numpy/scipy (verosimilitud restringida + GLS)
+{
+  const R = JSON.parse(fs.readFileSync(new URL('./reference_reg.json', import.meta.url)));
+  for (const [kind, dm] of [['num', designMatrix(R.x.map(String), 'num')], ['cat', designMatrix(R.g, 'cat')]]) {
+    if (kind === 'cat') ok('designMatrix referencia = A', dm.ref === 'A' ? 1 : 0, 1, 0);
+    for (const test of ['z', 'knha', 'adhoc']) {
+      const r = R[kind + '_' + test], m = metaReg(R.y, R.v, dm.X, { method: 'REML', test }), tag = `reg ${kind} ${test}`;
+      ok(tag + ' tau2', m.tau2, r.tau2, 1e-6); r.beta.forEach((b, i) => { ok(`${tag} b${i}`, m.beta[i], b, 1e-6); ok(`${tag} se${i}`, m.se[i], r.se[i], 1e-6); ok(`${tag} p${i}`, m.pval[i], r.p[i], 1e-6); });
+      ok(tag + ' QM', m.QM, r.QM, 1e-5); ok(tag + ' QMp', m.QMp, r.QMp, 1e-6); ok(tag + ' QE', m.QE, r.QE, 1e-6); ok(tag + ' QEp', m.QEp, r.QEp, 1e-8);
+    }
+  }
+  // La meta-regresión con solo intercepto reproduce rma(); el contraste de 2 subgrupos con τ² común = meta-regresión categórica
+  const m0 = metaReg(R.y, R.v, R.y.map(() => [1])), f0 = rma(R.y, R.v); ok('reg intercept-only = rma', m0.beta[0], f0.est, 1e-8); ok('reg intercept-only tau2', m0.tau2, f0.tau2, 1e-8);
+  const g2 = [0, 1].map(j => R.g.map((g, i) => (g === 'A') === !j ? i : -1).filter(i => i >= 0).map(i => i));
+  const fits = g2.map(ix => rma(ix.map(i => R.y[i]), ix.map(i => R.v[i]), { method: 'REML' })), st = subgroupTest(fits);
+  const w = fits.map(f => 1 / f.se ** 2), mu = (w[0] * fits[0].est + w[1] * fits[1].est) / (w[0] + w[1]);
+  ok('subgroupTest Q', st.Q, w[0] * (fits[0].est - mu) ** 2 + w[1] * (fits[1].est - mu) ** 2, 1e-9); ok('subgroupTest df', st.df, 1, 0);
+}
 console.log(fails ? `\n${fails} fallos` : '\nTodas las comprobaciones pasaron'); process.exit(fails ? 1 : 0);

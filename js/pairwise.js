@@ -1,6 +1,6 @@
 // Meta-análisis por pares: escalc + rma (EE, DL, REML; Wald, Knapp-Hartung, HKSJ ad hoc).
 // Port de la implementación validada contra metafor (BAFF-APRIL, metafx.py).
-import { qnorm, pnorm, qt, pt, pchisq, sum } from './stats.js?v=2026.10.22-1';
+import { qnorm, pnorm, qt, pt, pf, pchisq, sum } from './stats.js?v=2026.10.24-1';
 
 export const RATIO = new Set(['RR', 'OR', 'HR', 'ROM']);
 
@@ -113,4 +113,84 @@ export function subgroupTest(groups) {
   const w = fits.map(f => 1 / (f.se * f.se)), m = sum(fits.map((f, i) => w[i] * f.est)) / sum(w);
   const Q = sum(fits.map((f, i) => w[i] * (f.est - m) ** 2));
   return { Q, df: fits.length - 1, p: 1 - pchisq(Q, fits.length - 1) };
+}
+
+// ---------- Meta-regresión (modelo de efectos mixtos, como rma(yi, vi, mods=) de metafor) ----------
+// X: matriz k×p con intercepto en la primera columna. Devuelve coeficientes, QM (ómnibus de los moderadores),
+// QE residual, τ² residual y R² (reducción del τ² frente al modelo sin moderadores).
+const matInv = A => {
+  const n = A.length, M = A.map((r, i) => [...r, ...Array.from({ length: n }, (_, j) => +(i === j))]);
+  for (let c = 0; c < n; c++) {
+    let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    if (Math.abs(M[p][c]) < 1e-12) return null; // moderadores colineales
+    [M[c], M[p]] = [M[p], M[c]];
+    const d = M[c][c]; for (let j = 0; j < 2 * n; j++) M[c][j] /= d;
+    for (let r = 0; r < n; r++) if (r !== c) { const f = M[r][c]; if (f) for (let j = 0; j < 2 * n; j++) M[r][j] -= f * M[c][j]; }
+  }
+  return M.map(r => r.slice(n));
+};
+const mm = (A, B) => A.map(r => B[0].map((_, j) => sum(r.map((x, t) => x * B[t][j]))));
+const tr_ = A => A[0].map((_, j) => A.map(r => r[j]));
+export function metaReg(yi, vi, X, { method = 'REML', test = 'z', level = 0.95 } = {}) {
+  const idx = yi.map((_, i) => i).filter(i => isFinite(yi[i]) && isFinite(vi[i]) && X[i].every(isFinite));
+  const y = idx.map(i => yi[i]), v = idx.map(i => vi[i]), Z = idx.map(i => X[i]), k = y.length, p = Z[0].length;
+  if (k <= p) return null;
+  const Xt = tr_(Z);
+  // P = W − W X (X'WX)⁻¹ X'W para un τ² dado
+  const proj = tau2 => {
+    const w = v.map(x => 1 / (x + tau2)), XtW = Xt.map(r => r.map((x, i) => x * w[i])), A = matInv(mm(XtW, Z));
+    if (!A) return null;
+    const WX = Z.map((r, i) => r.map(x => x * w[i])), WXA = mm(WX, A);
+    const P = w.map((wi, i) => w.map((_, j) => (i === j ? wi : 0) - sum(WXA[i].map((a, t) => a * WX[j][t]))));
+    return { w, A, P };
+  };
+  const q = (P) => sum(y.map((yi_, i) => yi_ * sum(P[i].map((pij, j) => pij * y[j]))));
+  const trace = P => sum(P.map((r, i) => r[i]));
+  const P0 = proj(0); if (!P0) return null;
+  let tau2 = 0;
+  if (method === 'DL') tau2 = Math.max(0, (q(P0.P) - (k - p)) / trace(P0.P));
+  else if (method === 'REML') {
+    for (let it = 0; it < 1000; it++) {
+      const { P } = proj(tau2), Py = P.map(r => sum(r.map((x, j) => x * y[j])));
+      const trPP = sum(P.map((r, i) => sum(r.map((x, j) => x * P[j][i]))));
+      const adj = (sum(Py.map(x => x * x)) - trace(P)) / trPP;
+      let step = 1, nw = tau2 + adj;
+      while (nw < 0 && step > 1e-8) { step /= 2; nw = tau2 + step * adj; }
+      nw = Math.max(nw, 0);
+      if (Math.abs(nw - tau2) < 1e-10) { tau2 = nw; break; }
+      tau2 = nw;
+    }
+  }
+  const { w, A } = proj(tau2);
+  const XtWy = Xt.map(r => sum(r.map((x, i) => x * w[i] * y[i]))), beta = A.map(r => sum(r.map((a, j) => a * XtWy[j])));
+  const res = y.map((yi_, i) => yi_ - sum(Z[i].map((x, j) => x * beta[j])));
+  const knha = test === 'knha' || test === 'adhoc', df = k - p;
+  let s2 = 1; if (knha) { s2 = sum(res.map((r, i) => w[i] * r * r)) / df; if (test === 'adhoc') s2 = Math.max(1, s2); }
+  const vb = A.map(r => r.map(a => a * s2)), se = vb.map((r, i) => Math.sqrt(r[i]));
+  const a = (1 - level) / 2, crit = knha ? qt(1 - a, df) : qnorm(1 - a);
+  const zval = beta.map((b, i) => b / se[i]);
+  const pval = zval.map(z => (knha ? 2 * (1 - pt(Math.abs(z), df)) : 2 * (1 - pnorm(Math.abs(z)))));
+  // ómnibus de los moderadores (todos los coeficientes salvo el intercepto)
+  const m = p - 1; let QM = NaN, QMp = NaN;
+  if (m > 0) {
+    const Vm = matInv(vb.slice(1).map(r => r.slice(1))), bm = beta.slice(1);
+    if (Vm) { QM = sum(bm.map((b, i) => b * sum(Vm[i].map((x, j) => x * bm[j])))); QMp = knha ? 1 - pf(QM / m, m, df) : 1 - pchisq(QM, m); if (knha) QM /= m; }
+  }
+  // QE residual con pesos de efecto fijo y τ² del modelo sin moderadores para R²
+  const w0 = v.map(x => 1 / x), XtW0 = Xt.map(r => r.map((x, i) => x * w0[i])), A0 = matInv(mm(XtW0, Z)), b0 = A0.map(r => sum(r.map((x, j) => x * sum(XtW0[j].map((xx, i) => xx * y[i])))));
+  const QE = sum(y.map((yi_, i) => w0[i] * (yi_ - sum(Z[i].map((x, j) => x * b0[j]))) ** 2)), QEp = df > 0 ? 1 - pchisq(QE, df) : NaN;
+  const base = rma(y, v, { method, test: 'z' }), R2 = base.tau2 > 0 ? Math.max(0, 100 * (base.tau2 - tau2) / base.tau2) : 0;
+  const s2typ = df / trace(proj(0).P), I2 = 100 * tau2 / (tau2 + s2typ);
+  return { k, p, beta, se, ci: beta.map((b, i) => [b - crit * se[i], b + crit * se[i]]), z: zval, pval, QM, QMp, m, QE, QEp, df, tau2, tau2_0: base.tau2, R2, I2, vb, test, method, idx };
+}
+
+// Matriz de diseño a partir de los valores del moderador: numérico (centrado en la media) o categórico (referencia = categoría más frecuente)
+export function designMatrix(values, type) {
+  if (type === 'num') {
+    const x = values.map(v => parseFloat(String(v).replace(',', '.'))), ok = x.filter(isFinite), mean = sum(ok) / ok.length;
+    return { X: x.map(v => [1, v - mean]), terms: ['Intercept (at mean)', 'Slope'], mean, type };
+  }
+  const lv = [...new Set(values.filter(v => v !== '' && v != null))], cnt = l => values.filter(v => v === l).length;
+  lv.sort((a, b) => cnt(b) - cnt(a)); const ref = lv[0];
+  return { X: values.map(v => (v === '' || v == null ? [NaN] : [1, ...lv.slice(1).map(l => +(v === l))])), terms: ['Intercept (' + ref + ')', ...lv.slice(1).map(l => l + ' vs ' + ref)], levels: lv, ref, type };
 }

@@ -185,3 +185,4 @@ export function goldenMin(f, a, b, tol = 1e-10) {
 
 export const median = a => { const s = [...a].sort((x, y) => x - y), n = s.length; return n ? (n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2) : NaN; };
 export const sum = a => a.reduce((s, x) => s + x, 0);
+export const pf = (x, d1, d2) => (x <= 0 ? 0 : pbeta(d1 * x / (d1 * x + d2), d1 / 2, d2 / 2));

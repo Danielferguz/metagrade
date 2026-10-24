@@ -29,6 +29,13 @@ export const HELP_HTML = `
 <li><b>Inconsistencia de la estimación de red:</b> el intervalo de predicción frente a ±MID (misma regla que por pares), sin volver a bajar si la evidencia directa ya bajó por inconsistencia.</li>
 <li><b>Imprecisión:</b> umbrales cruzados por el IC del efecto absoluto (esquema de 2 umbrales: −1/−2; −3 si va de beneficio grande a daño grande; esquema de 3 umbrales: −1 por umbral cruzado, máx. −3). Sin cruces y efecto grande: tamaño muestral efectivo de la estimación de red frente al OIS.</li>
 </ul>
+<h3>Subgrupos, meta-regresión y evidencia por diseño (solo pares)</h3>
+<ul>
+<li><b>Subgrupos:</b> elija cualquier columna del archivo (región, población, dosis, <code>design</code>…). Cada subgrupo se combina por separado con su propio τ² y se muestra en el forest plot con su diamante; la <b>p de interacción</b> es la prueba Q de diferencia entre subgrupos. Con pocos estudios por subgrupo tiene poca potencia; juzgue la credibilidad con ICEMAN antes de presentar estimaciones separadas.</li>
+<li><b>Meta-regresión:</b> modelo de efectos mixtos con un moderador numérico (se centra en la media; gráfico de burbujas con la recta y su IC 95 %) o categórico (categoría más frecuente como referencia). Se informan β (exp(β) en razones), prueba ómnibus de moderadores, heterogeneidad residual y R². Use ≥10 estudios por moderador; es una asociación entre estudios, no causal.</li>
+<li><b>Columnas de intervención y control:</b> n/N (%) en binarios, media (DE) y N en continuos y solo N en razones ajustadas (columnas opcionales <code>n_int</code> y <code>n_comp</code>). Las filas combinadas muestran los totales.</li>
+<li><b>Evidencia por diseño:</b> con la columna <code>design</code> (RCT / cohorte / caso-control / NRSI…) y ambos tipos de estudio, se añade una sección que califica por separado los ECA (inician en alta) y los observacionales (inician en baja; alta si se evalúan con ROBINS-I y emulan un ensayo), con sus propios dominios GRADE editables, forest por diseño, p de interacción y filas separadas en la SoF. Cuando los ECA aportan certeza alta o moderada, los observacionales rara vez la modifican. No se aplica a las NMA.</li>
+</ul>
 <h3>Visualización de los dominios</h3>
 <p>Tras ejecutar el análisis aparecen paneles gráficos (inspirados en la Figura S1 de las NMA publicadas):</p>
 <ul>

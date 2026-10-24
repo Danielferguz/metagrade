@@ -7,7 +7,7 @@
 <meta name="description" content="Meta-análisis por pares y en red (NMA) con calificación de la certeza de la evidencia según Core GRADE y GRADE para NMA. Todo se calcula en el navegador.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Source+Sans+3:wght@400;600&display=swap">
-<link rel="stylesheet" href="css/style.css?v=2026.10.22-1">
+<link rel="stylesheet" href="css/style.css?v=2026.10.24-1">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 </head>
 <body>
@@ -67,9 +67,10 @@
         <ul class="tight">
           <li><b>Binario:</b> <code>study, events_int, n_int, events_comp, n_comp</code></li>
           <li><b>Continuo:</b> <code>study, mean_int, sd_int, n_int, mean_comp, sd_comp, n_comp</code></li>
-          <li><b>Efectos ajustados (HR/OR/RR):</b> <code>study, estimate, lower, upper, n</code></li>
+          <li><b>Efectos ajustados (HR/OR/RR):</b> <code>study, estimate, lower, upper, n</code> (opcional <code>n_int, n_comp</code>: N de cada grupo en el forest plot)</li>
           <li><b>Genérico:</b> <code>study, yi, sei, n</code> (yi en escala log para razones)</li>
-          <li>Opcionales: <code>rob</code> (Low / Some concerns / High), <code>indirect</code> (0/1 o texto), <code>outcome</code>, <code>subgroup</code>, <code>design</code></li>
+          <li>Opcionales: <code>rob</code> (Low / Some concerns / High), <code>indirect</code> (0/1 o texto), <code>outcome</code>, <code>subgroup</code>, <code>design</code> (RCT / cohorte…: permite el análisis GRADE separado de ECA y observacionales)</li>
+          <li>Cualquier otra columna (año, región, duración, dosis…) puede usarse como variable de <b>subgrupos</b> (con p de interacción) o como <b>moderador de meta-regresión</b></li>
         </ul>
       </div>
       <div>
@@ -135,6 +136,16 @@
           <label><input type="checkbox" id="pw-industry"> estudios pequeños financiados por la industria</label>
           <label><input type="checkbox" id="pw-dose"> gradiente dosis-respuesta (no aleatorizados)</label>
         </div>
+      </details>
+      <details class="helper" open><summary>Subgrupos, meta-regresión y columnas del forest plot</summary>
+        <div class="form">
+          <label>Subgrupos por (con p de interacción) <select id="pw-subvar"></select></label>
+          <label>Meta-regresión: moderador <select id="pw-regvar"></select></label>
+          <label>Tipo de moderador <select id="pw-regtype"><option value="auto">Automático</option><option value="num">Numérico (pendiente)</option><option value="cat">Categórico (vs categoría más frecuente)</option></select></label>
+          <label><input type="checkbox" id="pw-cols" checked> columnas de intervención y control en el forest plot (n/N (%), media (DE) y N, o solo N en HR)</label>
+          <label><input type="checkbox" id="pw-strata" checked> sección GRADE separada para ECA y estudios observacionales (requiere columna <code>design</code> con ambos tipos)</label>
+        </div>
+        <p class="muted">La prueba de interacción compara los efectos de los subgrupos (Q entre grupos, τ² propio de cada subgrupo). La meta-regresión usa el mismo modelo y la misma prueba (Wald, Knapp-Hartung) que el análisis principal; con menos de 10 estudios por moderador su potencia es baja (Cochrane Handbook 10.11). Nada de esto se aplica a las NMA.</p>
       </details>
       <div id="pw-outcfg" class="outcfg"></div>
       <div class="row end gap"><button class="primary" id="pw-runall" title="Usa las columnas importance, direction, mid, disutility, baseline_risk si existen">Ejecutar todos los desenlaces y añadir a SoF</button><button class="ghost" id="pw-run">Ejecutar solo el desenlace actual</button></div>
@@ -209,7 +220,7 @@
   <div class="card prose" id="help"></div>
 </section>
 </main>
-<footer class="foot"><p>MetaGRADE <span id="app-version">2026.10.22-1</span> · © Daniel Fernández-Guzmán · <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="noopener">CC BY-NC-ND 4.0</a> · cite MetaGRADE si lo usa · los cálculos se hacen en el navegador. Las calificaciones automáticas son sugerencias que dos revisores deben verificar y justificar.</p></footer>
-<script type="module" src="js/app.js?v=2026.10.22-1"></script>
+<footer class="foot"><p>MetaGRADE <span id="app-version">2026.10.24-1</span> · © Daniel Fernández-Guzmán · <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="noopener">CC BY-NC-ND 4.0</a> · cite MetaGRADE si lo usa · los cálculos se hacen en el navegador. Las calificaciones automáticas son sugerencias que dos revisores deben verificar y justificar.</p></footer>
+<script type="module" src="js/app.js?v=2026.10.24-1"></script>
 </body>
 </html>

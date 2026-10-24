@@ -18,13 +18,33 @@ function niceTicks(lo, hi, log) {
   return out;
 }
 
-// rows: [{label, est, lo, hi, w (0-1), rob}] en escala natural (ratio si log=true); pooled: {est, lo, hi, pi:[lo,hi]}
-export function forestSVG({ rows, pooled, log, measure, leftLabel = 'Favours intervention', rightLabel = 'Favours control', title = '' }) {
-  const compact = !rows.some(r => r.w != null || r.rob);
-  const lw = Math.max(70, Math.min(260, 7 * Math.max(...rows.map(r => String(r.label).length), 5)));
-  const W = compact ? lw + 470 : 860, rowH = 22, top = 46, n = rows.length, H = top + (n + (pooled ? 3 : 1.2)) * rowH + 40;
-  const x0 = compact ? lw + 14 : 380, x1 = compact ? lw + 274 : 640;
-  const vals = rows.flatMap(r => [r.lo, r.hi]).concat(pooled ? [pooled.lo, pooled.hi] : []).filter(v => isFinite(v) && (!log || v > 0));
+// rows: [{label, est, lo, hi, w (0-1), rob, cells:[texto por columna]}] en escala natural (ratio si log=true);
+// pooled: {est, lo, hi, pi:[lo,hi], het, label, cells}. Opcionales: cols [{group, head, w}] (columnas de intervención/control),
+// groups [{label, rows, pooled}] (subgrupos con diamante propio) e interaction (texto de la prueba de diferencia entre subgrupos).
+export function forestSVG({ rows = [], pooled, groups = null, cols = [], interaction = '', weightHead = 'Weight', log, measure, leftLabel = 'Favours intervention', rightLabel = 'Favours control', title = '' }) {
+  const grouped = !!groups, all = grouped ? groups.flatMap(g => g.rows) : rows, ind = grouped ? 12 : 0;
+  const compact = !grouped && !cols.length && !all.some(r => r.w != null || r.rob);
+  const hasW = all.some(r => r.w != null), hasRob = all.some(r => r.rob);
+  const nameLen = Math.max(...all.map(r => String(r.label).length), 5);
+  const lw = compact ? Math.max(70, Math.min(260, 7 * nameLen)) : Math.max(grouped || cols.length ? 150 : 240, Math.min(300, 6.8 * nameLen + ind + 10));
+  const two = cols.some(c => c.group), top = 46 + (two ? 16 : 0), rowH = 22;
+  let cx = 8 + lw + 8; const colX = cols.map(c => { const x = cx + (c.w || 88) / 2; cx += c.w || 88; return x; });
+  const wX = cx + 4; // columna de pesos
+  const x0 = compact ? lw + 14 : wX + (hasW ? 56 : 0) + (hasRob ? 28 : 0) + 18, x1 = x0 + (compact ? 260 : 260);
+  const robX = wX + (hasW ? 66 : 0) + 6;
+  // líneas: cada una ocupa una fila (los huecos, media)
+  const lines = [];
+  const addRows = rs => rs.forEach(r => lines.push({ k: 'row', r }));
+  const addPool = p => { lines.push({ k: 'pool', p }); if (p.pi && isFinite(p.pi[0])) lines.push({ k: 'pi', p }); if (p.het) lines.push({ k: 'het', t: p.het }); };
+  if (grouped) groups.forEach(g => { lines.push({ k: 'hdr', t: g.label }); addRows(g.rows); if (g.pooled) addPool(g.pooled); lines.push({ k: 'gap' }); });
+  else addRows(rows);
+  if (pooled) addPool(pooled);
+  if (interaction) lines.push({ k: 'het', t: interaction, b: true });
+  let yy = top; lines.forEach(l => { l.y = yy + 10; yy += (l.k === 'gap' ? 0.5 : 1) * rowH; });
+  const bodyEnd = yy, lastPool = [...lines].reverse().find(l => l.k === 'pool' || l.k === 'row' || l.k === 'pi');
+  const refEnd = pooled || grouped ? (lastPool ? lastPool.y + rowH * 0.6 : bodyEnd) : bodyEnd - rowH * 0.2;
+  const W = compact ? lw + 470 : x1 + 20 + 175, H = bodyEnd + 52;
+  const vals = all.flatMap(r => [r.lo, r.hi]).concat(pooled ? [pooled.lo, pooled.hi] : [], grouped ? groups.flatMap(g => g.pooled ? [g.pooled.lo, g.pooled.hi] : []) : []).filter(v => isFinite(v) && (!log || v > 0));
   let lo = Math.min(...vals), hi = Math.max(...vals);
   if (log) { lo = Math.min(lo, 0.9); hi = Math.max(hi, 1.1); lo = Math.max(lo, 0.005); hi = Math.min(hi, 200); }
   else { lo = Math.min(lo, 0); hi = Math.max(hi, 0); const pad = (hi - lo) * 0.05; lo -= pad; hi += pad; }
@@ -33,34 +53,71 @@ export function forestSVG({ rows, pooled, log, measure, leftLabel = 'Favours int
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" class="plot" role="img" aria-label="Forest plot">`;
   s += `<style>text{font:12px system-ui,sans-serif;fill:currentColor}.h{font-weight:600}.m{fill:var(--muted,#666)}</style>`;
   if (title) s += `<text x="8" y="16" class="h">${esc(title)}</text>`;
-  s += `<text x="8" y="38" class="h">${compact ? 'Intervention' : 'Study'}</text>${compact ? '' : '<text x="250" y="38" class="h">Weight</text>'}<text x="${x1 + 20}" y="38" class="h">${esc(measure)} (95% CI)</text>`;
-  const ref = log ? 1 : 0;
-  s += `<line x1="${sx(ref)}" x2="${sx(ref)}" y1="${top - 6}" y2="${top + (n + (pooled ? 1.6 : 0.2)) * rowH}" stroke="currentColor" stroke-width="1"/>`;
-  rows.forEach((r, i) => {
-    const y = top + i * rowH + 10, sz = 4 + 10 * Math.sqrt(r.w || 0);
-    s += `<text x="8" y="${y + 4}">${esc(r.label)}</text><text x="250" y="${y + 4}" class="m">${r.w != null ? (r.w * 100).toFixed(1) + '%' : ''}</text>`;
-    if (isFinite(r.est)) {
-      s += `<line x1="${clamp(r.lo)}" x2="${clamp(r.hi)}" y1="${y}" y2="${y}" stroke="currentColor"/>`;
-      s += `<rect x="${sx(r.est) - sz / 2}" y="${y - sz / 2}" width="${sz}" height="${sz}" fill="#1F3A5F"/>`;
-      s += `<text x="${x1 + 20}" y="${y + 4}">${fmt(r.est)} (${fmt(r.lo)} to ${fmt(r.hi)})</text>`;
-    } else s += `<text x="${x1 + 20}" y="${y + 4}" class="m">not estimable</text>`;
-    if (r.rob) { const col = /high|serious|critical/i.test(r.rob) ? '#C0392B' : /some|unclear|moderate/i.test(r.rob) ? '#E0A800' : '#2E8B57'; s += `<circle cx="345" cy="${y}" r="6" fill="${col}"><title>Risk of bias: ${esc(r.rob)}</title></circle>`; }
-  });
-  if (pooled) {
-    const y = top + (n + 0.8) * rowH;
-    s += `<polygon points="${sx(pooled.lo)},${y} ${sx(pooled.est)},${y - 7} ${sx(pooled.hi)},${y} ${sx(pooled.est)},${y + 7}" fill="#1F3A5F"/>`;
-    s += `<text x="8" y="${y + 4}" class="h">${esc(pooled.label || 'Pooled (random effects)')}</text><text x="${x1 + 20}" y="${y + 4}" class="h">${fmt(pooled.est)} (${fmt(pooled.lo)} to ${fmt(pooled.hi)})</text>`;
-    if (pooled.pi && isFinite(pooled.pi[0])) {
-      const yp = y + rowH;
-      s += `<line x1="${clamp(pooled.pi[0])}" x2="${clamp(pooled.pi[1])}" y1="${yp}" y2="${yp}" stroke="#1F3A5F" stroke-width="3" opacity=".45"/>`;
-      s += `<text x="8" y="${yp + 4}" class="m">95% prediction interval</text><text x="${x1 + 20}" y="${yp + 4}" class="m">${fmt(pooled.pi[0])} to ${fmt(pooled.pi[1])}</text>`;
-    }
-    if (pooled.het) s += `<text x="8" y="${y + 2 * rowH + 4}" class="m">${esc(pooled.het)}</text>`;
+  const hy = top - 8;
+  s += `<text x="8" y="${hy}" class="h">${compact ? 'Intervention' : 'Study'}</text>`;
+  cols.forEach((c, i) => { s += `<text x="${colX[i]}" y="${hy}" class="h" text-anchor="middle">${esc(c.head)}</text>`; });
+  if (two) { // cabecera agrupada (Intervention / Control) con subrayado
+    const gs = []; cols.forEach((c, i) => { const l = gs[gs.length - 1]; if (l && l.g === c.group) l.e = i; else gs.push({ g: c.group, b: i, e: i }); });
+    gs.forEach(g => { const xa = colX[g.b] - (cols[g.b].w || 88) / 2 + 4, xb = colX[g.e] + (cols[g.e].w || 88) / 2 - 4;
+      s += `<text x="${(xa + xb) / 2}" y="${hy - 15}" class="h" text-anchor="middle">${esc(g.g || '')}</text><line x1="${xa}" x2="${xb}" y1="${hy - 11}" y2="${hy - 11}" stroke="currentColor"/>`; });
   }
-  const ya = top + (n + (pooled ? 2.4 : 0.4)) * rowH + 6;
+  if (!compact && hasW) s += `<text x="${wX}" y="${hy}" class="h">${esc(weightHead)}</text>`;
+  s += `<text x="${x1 + 20}" y="${hy}" class="h">${esc(measure)} (95% CI)</text>`;
+  const ref = log ? 1 : 0;
+  s += `<line x1="${sx(ref)}" x2="${sx(ref)}" y1="${top - 6}" y2="${refEnd}" stroke="currentColor" stroke-width="1"/>`;
+  const cellsOf = (cells, y, bold) => (cells || []).forEach((t, i) => { if (t != null && t !== '') s += `<text x="${colX[i]}" y="${y + 4}" text-anchor="middle"${bold ? ' class="h"' : ''}>${esc(t)}</text>`; });
+  lines.forEach(l => {
+    const y = l.y;
+    if (l.k === 'hdr') s += `<text x="8" y="${y + 4}" class="h">${esc(l.t)}</text>`;
+    else if (l.k === 'row') {
+      const r = l.r, sz = 4 + 10 * Math.sqrt(r.w || 0);
+      s += `<text x="${8 + ind}" y="${y + 4}">${esc(r.label)}</text>${hasW ? `<text x="${wX}" y="${y + 4}" class="m">${r.w != null ? (r.w * 100).toFixed(1) + '%' : ''}</text>` : ''}`;
+      cellsOf(r.cells, y, false);
+      if (isFinite(r.est)) {
+        s += `<line x1="${clamp(r.lo)}" x2="${clamp(r.hi)}" y1="${y}" y2="${y}" stroke="currentColor"/>`;
+        s += `<rect x="${sx(r.est) - sz / 2}" y="${y - sz / 2}" width="${sz}" height="${sz}" fill="#1F3A5F"/>`;
+        s += `<text x="${x1 + 20}" y="${y + 4}">${fmt(r.est)} (${fmt(r.lo)} to ${fmt(r.hi)})</text>`;
+      } else s += `<text x="${x1 + 20}" y="${y + 4}" class="m">not estimable</text>`;
+      if (r.rob) { const col = /high|serious|critical/i.test(r.rob) ? '#C0392B' : /some|unclear|moderate/i.test(r.rob) ? '#E0A800' : '#2E8B57'; s += `<circle cx="${compact ? 345 : robX}" cy="${y}" r="6" fill="${col}"><title>Risk of bias: ${esc(r.rob)}</title></circle>`; }
+    } else if (l.k === 'pool') {
+      const p = l.p;
+      s += `<polygon points="${sx(p.lo)},${y} ${sx(p.est)},${y - 7} ${sx(p.hi)},${y} ${sx(p.est)},${y + 7}" fill="#1F3A5F"/>`;
+      s += `<text x="8" y="${y + 4}" class="h">${esc(p.label || 'Pooled (random effects)')}</text>`;
+      cellsOf(p.cells, y, true);
+      s += `<text x="${x1 + 20}" y="${y + 4}" class="h">${fmt(p.est)} (${fmt(p.lo)} to ${fmt(p.hi)})</text>`;
+    } else if (l.k === 'pi') {
+      const p = l.p;
+      s += `<line x1="${clamp(p.pi[0])}" x2="${clamp(p.pi[1])}" y1="${y}" y2="${y}" stroke="#1F3A5F" stroke-width="3" opacity=".45"/>`;
+      s += `<text x="8" y="${y + 4}" class="m">95% prediction interval</text><text x="${x1 + 20}" y="${y + 4}" class="m">${fmt(p.pi[0])} to ${fmt(p.pi[1])}</text>`;
+    } else if (l.k === 'het') s += `<text x="8" y="${y + 4}" class="${l.b ? 'h' : 'm'}">${esc(l.t)}</text>`;
+  });
+  const ya = bodyEnd + 6;
   s += `<line x1="${x0}" x2="${x1}" y1="${ya}" y2="${ya}" stroke="currentColor"/>`;
   niceTicks(lo, hi, log).forEach(v => { s += `<line x1="${sx(v)}" x2="${sx(v)}" y1="${ya}" y2="${ya + 4}" stroke="currentColor"/><text x="${sx(v)}" y="${ya + 16}" text-anchor="middle">${v}</text>`; });
   s += `<text x="${sx(ref) - 6}" y="${ya + 32}" text-anchor="end" class="m">← ${esc(leftLabel)}</text><text x="${sx(ref) + 6}" y="${ya + 32}" class="m">${esc(rightLabel)} →</text>`;
+  return s + '</svg>';
+}
+
+// Gráfico de burbujas de la meta-regresión: efecto (escala del modelo; log si log=true) frente a un moderador numérico.
+// pts: [{x, y, w (0-1), label}], pred: x => {est, lo, hi} (banda del IC 95 % de la recta ajustada)
+export function bubbleSVG({ pts, pred, log = false, xlabel = '', ylabel = '', title = '' }) {
+  const W = 620, H = 400, L = 62, R = 20, T = title ? 34 : 16, B = 56;
+  const xs = pts.map(p => p.x), xlo = Math.min(...xs), xhi = Math.max(...xs), xpad = (xhi - xlo || 1) * 0.06;
+  const xa = xlo - xpad, xb = xhi + xpad, N = 40, grid = Array.from({ length: N + 1 }, (_, i) => xa + (xb - xa) * i / N), band = grid.map(x => ({ x, ...pred(x) }));
+  const ys = pts.map(p => p.y).concat(band.flatMap(b => [b.lo, b.hi])).concat([log ? 0 : 0]);
+  let ya = Math.min(...ys), yb = Math.max(...ys); const yp = (yb - ya) * 0.05; ya -= yp; yb += yp;
+  const sx = v => L + (v - xa) / (xb - xa) * (W - L - R), sy = v => H - B - (v - ya) / (yb - ya) * (H - B - T);
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" class="plot" role="img" aria-label="Meta-regression bubble plot"><style>text{font:12px system-ui,sans-serif;fill:currentColor}.h{font-weight:600}.m{fill:var(--muted,#666)}</style>`;
+  if (title) s += `<text x="8" y="16" class="h">${esc(title)}</text>`;
+  const yt = log ? niceTicks(Math.exp(ya), Math.exp(yb), true).map(v => [Math.log(v), v]) : niceTicks(ya, yb, false).map(v => [v, v]);
+  yt.forEach(([m, lab]) => { s += `<line x1="${L}" x2="${W - R}" y1="${sy(m)}" y2="${sy(m)}" stroke="currentColor" opacity=".12"/><text x="${L - 6}" y="${sy(m) + 4}" text-anchor="end">${lab}</text>`; });
+  niceTicks(xa, xb, false).forEach(v => { s += `<line x1="${sx(v)}" x2="${sx(v)}" y1="${H - B}" y2="${H - B + 4}" stroke="currentColor"/><text x="${sx(v)}" y="${H - B + 18}" text-anchor="middle">${v}</text>`; });
+  s += `<line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" stroke="currentColor"/><line x1="${L}" x2="${L}" y1="${T}" y2="${H - B}" stroke="currentColor"/>`;
+  if (0 > ya && 0 < yb) s += `<line x1="${L}" x2="${W - R}" y1="${sy(0)}" y2="${sy(0)}" stroke="currentColor" stroke-dasharray="4 3"/>`;
+  s += `<polygon points="${band.map(b => `${sx(b.x)},${sy(b.hi)}`).join(' ')} ${band.slice().reverse().map(b => `${sx(b.x)},${sy(b.lo)}`).join(' ')}" fill="#1F3A5F" opacity=".14"/>`;
+  s += `<polyline points="${band.map(b => `${sx(b.x)},${sy(b.est)}`).join(' ')}" fill="none" stroke="#1F3A5F" stroke-width="2"/>`;
+  pts.forEach(p => { s += `<circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="${3 + 11 * Math.sqrt(p.w || 0)}" fill="#7A8CA5" fill-opacity=".55" stroke="#1F3A5F"><title>${esc(p.label)}</title></circle>`; });
+  s += `<text x="${(L + W - R) / 2}" y="${H - 12}" text-anchor="middle">${esc(xlabel)}</text><text transform="translate(16 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">${esc(ylabel)}</text>`;
   return s + '</svg>';
 }
 
