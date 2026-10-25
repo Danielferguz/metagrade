@@ -1,8 +1,9 @@
 // Exactitud diagnóstica (DTA): sensibilidad y especificidad combinadas por separado (modelos univariados de proporciones, como en metaprop)
 // y modelo bivariado de Reitsma (verosimilitud máxima, μ perfilada por GLS). Valoración GRADE para DTA (versión beta) con umbrales de decisión
 // de falsos negativos / falsos positivos por 100 evaluados (GRADE guidelines 21 y guidance 37).
-import { poolProp, wilson } from './prop.js?v=2026.10.25-4';
-import { qnorm, sum } from './stats.js?v=2026.10.25-4';
+import { poolProp, wilson } from './prop.js?v=2026.10.25-6';
+import { qnorm, sum } from './stats.js?v=2026.10.25-6';
+import { subgroupTest } from './pairwise.js?v=2026.10.25-6';
 
 export const dtaN = s => ({ nSe: s.tp + s.fn, nSp: s.fp + s.tn });
 // Se y Sp por separado; devuelve estimaciones, IC, heterogeneidad y pesos (para GRADE)
@@ -89,4 +90,23 @@ const MATRIX = {
   1: { ok: 'The evidence is very uncertain about the test’s accuracy.', mid: 'The evidence is very uncertain and suggests possible misclassification.', bad: 'The evidence is very uncertain and suggests poor test performance.' },
 };
 export const dtaText = (c, zn) => MATRIX[c][zn];
+// prevalencia a partir de los estudios: mediana de (TP+FN)/N o límite inferior/superior del IC 95 % de la prevalencia combinada (logit)
+export function prevFrom(S, mode) {
+  const x = S.map(s => s.tp + s.fn), n = S.map(s => s.tp + s.fn + s.fp + s.tn);
+  if (mode === 'median') { const p = S.map((s, i) => x[i] / n[i]).sort((a, b) => a - b), m = p.length >> 1; return p.length % 2 ? p[m] : (p[m - 1] + p[m]) / 2; }
+  const P = poolProp(x, n, 'PLO'); return mode === 'lo' ? P.lo : P.hi;
+}
+// umbrales por 100 para una prevalencia cualquiera: las tres prevalencias de referencia (10/24/36 %) equivalen a ≈21 % / 47 % de los enfermos
+// y ≈5 % / 23 % de los sanos (falsos negativos aceptable/inaceptable; falsos positivos aceptable/inaceptable)
+export function autoThr(prev) {
+  const fnA = Math.max(1, Math.round(100 * prev * 0.21)), fpA = Math.max(1, Math.round(100 * (1 - prev) * 0.053));
+  return { fnA, fnU: Math.max(fnA + 1, Math.round(100 * prev * 0.47)), fpA, fpU: Math.max(fpA + 1, Math.round(100 * (1 - prev) * 0.23)) };
+}
+// subgrupos por riesgo de sesgo: bajo/aceptable frente a alto/poco claro, con la prueba de diferencia entre subgrupos (Q sobre la escala transformada)
+export function robSplit(S, o = {}) {
+  const isLow = s => /^(low|bajo|acceptable)/i.test(String(s.rob || '')), lo = S.filter(isLow), hi = S.filter(s => s.rob && !isLow(s));
+  if (!lo.length || !hi.length) return null;
+  const r = [lo, hi].map(g => poolSeSp(g, o)), t = key => (r[0][key] && r[1][key] ? subgroupTest([r[0][key].fit, r[1][key].fit]) : null);
+  return { groups: [{ label: 'Low or acceptable risk of bias', S: lo, res: r[0] }, { label: 'High or unclear risk of bias', S: hi, res: r[1] }], test: { se: t('se'), sp: t('sp') } };
+}
 export { wilson };

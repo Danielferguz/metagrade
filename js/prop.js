@@ -1,7 +1,7 @@
 // Meta-análisis de proporciones (prevalencia) y de tasas de incidencia: transformaciones logit (PLO), doble arcoseno de Freeman-Tukey (PFT),
 // proporción cruda (PRAW), log-tasa (IRLN), raíz de la tasa (IRS) y tasa cruda (IR). Combinación con rma() y retrotransformación.
-import { rma } from './pairwise.js?v=2026.10.25-4';
-import { qnorm } from './stats.js?v=2026.10.25-4';
+import { rma } from './pairwise.js?v=2026.10.25-6';
+import { qnorm } from './stats.js?v=2026.10.25-6';
 
 export const PROP_TR = { PLO: 'Logit', PFT: 'Doble arcoseno (Freeman-Tukey)', PRAW: 'Proporción cruda' };
 export const RATE_TR = { IRLN: 'Log de la tasa', IRS: 'Raíz cuadrada de la tasa', IR: 'Tasa cruda' };

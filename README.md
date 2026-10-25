@@ -27,7 +27,7 @@ Todo se calcula en el navegador: los datos no salen de tu computadora. No requie
 
 - **SoF por diseño:** con ECA + observacionales, dos filas por desenlace (una por diseño) en una misma tabla.
 - **Prevalencia / incidencia:** meta-análisis de proporciones y tasas (PLO/PFT/PRAW, IRLN/IRS/IR), subgrupos, meta-regresión y forest RevMan; sin GRADE.
-- **Exactitud diagnóstica (beta):** Se/Sp univariado y bivariado (Reitsma), SROC y GRADE para DTA (FN/FP por 100, umbrales de decisión, dominios editables).
+- **Exactitud diagnóstica (beta):** Se/Sp univariado y bivariado (Reitsma), forest pareado con riesgo de sesgo, subgrupos por RoB, SROC, GRADE para DTA (FN/FP por 100, umbrales de decisión con cruce visual y pictograma de 100 personas; prevalencia por escenario, mediana, IC o personalizada). El GRADE para DTA aún no está plenamente desarrollado: las decisiones podrían cambiar.
 
 ## Uso
 

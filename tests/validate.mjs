@@ -7,7 +7,8 @@ import { oisBinary, effectiveN } from '../js/grade.js';
 import { parseCSV } from '../js/io.js';
 import { forestRM } from '../js/plots.js';
 import { MIDS, midValues } from '../js/mids.js';
-import { poolSeSp, bivariate, gradeDTA, dtaCertainty, SCEN } from '../js/dta.js';
+import { poolSeSp, bivariate, gradeDTA, dtaCertainty, SCEN, prevFrom, autoThr, robSplit } from '../js/dta.js';
+import { dtaPaired, dtaThreshold, dtaPeople } from '../js/dtaplots.js';
 import { poolProp, wilson } from '../js/prop.js';
 const ref = JSON.parse(fs.readFileSync(new URL('./reference.json', import.meta.url)));
 let fails = 0; const ok = (name, a, b, tol = 1e-6) => { const good = Math.abs(a - b) <= tol; if (!good) fails++; console.log(`${good ? 'OK  ' : 'FAIL'} ${name}: ${a} vs ${b}`); };
@@ -71,4 +72,15 @@ ok('GRADE33 OIS', oisBinary(0.77, 0.25), 184, 0);
 // prevalencia: PLO reproduce la proporción agrupada cuando los estudios son idénticos; Wilson contiene la proporción
 { const p = poolProp([20, 20, 20], [100, 100, 100], 'PLO'); ok('prevalencia PLO estudios idénticos = 0,20', p.est, 0.2, 1e-6);
   const w = wilson(20, 100); ok('Wilson 20/100 contiene 0,20', w[0] < 0.2 && w[1] > 0.2 ? 1 : 0, 1, 0); }
+// DTA: prevalencia (mediana / IC), umbrales escalados, subgrupos por riesgo de sesgo y figuras
+{ const S = [[27, 3, 18, 14], [53, 14, 15, 29], [10, 11, 1, 37], [198, 2, 42, 21], [1176, 166, 88, 142], [162, 17, 33, 45]].map(([tp, fp, fn, tn], i) => ({ tp, fp, fn, tn, rob: i < 3 ? 'low' : 'high', study: 'S' + i }));
+  const pr = S.map(s => (s.tp + s.fn) / (s.tp + s.fn + s.fp + s.tn)).sort((a, b) => a - b); ok('DTA prevalencia mediana', prevFrom(S, 'median'), (pr[2] + pr[3]) / 2, 1e-12);
+  ok('DTA prevalencia: IC inferior < mediana-ish < IC superior', prevFrom(S, 'lo') < prevFrom(S, 'hi') ? 1 : 0, 1, 0);
+  for (const p of [0.1, 0.24, 0.36]) { const a = autoThr(p), r = SCEN[String(Math.round(p * 100))]; ok(`umbrales auto ≈ referencia (${p})`, Math.abs(a.fnA - r.fnA) + Math.abs(a.fnU - r.fnU) + Math.abs(a.fpA - r.fpA) <= 1 && Math.abs(a.fpU - r.fpU) <= 1 ? 1 : 0, 1, 0); }
+  const sp = robSplit(S); ok('subgrupos por RoB: 2 grupos con prueba de diferencia', sp && sp.groups.length === 2 && sp.test.se.df === 1 && sp.test.sp.p >= 0 ? 1 : 0, 1, 0);
+  const R = poolSeSp(S), row = (x, i) => ({ label: x.study, tp: x.tp, fn: x.fn, fp: x.fp, tn: x.tn, se: [0.5, 0.4, 0.6], sp: [0.7, 0.6, 0.8], wse: 1 / 6, wsp: 1 / 6, rob: x.rob });
+  const svg = dtaPaired({ title: 't', groups: [{ label: '', rows: S.map(row) }], overall: { label: 'Total', se: [R.se.est, R.se.lo, R.se.hi], sp: [R.sp.est, R.sp.lo, R.sp.hi], tp: 1, fn: 1, fp: 1, tn: 1, het: ['a', 'b'] } });
+  ok('forest pareado: Sens/Spec, RoB y sin NaN', ['Sens', 'Spec', 'Risk of bias', '#1F6FD0'].every(t => svg.includes(t)) && !/NaN|undefined/.test(svg) ? 1 : 0, 1, 0);
+  const th = dtaThreshold({ items: [{ title: 'FN', est: 10, lo: 4, hi: 16, a: 5, u: 11 }] }), pe = dtaPeople({ scenarios: [{ title: 'x', sub: 'y', c: { tp: 20, fn: 4, fp: 4, tn: 72 } }], texts: { fn: 'z' } });
+  ok('umbrales: cruza 2 → rebaja 2', th.includes('crosses 2 thresholds') ? 1 : 0, 1, 0); ok('100 personas: 100 figuras y sin NaN', (pe.match(/<circle /g) || []).length === 104 && !/NaN/.test(pe) ? 1 : 0, 1, 0); }
 console.log(fails ? `\n${fails} fallos` : '\nTodas las comprobaciones pasaron'); process.exit(fails ? 1 : 0);
