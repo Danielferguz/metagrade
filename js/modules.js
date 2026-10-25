@@ -1,12 +1,12 @@
 // Módulos de prevalencia / incidencia y de exactitud diagnóstica (DTA, beta). La interfaz se monta desde app.js con mountModules(env).
-import { poolProp, propES, backTr, wilson, byar, PROP_TR, RATE_TR } from './prop.js?v=2026.10.25-6';
-import { poolSeSp, bivariate, gradeDTA, dtaCertainty, dtaText, SCEN, fnPer100, fpPer100, prevFrom, autoThr, robSplit } from './dta.js?v=2026.10.25-6';
-import { dtaPaired, dtaThreshold, dtaPeople } from './dtaplots.js?v=2026.10.25-6';
-import { forestRM, srocSVG, bubbleSVG } from './plots.js?v=2026.10.25-6';
-import { rma, subgroupTest } from './pairwise.js?v=2026.10.25-6';
-import { LEVELS, SYM } from './grade.js?v=2026.10.25-6';
-import { normalize } from './io.js?v=2026.10.25-6';
-import { sum } from './stats.js?v=2026.10.25-6';
+import { poolProp, propES, backTr, wilson, byar, PROP_TR, RATE_TR } from './prop.js?v=2026.10.25-7';
+import { poolSeSp, bivariate, gradeDTA, dtaCertainty, dtaText, SCEN, fnPer100, fpPer100, prevFrom, autoThr, robSplit } from './dta.js?v=2026.10.25-7';
+import { dtaPaired, dtaThreshold, dtaPeople } from './dtaplots.js?v=2026.10.25-7';
+import { forestRM, srocSVG, bubbleSVG } from './plots.js?v=2026.10.25-7';
+import { rma, subgroupTest } from './pairwise.js?v=2026.10.25-7';
+import { LEVELS, SYM } from './grade.js?v=2026.10.25-7';
+import { normalize } from './io.js?v=2026.10.25-7';
+import { sum } from './stats.js?v=2026.10.25-7';
 
 const ZN = { ok: 'benefit', mid: 'nodiff', bad: 'harm' };
 export const ZONE_TXT = { ok: 'Within acceptable range', mid: 'Between acceptable and unacceptable', bad: 'Beyond unacceptable threshold' };

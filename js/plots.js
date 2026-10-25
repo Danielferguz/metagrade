@@ -105,10 +105,10 @@ export function forestSVG({ rows = [], pooled, groups = null, cols = [], interac
 // groups: [{label, rows:[{label, cells, w (texto), wf (0–1), est, lo, hi, rob}], sub:{label, cells, w, est, lo, hi}, lines:[texto]}]
 // overall: igual que sub (+ lines); cols: [{group, head}]; fs: tamaño de letra (unidades de figura).
 const RM_ROB = { low: ['#33CC33', '+'], some: ['#FFEE33', '?'], high: ['#E02B20', '−'] };
-export function forestRM({ title = '', groups, overall = null, cols = [], log = false, measure = '', model = '', leftLabel = '', rightLabel = '', interaction = '', fs = 12, rob = false, robDoms = [], estDec = 2, xlim = null, noRef = false }) {
+export function forestRM({ title = '', groups, overall = null, cols = [], log = false, measure = '', model = '', leftLabel = '', rightLabel = '', interaction = '', fs = 12, rob = false, robDoms = [], estDec = 2, xlim = null, noRef = false, epi = false }) {
   const rowH = fs * 1.7, tw = (t, bold) => String(t ?? '').length * fs * (bold ? 0.6 : 0.54);
   const fmt = v => (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(estDec)).replace('-', '−');
-  const ci = e => (isFinite(e.est) ? `${fmt(e.est)} [${fmt(e.lo)}, ${fmt(e.hi)}]` : 'Not estimable');
+  const ci = e => (isFinite(e.est) ? (epi ? `${fmt(e.est)} (${fmt(e.lo)}–${fmt(e.hi)})` : `${fmt(e.est)} [${fmt(e.lo)}, ${fmt(e.hi)}]`) : 'Not estimable');
   const nD = robDoms.length, cw = fs * 1.55, robCls = v => (!v ? null : RM_ROB[/high|serious|critical/i.test(v) ? 'high' : /some|unclear|moderate/i.test(v) ? 'some' : 'low']);
   const all = groups.flatMap(g => g.rows), pools = [...groups.map(g => g.sub), overall].filter(Boolean);
   // anchos de columnas (texto alineado a la derecha, como RevMan)
@@ -117,7 +117,7 @@ export function forestRM({ title = '', groups, overall = null, cols = [], log = 
   { const gs = []; cols.forEach((c, i) => { const l = gs.at(-1); if (l && l.g === c.group) l.e = i; else gs.push({ g: c.group, b: i, e: i }); }); gs.forEach(g => { const have = colW.slice(g.b, g.e + 1).reduce((a, b) => a + b, 0), need = tw(g.g || '', true) + fs; if (need > have) colW[g.e] += need - have; }); }
   const wW = Math.max(tw('Weight', true), ...all.map(r => tw(r.w)), ...pools.map(p => tw(p.w, true))) + fs * 1.3;
   const eW = Math.max(tw('IV, Random, 95% CI', true) * 0.9, ...all.map(r => tw(ci(r))), ...pools.map(p => tw(ci(p), true))) + fs * 1.2;
-  const PW = fs * 24, robW = nD ? (nD * cw) + fs * 4.6 : (rob ? fs * 6 : 0);
+  const PW = fs * 24, robW = nD ? (nD * cw) + (epi ? fs * 1.4 : fs * 4.6) : (rob ? fs * 6 : 0);
   let x = 8 + labW; const colR = colW.map(w => (x += w)), wR = (x += wW), eR = (x += eW), p0 = x + fs * 1.2, p1 = p0 + PW, W = p1 + fs * 1.2 + robW;
   const vals = [...all, ...pools].flatMap(r => [r.lo, r.hi, r.est]).filter(v => isFinite(v) && (!log || v > 0)), ref = log ? 1 : 0;
   let lo = Math.min(...vals, ref), hi = Math.max(...vals, ref);
@@ -135,18 +135,18 @@ export function forestRM({ title = '', groups, overall = null, cols = [], log = 
   if (overall) { row({ k: 'sub', p: overall }); (overall.lines || []).forEach(t => row({ k: 'txt', t })); }
   if (interaction) row({ k: 'txt', t: interaction });
   const top = (title ? fs * 1.8 : 6) + fs * 3.4; let y = top; L.forEach(l => { l.y = y + rowH / 2; y += (l.k === 'gap' ? 0.5 : 1) * rowH; });
-  const per = Math.max(2, Math.floor((W - 16) / (fs * 14))), ya = y + fs * 0.4, H = ya + fs * 4.8 + (rob || nD ? fs * 1.6 : 0) + (nD ? fs * 1.3 * Math.ceil(nD / per) : 0);
+  const per = Math.max(2, Math.floor((W - 16) / (fs * 14))), ya = y + fs * 0.4, H = epi ? ya + fs * 5.2 + (nD ? Math.max(3 * 1.7 + 1.5, Math.ceil(nD / 2) * 1.4 + 1) * fs + fs : 0) : ya + fs * 4.8 + (rob || nD ? fs * 1.6 : 0) + (nD ? fs * 1.3 * Math.ceil(nD / per) : 0);
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${+W.toFixed(1)} ${+H.toFixed(1)}" data-fs="${fs}" class="plot" role="img" aria-label="Forest plot (RevMan)" style="max-width:${Math.round(W * 1.15)}px"><style>text{font:${fs}px system-ui,sans-serif;fill:currentColor}.h{font-weight:700}.m{fill:var(--muted,#666)}</style>`;
   if (title) s += `<text x="8" y="${fs * 1.3}" class="h">${esc(title)}</text>`;
   const hy = top - fs * 0.9, T = (xx, yy, t, a = 'start', c = '') => (t === '' || t == null ? '' : `<text x="${xx.toFixed(1)}" y="${yy.toFixed(1)}" text-anchor="${a}"${c ? ` class="${c}"` : ''}>${esc(t)}</text>`);
-  s += T(8, hy, 'Study or Subgroup', 'start', 'h');
+  s += T(8, hy, epi ? 'Study or subgroup' : 'Study or Subgroup', 'start', 'h');
   // cabecera de columnas: nombre del grupo centrado sobre sus columnas y nombre de cada columna
   const gs = []; cols.forEach((c, i) => { const l = gs.at(-1); if (l && l.g === c.group) l.e = i; else gs.push({ g: c.group, b: i, e: i }); });
   gs.forEach(g => { if (g.g) s += T((colR[g.b] - colW[g.b] + colR[g.e]) / 2, hy - fs * 1.25, g.g, 'middle', 'h'); });
   cols.forEach((c, i) => { s += T(colR[i] - fs * 0.4, hy, c.head, 'end', 'h'); });
-  s += T(wR - fs * 0.4, hy, 'Weight', 'end', 'h') + T(eR - eW / 2 + fs * 0.3, hy - fs * 1.25, measure, 'middle', 'h') + T(eR - eW / 2 + fs * 0.3, hy, model, 'middle', 'h') + T((p0 + p1) / 2, hy - fs * 1.25, measure, 'middle', 'h') + T((p0 + p1) / 2, hy, model, 'middle', 'h');
+  s += (epi ? T(wR - fs * 0.4, hy - fs * 1.25, 'Weight', 'end', 'h') + T(wR - fs * 0.4, hy, '%', 'end', 'h') : T(wR - fs * 0.4, hy, 'Weight', 'end', 'h')) + T(eR - eW / 2 + fs * 0.3, hy - fs * 1.25, measure, 'middle', 'h') + T(eR - eW / 2 + fs * 0.3, hy, model, 'middle', 'h') + T((p0 + p1) / 2, hy - fs * 1.25, measure, 'middle', 'h') + T((p0 + p1) / 2, hy, model, 'middle', 'h');
   const rx0 = W - robW + fs * 0.2, gx = rx0 + nD * cw + fs * 2.1;
-  if (nD) { s += T((rx0 + gx) / 2, hy - fs * 1.25, 'Risk of Bias', 'middle', 'h'); robDoms.forEach((d, j) => { s += T(rx0 + (j + 0.5) * cw, hy, d.head, 'middle', 'h'); }); s += T(gx, hy, 'Global', 'middle', 'h'); }
+  if (nD) { s += T(epi ? rx0 + nD * cw / 2 : (rx0 + gx) / 2, hy - fs * 1.25, epi ? 'Risk of bias' : 'Risk of Bias', 'middle', 'h'); robDoms.forEach((d, j) => { s += T(rx0 + (j + 0.5) * cw, hy, d.head, 'middle', 'h'); }); if (!epi) s += T(gx, hy, 'Global', 'middle', 'h'); }
   else if (rob) s += T(W - robW / 2 - fs * 0.6, hy, 'Risk of Bias', 'middle', 'h');
   s += `<line x1="8" x2="${W - 8}" y1="${hy + fs * 0.45}" y2="${hy + fs * 0.45}" stroke="currentColor" stroke-width=".6"/>`;
   if (!noRef) s += `<line x1="${sx(ref)}" x2="${sx(ref)}" y1="${hy + fs * 0.45}" y2="${ya}" stroke="currentColor" stroke-width="1"/>`;
@@ -157,11 +157,11 @@ export function forestRM({ title = '', groups, overall = null, cols = [], log = 
     else if (l.k === 'row') {
       const r = l.r, o = { ...r, y: l.y }; s += T(8 + fs * 0.4, l.y + fs * 0.35, r.label) + cellTxt(o, false);
       if (isFinite(r.est)) {
-        const sz = Math.max(fs * 0.45, Math.min(rowH * 0.78, fs * 0.5 + rowH * 0.5 * Math.sqrt(r.wf || 0.2)));
-        s += `<line x1="${cl(r.lo)}" x2="${cl(r.hi)}" y1="${l.y}" y2="${l.y}" stroke="#000" stroke-width="1"/><rect x="${sx(r.est) - sz / 2}" y="${l.y - sz / 2}" width="${sz}" height="${sz}" fill="#B5281C"/>`;
+        const sz = epi ? Math.max(fs * 0.3, Math.min(rowH * 0.5, fs * 0.28 + rowH * 0.3 * Math.sqrt(r.wf || 0.2))) : Math.max(fs * 0.45, Math.min(rowH * 0.78, fs * 0.5 + rowH * 0.5 * Math.sqrt(r.wf || 0.2)));
+        s += `<line x1="${cl(r.lo)}" x2="${cl(r.hi)}" y1="${l.y}" y2="${l.y}" stroke="#000" stroke-width="1"/><rect x="${sx(r.est) - sz / 2}" y="${l.y - sz / 2}" width="${sz}" height="${sz}" fill="${epi ? '#3FA34D' : '#B5281C'}"/>`;
       }
-      const dot = (cx, d) => (d ? `<circle cx="${cx}" cy="${l.y}" r="${fs * 0.5}" fill="${d[0]}" stroke="#222" stroke-width=".6"/><text x="${cx}" y="${l.y + fs * 0.33}" text-anchor="middle" style="fill:#000;font-weight:700;font-size:${(fs * 0.85).toFixed(1)}px">${d[1]}</text>` : '');
-      if (nD) { (r.robs || []).forEach((v, j) => { s += dot(rx0 + (j + 0.5) * cw, robCls(v)); }); s += dot(gx, robCls(r.rob)); }
+      const dot = (cx, d) => (d ? `<circle cx="${cx}" cy="${l.y}" r="${fs * 0.5}" fill="${d[0]}" stroke="${epi ? '#000' : '#222'}" stroke-width="${epi ? 1 : 0.6}"/><text x="${cx}" y="${l.y + fs * 0.33}" text-anchor="middle" style="fill:#000;font-weight:700;font-size:${(fs * 0.85).toFixed(1)}px">${d[1]}</text>` : '');
+      if (nD) { (r.robs || []).forEach((v, j) => { s += dot(rx0 + (j + 0.5) * cw, robCls(v)); }); if (!epi) s += dot(gx, robCls(r.rob)); }
       else if (rob && r.rob) { const d = RM_ROB[/high|serious|critical/i.test(r.rob) ? 'high' : /some|unclear|moderate/i.test(r.rob) ? 'some' : 'low'], cx = W - robW / 2 - fs * 0.6; s += `<circle cx="${cx}" cy="${l.y}" r="${fs * 0.5}" fill="${d[0]}" stroke="#222" stroke-width=".6"><title>Risk of bias: ${esc(r.rob)}</title></circle><text x="${cx}" y="${l.y + fs * 0.33}" text-anchor="middle" style="fill:#000;font-weight:700;font-size:${(fs * 0.85).toFixed(1)}px">${d[1]}</text>`; }
     } else if (l.k === 'sub') {
       const p = { ...l.p, y: l.y }; s += T(8, l.y + fs * 0.35, p.label, 'start', 'h') + cellTxt(p, true);
@@ -171,8 +171,13 @@ export function forestRM({ title = '', groups, overall = null, cols = [], log = 
   s += `<line x1="${p0}" x2="${p1}" y1="${ya}" y2="${ya}" stroke="currentColor"/>`;
   ticks.forEach(v => { s += `<line x1="${sx(v)}" x2="${sx(v)}" y1="${ya}" y2="${ya + fs * 0.4}" stroke="currentColor"/>` + T(sx(v), ya + fs * 1.5, String(v).replace('-', '−'), 'middle'); });
   if (!noRef) s += T(sx(ref) - fs * 0.4, ya + fs * 3, leftLabel, 'end') + T(sx(ref) + fs * 0.4, ya + fs * 3, rightLabel, 'start');
-  if (rob || nD) s += `<text x="8" y="${ya + fs * 4.6}" style="font-size:${(fs * 0.85).toFixed(1)}px" class="m">Risk of bias: (+) low, (?) some concerns / unclear, (−) high</text>`;
-  if (nD) { for (let i = 0; i < nD; i += per) s += `<text x="8" y="${ya + fs * (6 + i / per * 1.3)}" style="font-size:${(fs * 0.85).toFixed(1)}px">${esc(robDoms.slice(i, i + per).map(d => `(${d.head}) ${d.name}`).join('   '))}</text>`; }
+  if (epi && nD) {
+    const y0 = ya + fs * 5.2, r = fs * 0.5, jx = 8 + fs * 0.6; s += T(8, y0 + fs * 0.6, 'Judgement', 'start', 'h');
+    [['high', 'High'], ['some', 'Unclear'], ['low', 'Low']].forEach(([k, t], i) => { const d = RM_ROB[k], cy = y0 + fs * 1.3 + i * fs * 1.7 + r; s += `<circle cx="${jx + r}" cy="${cy}" r="${r}" fill="${d[0]}" stroke="#000" stroke-width="1"/><text x="${jx + r}" y="${cy + fs * 0.33}" text-anchor="middle" style="fill:#000;font-weight:700;font-size:${(fs * 0.85).toFixed(1)}px">${d[1]}</text>` + T(jx + 2 * r + fs * 0.5, cy + fs * 0.35, t); });
+    const half = Math.ceil(nD / 2), cx0 = Math.max(jx + fs * 8, W * 0.3); robDoms.forEach((d, j) => { s += T(j < half ? cx0 : cx0 + (W - cx0) / 2, y0 + fs * 1.1 + (j % half) * fs * 1.4, /^d?\d+$/i.test(d.name) ? `D${j + 1}` : `D${j + 1}: ${d.name}`, 'start', ''); });
+  }
+  if (!epi && (rob || nD)) s += `<text x="8" y="${ya + fs * 4.6}" style="font-size:${(fs * 0.85).toFixed(1)}px" class="m">Risk of bias: (+) low, (?) some concerns / unclear, (−) high</text>`;
+  if (nD && !epi) { for (let i = 0; i < nD; i += per) s += `<text x="8" y="${ya + fs * (6 + i / per * 1.3)}" style="font-size:${(fs * 0.85).toFixed(1)}px">${esc(robDoms.slice(i, i + per).map(d => `(${d.head}) ${d.name}`).join('   '))}</text>`; }
   return s + '</svg>';
 }
 

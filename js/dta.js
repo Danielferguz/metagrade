@@ -1,9 +1,9 @@
 // Exactitud diagnóstica (DTA): sensibilidad y especificidad combinadas por separado (modelos univariados de proporciones, como en metaprop)
 // y modelo bivariado de Reitsma (verosimilitud máxima, μ perfilada por GLS). Valoración GRADE para DTA (versión beta) con umbrales de decisión
 // de falsos negativos / falsos positivos por 100 evaluados (GRADE guidelines 21 y guidance 37).
-import { poolProp, wilson } from './prop.js?v=2026.10.25-6';
-import { qnorm, sum } from './stats.js?v=2026.10.25-6';
-import { subgroupTest } from './pairwise.js?v=2026.10.25-6';
+import { poolProp, wilson } from './prop.js?v=2026.10.25-7';
+import { qnorm, sum } from './stats.js?v=2026.10.25-7';
+import { subgroupTest } from './pairwise.js?v=2026.10.25-7';
 
 export const dtaN = s => ({ nSe: s.tp + s.fn, nSp: s.fp + s.tn });
 // Se y Sp por separado; devuelve estimaciones, IC, heterogeneidad y pesos (para GRADE)

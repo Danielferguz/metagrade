@@ -1,16 +1,16 @@
-import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.25-6';
-import { escalc, rma, egger, subgroupTest, metaReg, designMatrix } from './pairwise.js?v=2026.10.25-6';
-import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.25-6';
-import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.25-6';
-import { mountThreshold } from './thresh.js?v=2026.10.25-6';
-import { renderEtD } from './etd.js?v=2026.10.25-6';
-import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.25-6';
-import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.25-6';
-import { forestSVG, forestRM, bubbleSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.25-6';
-import { mountModules } from './modules.js?v=2026.10.25-6';
-import { MIDS, midValues } from './mids.js?v=2026.10.25-6';
-import { median } from './stats.js?v=2026.10.25-6';
-import { HELP_HTML } from './help.js?v=2026.10.25-6';
+import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.25-7';
+import { escalc, rma, egger, subgroupTest, metaReg, designMatrix } from './pairwise.js?v=2026.10.25-7';
+import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.25-7';
+import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.25-7';
+import { mountThreshold } from './thresh.js?v=2026.10.25-7';
+import { renderEtD } from './etd.js?v=2026.10.25-7';
+import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.25-7';
+import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.25-7';
+import { forestSVG, forestRM, bubbleSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.25-7';
+import { mountModules } from './modules.js?v=2026.10.25-7';
+import { MIDS, midValues } from './mids.js?v=2026.10.25-7';
+import { median } from './stats.js?v=2026.10.25-7';
+import { HELP_HTML } from './help.js?v=2026.10.25-7';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -480,21 +480,25 @@ function rmCols(P) {
 }
 const hetRM = f => (f.k > 1 ? `Heterogeneity: Tau² = ${f.tau2.toFixed(2)}; Chi² = ${f.QE.toFixed(2)}, df = ${f.k - 1} (P ${pRM(f.QEp)}); I² = ${isFinite(f.I2) ? f.I2.toFixed(0) : '0'}%` : 'Heterogeneity: not applicable');
 const testRM = f => (f.k > 1 && f.test !== 'z' ? `Test for overall effect: t = ${Math.abs(f.z).toFixed(2)}, df = ${f.k - 1} (P ${pRM(f.pval)})` : `Test for overall effect: Z = ${Math.abs(f.z).toFixed(2)} (P ${pRM(f.pval)})`);
+const pEPI = p => (!isFinite(p) ? '=–' : p < 0.00001 ? '<0.00001' : p < 0.01 ? '=' + p.toFixed(4) : '=' + p.toFixed(2));
+const hetEPI = f => (f.k > 1 ? `Heterogeneity: Tau² (${f.method})=${f.tau2.toFixed(2)}; Chi²=${f.QE.toFixed(2)}, df=${f.k - 1} (p${pEPI(f.QEp)}); I²=${isFinite(f.I2) ? f.I2.toFixed(0) : '0'}%` : 'Heterogeneity: not applicable');
+const testEPI = f => (f.k > 1 && f.test !== 'z' ? `Test for overall effect: t=${Math.abs(f.z).toFixed(2)}, df=${f.k - 1} (p${pEPI(f.pval)})` : `Test for overall effect: z=${Math.abs(f.z).toFixed(2)} (p${pEPI(f.pval)})`);
 // spec: {groups:[{label, ss, f}] | null, overall: bool, interaction: {col, test} | null, weightHead}
 function pwForest(P, tr, spec, title) {
   const { fit, S, cfg, isRatio } = P, fav = cfg.higherBetter ? [`Favours ${P.comp}`, `Favours ${P.int}`] : [`Favours ${P.int}`, `Favours ${P.comp}`], G = spec.groups, DR = P.dropped || [];
   // estudios sin estimador (p. ej., doble cero) se muestran como «Not estimable»; en los análisis por grupos van a su grupo
   const dropFor = x => (x ? x.drop || [] : DR);
   if (figSettings().forest !== 'classic') {
-    const cs = rmCols(P), rd = robDomCols(), blank = d => ({ ...d, yi: NaN, vi: NaN });
-    const mk = (ss, f, dr) => [...ss.map((s, j) => ({ label: s.study, cells: cs.cells(s), w: `${(f.weights[j] * 100).toFixed(1)}%`, wf: f.weights[j], est: tr(s.yi), lo: tr(s.yi - 1.96 * Math.sqrt(s.vi)), hi: tr(s.yi + 1.96 * Math.sqrt(s.vi)), rob: s.rob, robs: rd.map(c => String(s.raw?._raw?.[c] ?? '').trim()) })),
+    const epi = figSettings().forest === 'epi', cs = rmCols(P), rd = robDomCols(), blank = d => ({ ...d, yi: NaN, vi: NaN });
+    const wTxt = v => `${(v * 100).toFixed(1)}${epi ? '' : '%'}`, mk = (ss, f, dr) => [...ss.map((s, j) => ({ label: s.study, cells: cs.cells(s), w: wTxt(f.weights[j]), wf: f.weights[j], est: tr(s.yi), lo: tr(s.yi - 1.96 * Math.sqrt(s.vi)), hi: tr(s.yi + 1.96 * Math.sqrt(s.vi)), rob: s.rob, robs: rd.map(c => String(s.raw?._raw?.[c] ?? '').trim()) })),
       ...dr.map(d => ({ label: d.study, cells: cs.cells(blank(d)), w: '', wf: 0, est: NaN, lo: NaN, hi: NaN, rob: d.rob, robs: rd.map(c => String(d.raw?._raw?.[c] ?? '').trim()) }))];
-    const pool = (f, ss, dr, label) => ({ label, cells: cs.total([...ss, ...dr]), w: '100.0%', est: tr(f.est), lo: tr(f.ci[0]), hi: tr(f.ci[1]) });
-    const groups = G ? G.map(x => ({ label: x.label, rows: mk(x.ss, x.f, dropFor(x)), sub: pool(x.f, x.ss, dropFor(x), 'Subtotal (95% CI)'), lines: [hetRM(x.f), testRM(x.f)] })) : [{ label: '', rows: mk(S, fit, DR) }];
-    const ov = spec.overall ? { ...pool(fit, S, DR, 'Total (95% CI)'), lines: [hetRM(fit), testRM(fit)] } : null, t = spec.interaction?.test;
+    const pool = (f, ss, dr, label) => ({ label, cells: cs.total([...ss, ...dr]), w: epi ? '100' : '100.0%', est: tr(f.est), lo: tr(f.ci[0]), hi: tr(f.ci[1]) });
+    const tag = epi ? (P.test === 'knha' ? 'Knapp-Hartung' : 'Wald') : '', het = f => (epi ? hetEPI(f) : hetRM(f)), tst = f => (epi ? testEPI(f) : testRM(f)), byW = (rows) => (epi ? [...rows].sort((a, b) => (a.wf || 0) - (b.wf || 0) || 0).map(r => r) : rows);
+    const groups = G ? G.map(x => ({ label: x.label, rows: byW(mk(x.ss, x.f, dropFor(x))), sub: pool(x.f, x.ss, dropFor(x), epi ? `Subtotal (${tag})` : 'Subtotal (95% CI)'), lines: [het(x.f), tst(x.f)] })) : [{ label: '', rows: byW(mk(S, fit, DR)) }];
+    const ov = spec.overall ? { ...pool(fit, S, DR, epi ? `Total (${tag})` : 'Total (95% CI)'), lines: [het(fit), tst(fit)] } : null, t = spec.interaction?.test;
     const robDoms = rd.map((c, j) => ({ head: String.fromCharCode(65 + j), name: c.replace(/^rob[_\s.-]+/i, '').replace(/[_.-]+/g, ' ').replace(/^./, m => m.toUpperCase()) }));
-    return forestRM({ title, groups, overall: ov, cols: cs.cols, log: isRatio, measure: MEAS_RM[P.measure] || P.measure, model: `IV, ${fit.method === 'EE' ? 'Fixed' : 'Random'}, 95% CI`, leftLabel: fav[0], rightLabel: fav[1], fs: 12, rob: S.some(s => s.rob), robDoms,
-      interaction: t ? `Test for subgroup differences: Chi² = ${t.Q.toFixed(2)}, df = ${t.df} (P ${pRM(t.p)}), I² = ${t.Q > t.df ? (100 * (t.Q - t.df) / t.Q).toFixed(1) : '0.0'}%` : '' });
+    return forestRM({ title, groups, overall: ov, cols: cs.cols, log: isRatio, measure: epi ? `${(MEAS_RM[P.measure] || P.measure).replace(/ ([A-Z])/g, (m, c) => ' ' + c.toLowerCase())} (95% CI)` : MEAS_RM[P.measure] || P.measure, model: epi ? `IV, ${fit.method === 'EE' ? 'fixed' : 'random'}` : `IV, ${fit.method === 'EE' ? 'Fixed' : 'Random'}, 95% CI`, leftLabel: fav[0], rightLabel: fav[1], fs: 12, rob: S.some(s => s.rob), robDoms, epi,
+      interaction: t ? (epi ? `Test for subgroup differences: Chi²=${t.Q.toFixed(2)}, df=${t.df} (p${pEPI(t.p)}); I²=${t.Q > t.df ? (100 * (t.Q - t.df) / t.Q).toFixed(1) : '0.0'}%` : `Test for subgroup differences: Chi² = ${t.Q.toFixed(2)}, df = ${t.df} (P ${pRM(t.p)}), I² = ${t.Q > t.df ? (100 * (t.Q - t.df) / t.Q).toFixed(1) : '0.0'}%`) : '' });
   }
   const dRow = d => fRow(P, tr, { ...d, yi: NaN, vi: NaN }, null);
   const grp = G ? G.map(x => ({ label: x.label, rows: [...x.ss.map((s, j) => fRow(P, tr, s, x.f.weights[j])), ...dropFor(x).map(dRow)], pooled: fPool(P, tr, x.f, `Subtotal (k = ${x.f.k})`, x.ss, hetShort(x.f)) })) : null;
