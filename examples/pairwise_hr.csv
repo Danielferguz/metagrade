@@ -1,0 +1,26 @@
+study,outcome,estimate,lower,upper,n,rob,design,importance,direction,mid,disutility,baseline_risk,intervention_name,comparator_name,n_int,n_comp,region,followup_years
+CVOT-A 2016 (Cox),All-cause mortality,0.803,0.62,1.04,3311,Low,RCT,Critical,lower,,1,0.15,SGLT2 inhibitor,DPP-4 inhibitor,1655,1656,Europe,3.0
+RENAL-B 2018 (Cox),All-cause mortality,0.863,0.671,1.108,3730,Low,RCT,Critical,lower,,1,0.15,SGLT2 inhibitor,DPP-4 inhibitor,1865,1865,North America,4.1
+CVOT-C 2020 (Cox),All-cause mortality,0.796,0.636,0.995,4735,Low,RCT,Critical,lower,,1,0.15,SGLT2 inhibitor,DPP-4 inhibitor,2367,2368,Asia,4.5
+EMPA-like 2022 (Cox),All-cause mortality,0.864,0.727,1.028,5570,Some concerns,RCT,Critical,lower,,1,0.15,SGLT2 inhibitor,DPP-4 inhibitor,2785,2785,North America,4.9
+DAPA-like 2023 (Cox),All-cause mortality,0.96,0.783,1.178,5448,Low,RCT,Critical,lower,,1,0.15,SGLT2 inhibitor,DPP-4 inhibitor,2724,2724,Asia,4.6
+CVOT-A 2016 (Cox),Major adverse cardiovascular events,0.937,0.8,1.097,7636,Low,RCT,Critical,lower,,0.8,0.12,SGLT2 inhibitor,DPP-4 inhibitor,3818,3818,Europe,4.6
+RENAL-B 2018 (Cox),Major adverse cardiovascular events,1.02,0.854,1.218,5906,Low,RCT,Critical,lower,,0.8,0.12,SGLT2 inhibitor,DPP-4 inhibitor,2953,2953,North America,3.3
+CVOT-C 2020 (Cox),Major adverse cardiovascular events,0.905,0.788,1.04,8789,Low,RCT,Critical,lower,,0.8,0.12,SGLT2 inhibitor,DPP-4 inhibitor,4394,4395,Asia,3.0
+EMPA-like 2022 (Cox),Major adverse cardiovascular events,0.871,0.701,1.083,3732,Some concerns,RCT,Critical,lower,,0.8,0.12,SGLT2 inhibitor,DPP-4 inhibitor,1866,1866,North America,3.0
+DAPA-like 2023 (Cox),Major adverse cardiovascular events,0.97,0.803,1.171,6133,Some concerns,RCT,Critical,lower,,0.8,0.12,SGLT2 inhibitor,DPP-4 inhibitor,3066,3067,Asia,3.8
+CVOT-A 2016 (Cox),Acute kidney injury,0.695,0.598,0.807,7090,Low,RCT,Important,lower,,0.5,0.06,SGLT2 inhibitor,DPP-4 inhibitor,3545,3545,Europe,4.9
+RENAL-B 2018 (Cox),Acute kidney injury,0.887,0.738,1.067,7410,Low,RCT,Important,lower,,0.5,0.06,SGLT2 inhibitor,DPP-4 inhibitor,3705,3705,North America,3.9
+CVOT-C 2020 (Cox),Acute kidney injury,0.732,0.607,0.882,7326,Low,RCT,Important,lower,,0.5,0.06,SGLT2 inhibitor,DPP-4 inhibitor,3663,3663,Asia,4.8
+EMPA-like 2022 (Cox),Acute kidney injury,0.903,0.729,1.118,5179,Some concerns,RCT,Important,lower,,0.5,0.06,SGLT2 inhibitor,DPP-4 inhibitor,2589,2590,North America,4.0
+DAPA-like 2023 (Cox),Acute kidney injury,0.881,0.736,1.054,7913,Low,RCT,Important,lower,,0.5,0.06,SGLT2 inhibitor,DPP-4 inhibitor,3956,3957,Asia,4.4
+CVOT-A 2016 (Cox),Lower-limb amputation,1.265,1.028,1.557,5796,Low,RCT,Critical,lower,0.3,,0.01,SGLT2 inhibitor,DPP-4 inhibitor,2898,2898,Europe,3.1
+RENAL-B 2018 (Cox),Lower-limb amputation,1.205,0.973,1.491,4546,Low,RCT,Critical,lower,0.3,,0.01,SGLT2 inhibitor,DPP-4 inhibitor,2273,2273,North America,2.6
+CVOT-C 2020 (Cox),Lower-limb amputation,1.154,0.913,1.459,4835,Low,RCT,Critical,lower,0.3,,0.01,SGLT2 inhibitor,DPP-4 inhibitor,2417,2418,Asia,4.6
+EMPA-like 2022 (Cox),Lower-limb amputation,1.108,0.869,1.411,4218,Low,RCT,Critical,lower,0.3,,0.01,SGLT2 inhibitor,DPP-4 inhibitor,2109,2109,North America,3.2
+DAPA-like 2023 (Cox),Lower-limb amputation,1.163,0.934,1.447,4495,Some concerns,RCT,Critical,lower,0.3,,0.01,SGLT2 inhibitor,DPP-4 inhibitor,2247,2248,Asia,4.4
+CVOT-A 2016 (Cox),Fractures,0.953,0.811,1.12,8131,Low,RCT,Important,lower,1,,0.04,SGLT2 inhibitor,DPP-4 inhibitor,4065,4066,Europe,4.3
+RENAL-B 2018 (Cox),Fractures,1.062,0.86,1.31,4265,Low,RCT,Important,lower,1,,0.04,SGLT2 inhibitor,DPP-4 inhibitor,2132,2133,North America,3.3
+CVOT-C 2020 (Cox),Fractures,1.004,0.858,1.175,7679,Low,RCT,Important,lower,1,,0.04,SGLT2 inhibitor,DPP-4 inhibitor,3839,3840,Asia,3.6
+EMPA-like 2022 (Cox),Fractures,0.959,0.828,1.111,7849,Some concerns,RCT,Important,lower,1,,0.04,SGLT2 inhibitor,DPP-4 inhibitor,3924,3925,North America,2.5
+DAPA-like 2023 (Cox),Fractures,0.981,0.768,1.254,3787,Some concerns,RCT,Important,lower,1,,0.04,SGLT2 inhibitor,DPP-4 inhibitor,1893,1894,Asia,4.4

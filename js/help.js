@@ -36,7 +36,10 @@ export const HELP_HTML = `
 <li><b>Columnas de intervención y control:</b> n/N (%) en binarios, media (DE) y N en continuos y solo N en razones ajustadas (columnas opcionales <code>n_int</code> y <code>n_comp</code>). Las filas combinadas muestran los totales.</li>
 <li><b>Evidencia por diseño:</b> con la columna <code>design</code> (RCT / cohorte / caso-control / NRSI…) y ambos tipos de estudio, se añade una sección que califica por separado los ECA (inician en alta) y los observacionales (inician en baja; alta si se evalúan con ROBINS-I y emulan un ensayo), con sus propios dominios GRADE editables, forest por diseño, p de interacción y filas separadas en la SoF. Cuando los ECA aportan certeza alta o moderada, los observacionales rara vez la modifican. No se aplica a las NMA.</li>
 </ul>
+<h3>Forest estilo RevMan y tamaño de letra</h3>
+<p>En «Formato de figuras» elija el estilo del forest: <b>clásico</b> o <b>RevMan</b> (datos por grupo, peso, estimador [IC], subtotales con rombo negro, heterogeneidad y prueba del efecto en cada subgrupo, prueba de diferencia entre subgrupos y riesgo de sesgo). El <b>tamaño de letra</b> se controla con «Letra final (pt)» y el ancho «automático»; con un ancho fijo, la letra final se calcula a partir del ancho de la figura (se muestra debajo).</p>
 <h3>Visualización de los dominios</h3>
+<p>Si hay ECA y observacionales, o diferencias entre subgrupos (p de interacción &lt; 0,10), cada contexto tiene su pestaña con las cuatro vistas (riesgo de sesgo, inconsistencia, imprecisión y sesgo de publicación) calculadas solo con sus estudios. Los ejemplos «Pares · binario / continuo / HR ajustados» contienen solo ECA; los de «ECA + cohortes» permiten ver el análisis por diseño.</p>
 <p>Tras ejecutar el análisis aparecen paneles gráficos (inspirados en la Figura S1 de las NMA publicadas):</p>
 <ul>
 <li><b>Riesgo de sesgo:</b> barra del peso por categoría (bajo / algunas dudas / alto) con la línea de dominancia, peso de cada estudio y comparación bajo vs alto riesgo en escala absoluta. En NMA, las aristas de la red y cada comparación directa se colorean por riesgo de sesgo.</li>

@@ -5,6 +5,7 @@ import { escalc, rma, egger, metaReg, designMatrix, subgroupTest } from '../js/p
 import { NMA } from '../js/nma.js';
 import { oisBinary, effectiveN } from '../js/grade.js';
 import { parseCSV } from '../js/io.js';
+import { forestRM } from '../js/plots.js';
 const ref = JSON.parse(fs.readFileSync(new URL('./reference.json', import.meta.url)));
 let fails = 0; const ok = (name, a, b, tol = 1e-6) => { const good = Math.abs(a - b) <= tol; if (!good) fails++; console.log(`${good ? 'OK  ' : 'FAIL'} ${name}: ${a} vs ${b}`); };
 const rd = f => parseCSV(fs.readFileSync(new URL('../examples/' + f, import.meta.url), 'utf8'));
@@ -40,4 +41,10 @@ ok('GRADE33 OIS', oisBinary(0.77, 0.25), 184, 0);
   const w = fits.map(f => 1 / f.se ** 2), mu = (w[0] * fits[0].est + w[1] * fits[1].est) / (w[0] + w[1]);
   ok('subgroupTest Q', st.Q, w[0] * (fits[0].est - mu) ** 2 + w[1] * (fits[1].est - mu) ** 2, 1e-9); ok('subgroupTest df', st.df, 1, 0);
 }
+// forest estilo RevMan: estructura de subtotales, pruebas y eje, sin NaN
+{ const row = (label, est, lo, hi) => ({ label, cells: ['5', '100', '8', '100'], w: '25.0%', wf: 0.25, est, lo, hi, rob: 'Low' });
+  const sub = { label: 'Subtotal (95% CI)', cells: ['10', '200', '16', '200'], w: '100.0%', est: 0.6, lo: 0.4, hi: 0.9 };
+  const svg = forestRM({ groups: [{ label: 'Group 1', rows: [row('A', 0.5, 0.2, 1.2), row('B', 0.7, 0.4, 1.1)], sub, lines: ['Heterogeneity: Tau² = 0.00', 'Test for overall effect: Z = 2.5 (P = 0.01)'] }], overall: { ...sub, label: 'Total (95% CI)' }, cols: [{ group: 'Drug', head: 'Events' }, { group: 'Drug', head: 'Total' }, { group: 'Control', head: 'Events' }, { group: 'Control', head: 'Total' }], log: true, measure: 'Risk Ratio', model: 'IV, Random, 95% CI', leftLabel: 'Favours Drug', rightLabel: 'Favours Control', interaction: 'Test for subgroup differences: Chi² = 1.00', rob: true });
+  ok('forestRM: subtotal, total, pruebas y riesgo de sesgo', ['Subtotal (95% CI)', 'Total (95% CI)', 'Test for subgroup differences', 'Risk of Bias', 'Favours Drug'].every(t => svg.includes(t)) && svg.includes('data-fs="12"') ? 1 : 0, 1, 0);
+  ok('forestRM: sin NaN/undefined y 2 rombos (subtotal y total)', !/NaN|undefined|Infinity/.test(svg) && (svg.match(/<polygon /g) || []).length === 2 ? 1 : 0, 1, 0); }
 console.log(fails ? `\n${fails} fallos` : '\nTodas las comprobaciones pasaron'); process.exit(fails ? 1 : 0);

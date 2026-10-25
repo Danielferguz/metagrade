@@ -5,9 +5,6 @@ Costa 2020,Systolic blood pressure (mmHg),-8.75,13.05,114,0.05,13.33,116,Low,Imp
 Dubois 2021,Systolic blood pressure (mmHg),-3.88,8.61,93,2.48,8.12,79,High,Important,lower,5,exercise programme,usual care,RCT,12,CKD
 Ekström 2022,Systolic blood pressure (mmHg),-9.54,10.21,35,-1.77,11.05,43,Low,Important,lower,5,exercise programme,usual care,RCT,24,Type 2 diabetes
 Fischer 2023,Systolic blood pressure (mmHg),-2.13,11.52,73,-0.62,10.66,68,Low,Important,lower,5,exercise programme,usual care,RCT,52,CKD
-Nordic cohort 2019,Systolic blood pressure (mmHg),-8.72,12.14,327,-2.55,11.91,374,Moderate,Important,lower,5,exercise programme,usual care,Cohort,52,Type 2 diabetes
-Registry Asia 2021,Systolic blood pressure (mmHg),-6.85,10.91,530,-1.26,11.95,543,Serious,Important,lower,5,exercise programme,usual care,Cohort,156,CKD
-US claims 2023,Systolic blood pressure (mmHg),-0.96,10.44,629,3.31,11.28,749,Moderate,Important,lower,5,exercise programme,usual care,Cohort,156,Obesity
 Abe 2018,"Quality of life (KDQOL-36, 0-100)",64.02,16.24,141,58.34,14.09,150,Low,Critical,higher,5,exercise programme,usual care,RCT,24,CKD
 Bauer 2019,"Quality of life (KDQOL-36, 0-100)",59.72,15.73,69,54.88,15.07,65,Some concerns,Critical,higher,5,exercise programme,usual care,RCT,12,CKD
 Costa 2020,"Quality of life (KDQOL-36, 0-100)",58.96,13.76,180,54.67,15.79,130,Low,Critical,higher,5,exercise programme,usual care,RCT,26,Obesity
@@ -23,9 +20,6 @@ Ekström 2022,eGFR slope (mL/min/1.73 m² per year),-1.98,2.33,106,-3.11,2.35,12
 Fischer 2023,eGFR slope (mL/min/1.73 m² per year),-1.82,2.73,79,-3.55,2.7,77,Low,Important,higher,0.75,exercise programme,usual care,RCT,52,CKD
 Diaz 2022,eGFR slope (mL/min/1.73 m² per year),-2.21,2.31,78,-3.84,2.44,99,Low,Important,higher,0.75,exercise programme,usual care,RCT,36,Type 2 diabetes
 Evans 2023,eGFR slope (mL/min/1.73 m² per year),-2.54,2.55,60,-3.31,2.64,76,High,Important,higher,0.75,exercise programme,usual care,RCT,24,Obesity
-Nordic cohort 2019,eGFR slope (mL/min/1.73 m² per year),1.89,2.62,613,0.42,2.45,570,Serious,Important,higher,0.75,exercise programme,usual care,Cohort,156,Type 2 diabetes
-Registry Asia 2021,eGFR slope (mL/min/1.73 m² per year),0.47,2.62,446,-1.12,2.79,544,Moderate,Important,higher,0.75,exercise programme,usual care,Cohort,104,CKD
-US claims 2023,eGFR slope (mL/min/1.73 m² per year),1.41,2.69,492,-0.33,2.78,428,Moderate,Important,higher,0.75,exercise programme,usual care,Cohort,156,Obesity
 Abe 2018,"Fatigue (FACIT-F, 0-52)",31.29,9.3,113,30.77,9.44,92,Low,Important,higher,3,exercise programme,usual care,RCT,24,CKD
 Bauer 2019,"Fatigue (FACIT-F, 0-52)",33.26,8.51,94,32.02,9.58,93,Some concerns,Important,higher,3,exercise programme,usual care,RCT,12,CKD
 Costa 2020,"Fatigue (FACIT-F, 0-52)",35.25,8.56,154,33.54,8.82,150,Low,Important,higher,3,exercise programme,usual care,RCT,26,Obesity
@@ -40,6 +34,3 @@ Ekström 2022,Body weight (kg),78.05,6.41,109,81.12,5.92,121,Low,Important,lower
 Fischer 2023,Body weight (kg),81.51,6.51,75,81.56,5.72,105,Low,Important,lower,2,exercise programme,usual care,RCT,52,CKD
 Diaz 2022,Body weight (kg),80.98,6.08,109,82.37,5.93,79,Low,Important,lower,2,exercise programme,usual care,RCT,36,Type 2 diabetes
 Evans 2023,Body weight (kg),78.74,5.87,152,81.75,5.4,138,High,Important,lower,2,exercise programme,usual care,RCT,24,Obesity
-Nordic cohort 2019,Body weight (kg),-4.06,6.58,323,-1.88,6.15,371,Moderate,Important,lower,2,exercise programme,usual care,Cohort,104,Type 2 diabetes
-Registry Asia 2021,Body weight (kg),-2.29,6.7,653,0.34,6.02,692,Moderate,Important,lower,2,exercise programme,usual care,Cohort,156,CKD
-US claims 2023,Body weight (kg),-2.83,6.58,494,-0.19,6.53,589,Serious,Important,lower,2,exercise programme,usual care,Cohort,156,Obesity

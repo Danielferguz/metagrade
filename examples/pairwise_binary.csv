@@ -19,10 +19,6 @@ Huang 2021,Hospitalisation,83,397,92,323,High,0,Important,lower,,0.45,SGLT2 inhi
 Ito 2022,Hospitalisation,47,207,31,89,Low,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Asia,2022
 Kumar 2023,Hospitalisation,72,267,51,183,Low,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Asia,2023
 Lopez 2024,Hospitalisation,132,493,110,350,Some concerns,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Europe,2024
-Danish registry 2018,Hospitalisation,762,3740,1050,4211,Serious,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,Cohort,Europe,2018
-US claims 2020,Hospitalisation,1188,5455,1214,4840,Moderate,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,Cohort,North America,2020
-Korean cohort 2022,Hospitalisation,952,4271,1089,3860,Serious,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,Cohort,Asia,2022
-UK primary care 2024,Hospitalisation,1062,5322,1141,4188,Serious,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,Cohort,Europe,2024
 Alvarez 2015,Kidney failure,22,196,28,192,Low,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,Asia,2015
 Brown 2016,Kidney failure,10,209,15,223,Low,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,North America,2016
 Chen 2017,Kidney failure,15,251,22,228,Some concerns,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,North America,2017
@@ -31,9 +27,6 @@ Evans 2019,Kidney failure,9,159,8,172,Low,0,Critical,lower,,0.6,SGLT2 inhibitor,
 Garcia 2020,Kidney failure,11,186,29,214,Some concerns,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,Europe,2020
 Huang 2021,Kidney failure,26,434,24,350,High,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,Europe,2021
 Ito 2022,Kidney failure,17,254,18,246,Low,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,Asia,2022
-Danish registry 2018,Kidney failure,137,2431,234,2278,Moderate,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,Cohort,Europe,2018
-US claims 2020,Kidney failure,236,3607,222,2801,Serious,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,Cohort,North America,2020
-Korean cohort 2022,Kidney failure,318,3662,320,2980,Serious,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,Cohort,Asia,2022
 Alvarez 2015,Serious adverse events,31,210,43,249,Low,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Asia,2015
 Brown 2016,Serious adverse events,87,339,64,282,Low,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,North America,2016
 Chen 2017,Serious adverse events,56,237,50,235,Some concerns,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,North America,2017
@@ -44,10 +37,6 @@ Huang 2021,Serious adverse events,62,202,38,189,High,0,Critical,lower,2,,SGLT2 i
 Ito 2022,Serious adverse events,55,286,64,286,Low,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Asia,2022
 Kumar 2023,Serious adverse events,56,373,59,380,Low,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Asia,2023
 Lopez 2024,Serious adverse events,46,232,45,219,Some concerns,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Europe,2024
-Danish registry 2018,Serious adverse events,688,2570,494,2113,Moderate,0,Critical,lower,2,,SGLT2 inhibitor,placebo,Cohort,Europe,2018
-US claims 2020,Serious adverse events,574,2134,593,2464,Serious,0,Critical,lower,2,,SGLT2 inhibitor,placebo,Cohort,North America,2020
-Korean cohort 2022,Serious adverse events,1226,4979,1063,4571,Serious,0,Critical,lower,2,,SGLT2 inhibitor,placebo,Cohort,Asia,2022
-UK primary care 2024,Serious adverse events,708,3096,709,3451,Moderate,0,Critical,lower,2,,SGLT2 inhibitor,placebo,Cohort,Europe,2024
 Alvarez 2015,Genital mycotic infection,27,472,10,539,Low,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,Asia,2015
 Brown 2016,Genital mycotic infection,11,288,5,301,Low,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,North America,2016
 Chen 2017,Genital mycotic infection,7,410,1,455,Some concerns,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,North America,2017

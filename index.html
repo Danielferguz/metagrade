@@ -7,7 +7,7 @@
 <meta name="description" content="Meta-análisis por pares y en red (NMA) con calificación de la certeza de la evidencia según Core GRADE y GRADE para NMA. Todo se calcula en el navegador.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Source+Sans+3:wght@400;600&display=swap">
-<link rel="stylesheet" href="css/style.css?v=2026.10.24-1">
+<link rel="stylesheet" href="css/style.css?v=2026.10.25-1">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 </head>
 <body>
@@ -35,11 +35,14 @@
       <input type="file" id="file" accept=".csv,.txt,.tsv,.xlsx,.xls">
       <label for="file"><b>Elegir archivo</b> o arrastrarlo aquí</label>
     </div>
-    <div class="row gap">
+    <div class="row gap wrap">
       <span class="muted">Ejemplos:</span>
       <button class="ghost" data-example="examples/pairwise_binary.csv">Pares · binario</button>
       <button class="ghost" data-example="examples/pairwise_continuous.csv">Pares · continuo</button>
-      <button class="ghost" data-example="examples/pairwise_hr_cohorts.csv">Pares · HR ajustados</button>
+      <button class="ghost" data-example="examples/pairwise_hr.csv">Pares · HR ajustados</button>
+      <button class="ghost" data-example="examples/pairwise_binary_rct_cohort.csv">Pares · binario (ECA + cohortes)</button>
+      <button class="ghost" data-example="examples/pairwise_continuous_rct_cohort.csv">Pares · continuo (ECA + cohortes)</button>
+      <button class="ghost" data-example="examples/pairwise_hr_rct_cohort.csv">Pares · HR (ECA + cohortes)</button>
       <button class="ghost" data-example="examples/nma_binary.csv">NMA · binario</button>
       <button class="ghost" data-example="examples/nma_continuous.csv">NMA · continuo</button>
     </div>
@@ -90,7 +93,9 @@
 <section id="tab-analisis" class="tab">
   <details class="card figset"><summary><b>Formato de figuras para revistas</b> <span class="muted">(descargas SVG / PNG / TIFF debajo de cada gráfico)</span></summary>
     <div class="form" style="margin-top:10px">
-      <label>Ancho <select id="fig-width"><option value="single">1 columna · 85 mm (3,35 in)</option><option value="onehalf">1,5 columnas · 120 mm</option><option value="double" selected>2 columnas · 174 mm (6,85 in)</option><option value="custom">Personalizado</option></select></label>
+      <label>Estilo del forest <select id="fig-forest"><option value="classic" selected>Clásico (columnas de grupo)</option><option value="revman">RevMan (subtotales, heterogeneidad, riesgo de sesgo)</option></select></label>
+      <label>Ancho <select id="fig-width"><option value="auto">Automático (según la letra final)</option><option value="single">1 columna · 85 mm (3,35 in)</option><option value="onehalf">1,5 columnas · 120 mm</option><option value="double" selected>2 columnas · 174 mm (6,85 in)</option><option value="custom">Personalizado</option></select></label>
+      <label>Letra final (pt) <input id="fig-pt" type="number" min="5" max="14" step="0.5" value="8" disabled></label>
       <label>Ancho personalizado (mm) <input id="fig-mm" type="number" value="174" min="40" max="260"></label>
       <label>Resolución <select id="fig-dpi"><option value="300">300 dpi (fotos / color)</option><option value="600" selected>600 dpi (combinada)</option><option value="1000">1000 dpi (líneas)</option></select></label>
       <label>Fuente <select id="fig-font"><option value="arial">Arial</option><option value="helvetica">Helvetica</option><option value="times">Times New Roman</option></select></label>
@@ -220,7 +225,7 @@
   <div class="card prose" id="help"></div>
 </section>
 </main>
-<footer class="foot"><p>MetaGRADE <span id="app-version">2026.10.24-1</span> · © Daniel Fernández-Guzmán · <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="noopener">CC BY-NC-ND 4.0</a> · cite MetaGRADE si lo usa · los cálculos se hacen en el navegador. Las calificaciones automáticas son sugerencias que dos revisores deben verificar y justificar.</p></footer>
-<script type="module" src="js/app.js?v=2026.10.24-1"></script>
+<footer class="foot"><p>MetaGRADE <span id="app-version">2026.10.25-1</span> · © Daniel Fernández-Guzmán · <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="noopener">CC BY-NC-ND 4.0</a> · cite MetaGRADE si lo usa · los cálculos se hacen en el navegador. Las calificaciones automáticas son sugerencias que dos revisores deben verificar y justificar.</p></footer>
+<script type="module" src="js/app.js?v=2026.10.25-1"></script>
 </body>
 </html>

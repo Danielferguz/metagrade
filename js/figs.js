@@ -6,14 +6,17 @@ const FONT = { arial: 'Arial, Helvetica, sans-serif', helvetica: 'Helvetica, Ari
 export function figSettings() {
   const g = id => document.getElementById(id);
   const w = g('fig-width')?.value || 'double';
-  return { mm: w === 'custom' ? +g('fig-mm').value || 174 : FIG_WIDTHS[w], dpi: +(g('fig-dpi')?.value || 600), font: FONT[g('fig-font')?.value || 'arial'] };
+  return { mm: w === 'custom' ? +g('fig-mm').value || 174 : FIG_WIDTHS[w], auto: w === 'auto', pt: +(g('fig-pt')?.value) || 8, forest: g('fig-forest')?.value || 'classic', dpi: +(g('fig-dpi')?.value || 600), font: FONT[g('fig-font')?.value || 'arial'] };
 }
 // tamaño de letra efectivo (pt) de un texto de 12 unidades en una figura de ancho vbW
 export const effPt = (vbW, mm) => (12 * mm / vbW) / 0.3528;
 
-function prepare(svg, { mm, font }) {
+// con ancho «automático» el tamaño final sale de la letra elegida (pt): mm = pt × 0,3528 × ancho de la figura / tamaño de letra en unidades
+function prepare(svg, { mm, font, auto, pt }) {
   const c = svg.cloneNode(true);
   const [, , w, h] = (c.getAttribute('viewBox') || `0 0 ${svg.clientWidth} ${svg.clientHeight}`).split(/\s+/).map(Number);
+  if (auto) mm = +(pt * 0.3528 * w / (+c.getAttribute('data-fs') || 12)).toFixed(2);
+  c.removeAttribute('style'); c.removeAttribute('data-fs');
   c.setAttribute('width', `${mm}mm`); c.setAttribute('height', `${(mm * h / w).toFixed(2)}mm`);
   c.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   c.removeAttribute('class');
@@ -63,7 +66,7 @@ export async function exportFigure(svg, name, fmt) {
   const set = figSettings(), { s, w, h } = prepare(svg, set);
   const base = name.replace(/[^\w\-]+/g, '_').replace(/_+/g, '_').slice(0, 80) || 'figure';
   if (fmt === 'svg') return save(`${base}.svg`, new Blob([s], { type: 'image/svg+xml' }));
-  const pxW = Math.round(set.mm / 25.4 * set.dpi), pxH = Math.round(pxW * h / w);
+  const mmF = +(s.match(/width="([\d.]+)mm"/)?.[1] ?? set.mm), pxW = Math.round(mmF / 25.4 * set.dpi), pxH = Math.round(pxW * h / w);
   const url = URL.createObjectURL(new Blob([s], { type: 'image/svg+xml' }));
   const img = new Image(); img.decoding = 'sync';
   await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });

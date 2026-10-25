@@ -1,14 +1,14 @@
-import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.24-1';
-import { escalc, rma, egger, subgroupTest, metaReg, designMatrix } from './pairwise.js?v=2026.10.24-1';
-import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.24-1';
-import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.24-1';
-import { mountThreshold } from './thresh.js?v=2026.10.24-1';
-import { renderEtD } from './etd.js?v=2026.10.24-1';
-import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.24-1';
-import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.24-1';
-import { forestSVG, bubbleSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.24-1';
-import { median } from './stats.js?v=2026.10.24-1';
-import { HELP_HTML } from './help.js?v=2026.10.24-1';
+import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.25-1';
+import { escalc, rma, egger, subgroupTest, metaReg, designMatrix } from './pairwise.js?v=2026.10.25-1';
+import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.25-1';
+import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.25-1';
+import { mountThreshold } from './thresh.js?v=2026.10.25-1';
+import { renderEtD } from './etd.js?v=2026.10.25-1';
+import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.25-1';
+import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.25-1';
+import { forestSVG, forestRM, bubbleSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.25-1';
+import { median } from './stats.js?v=2026.10.25-1';
+import { HELP_HTML } from './help.js?v=2026.10.25-1';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -374,6 +374,14 @@ function designStrata(S, cfg, method, test) {
   return R && N ? { list: [R, N], test: subgroupTest([R.f, N.f]) } : null;
 }
 
+// bajo vs alto riesgo de sesgo (Core GRADE 4) con la regla de «algunas preocupaciones» elegida
+function robCompare(S, cfg, method, test) {
+  const isHigh = r => /high|serious|critical/i.test(r || '') || (cfg.someConcernsAsHigh && /some|unclear|moderate/i.test(r || ''));
+  const lowS = S.filter(s => !isHigh(s.rob)), highS = S.filter(s => isHigh(s.rob));
+  if (!lowS.length || !highS.length) return null;
+  const fl = rma(lowS.map(s => s.yi), lowS.map(s => s.vi), { method, test }), fh = rma(highS.map(s => s.yi), highS.map(s => s.vi), { method, test });
+  return { fl, fh, test: subgroupTest([fl, fh]) };
+}
 function runPairwise() {
   const t = detectType(state.map), measure = $('#pw-measure').value;
   const isRatio = ['RR', 'OR', 'HR', 'ROM'].includes(measure);
@@ -399,13 +407,7 @@ function runPairwise() {
   if (binaryAbs && !(cfg.p0 > 0 && cfg.p0 < 1)) { $('#pw-results').innerHTML = '<div class="err">Indique el riesgo basal (proporción entre 0 y 1) para calcular el efecto absoluto.</div>'; return; }
   const g = gradePairwise(cfg);
   // análisis por riesgo de sesgo (Core GRADE 4)
-  const isHigh = r => /high|serious|critical/i.test(r || '') || (cfg.someConcernsAsHigh && /some|unclear|moderate/i.test(r || ''));
-  const lowS = S.filter(s => !isHigh(s.rob)), highS = S.filter(s => isHigh(s.rob));
-  let robCmp = null;
-  if (lowS.length && highS.length) {
-    const fl = rma(lowS.map(s => s.yi), lowS.map(s => s.vi), { method, test }), fh = rma(highS.map(s => s.yi), highS.map(s => s.vi), { method, test });
-    robCmp = { fl, fh, test: subgroupTest([fl, fh]) };
-  }
+  const robCmp = robCompare(S, cfg, method, test);
   // subgrupos (cualquier columna) y meta-regresión
   const subvar = $('#pw-subvar').value, regvar = $('#pw-regvar').value;
   const subRes = subvar ? subgroupAnalysis(S, subvar, method, test) : null;
@@ -426,6 +428,36 @@ function domainRow(key, label, lvl, why, max = 3, pre = '') {
 // ---------- filas del forest y tarjetas de subgrupos / meta-regresión / evidencia por diseño ----------
 const fRow = (P, tr, s, w) => ({ label: s.study, est: tr(s.yi), lo: tr(s.yi - 1.96 * Math.sqrt(s.vi)), hi: tr(s.yi + 1.96 * Math.sqrt(s.vi)), w, rob: s.rob, cells: P.colSpec ? P.colSpec.cells(s) : null });
 const fPool = (P, tr, f, label, ss, het) => ({ est: tr(f.est), lo: tr(f.ci[0]), hi: tr(f.ci[1]), label, het, cells: P.colSpec ? P.colSpec.total(ss) : null });
+// ---------- forest: estilo clásico o RevMan (selector de figuras) ----------
+const MEAS_RM = { RR: 'Risk Ratio', OR: 'Odds Ratio', RD: 'Risk Difference', HR: 'Hazard Ratio', MD: 'Mean Difference', SMD: 'Std. Mean Difference', ROM: 'Ratio of Means' };
+const pRM = p => (!isFinite(p) ? '= –' : p < 0.00001 ? '< 0.00001' : p < 0.001 ? '= ' + p.toFixed(4) : p < 0.1 ? '= ' + p.toFixed(3) : '= ' + p.toFixed(2));
+// columnas de datos de RevMan: eventos y total (binario), media, DE y total (continuo) o log[estimador] y EE (razones ajustadas)
+function rmCols(P) {
+  const on = $('#pw-cols').checked, ok = isFinite, I = P.int || 'Intervention', C = P.comp || 'Control', S = P.S, n = v => (ok(v) ? String(v) : '');
+  const sum = (ss, k) => (ss.length && ss.every(x => ok(x.raw[k])) ? ss.reduce((a, x) => a + x.raw[k], 0) : NaN), d2 = v => (ok(v) ? v.toFixed(2) : '');
+  if (P.dataType === 'binary' && on) return { cols: [{ group: I, head: 'Events' }, { group: I, head: 'Total' }, { group: C, head: 'Events' }, { group: C, head: 'Total' }], cells: s => [n(s.raw.e1), n(s.raw.n1), n(s.raw.e2), n(s.raw.n2)], total: ss => [n(sum(ss, 'e1')), n(sum(ss, 'n1')), n(sum(ss, 'e2')), n(sum(ss, 'n2'))] };
+  if (P.dataType === 'continuous' && on) return { cols: [{ group: I, head: 'Mean' }, { group: I, head: 'SD' }, { group: I, head: 'Total' }, { group: C, head: 'Mean' }, { group: C, head: 'SD' }, { group: C, head: 'Total' }], cells: s => [d2(s.raw.m1), d2(s.raw.sd1), n(s.raw.n1), d2(s.raw.m2), d2(s.raw.sd2), n(s.raw.n2)], total: ss => ['', '', n(sum(ss, 'n1')), '', '', n(sum(ss, 'n2'))] };
+  const hasN = on && S.some(x => ok(x.raw.n1) || ok(x.raw.n2)), base = [{ group: '', head: `log[${P.measure}]` }, { group: '', head: 'SE' }];
+  return { cols: hasN ? [...base, { group: I, head: 'Total' }, { group: C, head: 'Total' }] : base, cells: s => [ok(s.yi) ? s.yi.toFixed(3) : '', ok(s.vi) ? Math.sqrt(s.vi).toFixed(3) : '', ...(hasN ? [n(s.raw.n1), n(s.raw.n2)] : [])], total: ss => ['', '', ...(hasN ? [n(sum(ss, 'n1')), n(sum(ss, 'n2'))] : [])] };
+}
+const hetRM = f => (f.k > 1 ? `Heterogeneity: Tau² = ${f.tau2.toFixed(2)}; Chi² = ${f.QE.toFixed(2)}, df = ${f.k - 1} (P ${pRM(f.QEp)}); I² = ${isFinite(f.I2) ? f.I2.toFixed(0) : '0'}%` : 'Heterogeneity: not applicable');
+const testRM = f => (f.k > 1 && f.test !== 'z' ? `Test for overall effect: t = ${Math.abs(f.z).toFixed(2)}, df = ${f.k - 1} (P ${pRM(f.pval)})` : `Test for overall effect: Z = ${Math.abs(f.z).toFixed(2)} (P ${pRM(f.pval)})`);
+// spec: {groups:[{label, ss, f}] | null, overall: bool, interaction: {col, test} | null, weightHead}
+function pwForest(P, tr, spec, title) {
+  const { fit, S, cfg, isRatio } = P, fav = cfg.higherBetter ? [`Favours ${P.comp}`, `Favours ${P.int}`] : [`Favours ${P.int}`, `Favours ${P.comp}`], G = spec.groups;
+  if (figSettings().forest === 'revman') {
+    const cs = rmCols(P), mk = (ss, f) => ss.map((s, j) => ({ label: s.study, cells: cs.cells(s), w: `${(f.weights[j] * 100).toFixed(1)}%`, wf: f.weights[j], est: tr(s.yi), lo: tr(s.yi - 1.96 * Math.sqrt(s.vi)), hi: tr(s.yi + 1.96 * Math.sqrt(s.vi)), rob: s.rob }));
+    const pool = (f, ss, label) => ({ label, cells: cs.total(ss), w: '100.0%', est: tr(f.est), lo: tr(f.ci[0]), hi: tr(f.ci[1]) });
+    const groups = G ? G.map(x => ({ label: x.label, rows: mk(x.ss, x.f), sub: pool(x.f, x.ss, 'Subtotal (95% CI)'), lines: [hetRM(x.f), testRM(x.f)] })) : [{ label: '', rows: mk(S, fit) }];
+    const ov = spec.overall ? { ...pool(fit, S, 'Total (95% CI)'), lines: [hetRM(fit), testRM(fit)] } : null, t = spec.interaction?.test;
+    return forestRM({ title, groups, overall: ov, cols: cs.cols, log: isRatio, measure: MEAS_RM[P.measure] || P.measure, model: `IV, ${fit.method === 'EE' ? 'Fixed' : 'Random'}, 95% CI`, leftLabel: fav[0], rightLabel: fav[1], fs: 12, rob: S.some(s => s.rob),
+      interaction: t ? `Test for subgroup differences: Chi² = ${t.Q.toFixed(2)}, df = ${t.df} (P ${pRM(t.p)}), I² = ${t.Q > t.df ? (100 * (t.Q - t.df) / t.Q).toFixed(1) : '0.0'}%` : '' });
+  }
+  const grp = G ? G.map(x => ({ label: x.label, rows: x.ss.map((s, j) => fRow(P, tr, s, x.f.weights[j])), pooled: fPool(P, tr, x.f, `Subtotal (k = ${x.f.k})`, x.ss, hetShort(x.f)) })) : null;
+  const hetTxt = fit.k > 1 ? `Heterogeneity: τ² = ${fit.tau2.toFixed(3)}; I² = ${fit.I2.toFixed(0)}%; Q = ${fit.QE.toFixed(2)} (p = ${fp(fit.QEp)})` : '', short = !!(grp || P.colSpec);
+  const pooledAll = spec.overall ? { ...fPool(P, tr, fit, short ? 'Overall' : `Pooled (${methLabel(fit).replace('Random effects, ', 'random effects, ').replace('Common effect', 'common effect')})`, S, short ? `${methLabel(fit)}. ${hetTxt}` : hetTxt), pi: fit.k >= 3 ? [tr(fit.pi[0]), tr(fit.pi[1])] : null } : null;
+  return forestSVG({ rows: G ? [] : S.map((s, i) => fRow(P, tr, s, fit.weights[i])), groups: grp, cols: P.colSpec?.cols || [], pooled: pooledAll, interaction: spec.interaction ? interTxt(spec.interaction.col, spec.interaction.test) : '', weightHead: spec.weightHead || (grp ? 'Weight (in subgroup)' : 'Weight'), log: isRatio, measure: P.measure, leftLabel: fav[0], rightLabel: fav[1], title });
+}
 const nTot = ss => { const v = ss.map(s => s.n).filter(isFinite); return v.length ? v.reduce((a, b) => a + b, 0) : '–'; };
 function subRegHTML(P, tr, subRes) {
   const { regRes } = P, lbl = P.measure, ci = f => `${f2(tr(f.est))} (${f2(tr(f.ci[0]))} a ${f2(tr(f.ci[1]))})`;
@@ -472,7 +504,7 @@ function stratumOv(i) {
 function strataHTML(P, tr) {
   const ST = P.strata; if (!ST) return '';
   const lbl = P.measure, fav = P.cfg.higherBetter ? [`Favours ${P.comp}`, `Favours ${P.int}`] : [`Favours ${P.int}`, `Favours ${P.comp}`];
-  const svg = forestSVG({ groups: ST.list.map(st => ({ label: DESIGN_EN[st.kind], rows: st.ss.map((s, j) => fRow(P, tr, s, st.f.weights[j])), pooled: fPool(P, tr, st.f, `Subtotal (k = ${st.f.k})`, st.ss, hetShort(st.f)) })), cols: P.colSpec?.cols || [], interaction: interTxt('study design', ST.test), weightHead: 'Weight (in design)', log: P.isRatio, measure: lbl, leftLabel: fav[0], rightLabel: fav[1], title: `${P.outcome} — by study design` });
+  const svg = pwForest(P, tr, { groups: ST.list.map(st => ({ label: DESIGN_EN[st.kind], ss: st.ss, f: st.f })), overall: false, interaction: { col: 'study design', test: ST.test }, weightHead: 'Weight (in design)' }, `${P.outcome} — by study design`);
   const body = ST.list.map((st, i) => { const g = st.g, un = g.ab.binary ? ` por ${P.cfg.unit}` : '';
     return `<details class="stratum" data-st="${i}" open><summary><b>${DESIGN_NAME[st.kind]}</b> <span class="muted">· ${st.f.k} estudio(s) · punto de partida: ${LEVELS[g.start]}</span></summary>
     <table class="grade-table"><thead><tr><th style="width:160px">Dominio</th><th style="width:190px">Juicio</th><th>Justificación (aparece como nota al pie)</th></tr></thead><tbody>
@@ -498,6 +530,7 @@ function updateStratum(i) {
   const s = pwSummary(stratumP(st), st.ov), fill = fillFor(s.cat, s.c), plain = plainStatement(s.cat, s.c, s.intervention, lcOut(s.outcome), P.cfg.threshold, s.plainRaw.d);
   document.querySelector(`.stratum[data-st="${i}"] .sfinal`).innerHTML = `<div class="row gap wrap" style="margin-top:10px"><span class="badge" style="background:#${fill}">${SYM[s.c]} ${LEVELS[s.c]}</span><span>${legendText(s.cat, s.c, s.comparator)}</span></div><p><b>Frase en lenguaje claro:</b> ${esc(plain)}</p><div class="notes">${s.notes.map(n => `<p>• ${esc(n)}</p>`).join('')}</div>`;
   $('#st-sum').innerHTML = stratumSummaryHTML(P);
+  const iv = document.getElementById(`pw-impviz-st${i}`); if (iv) { iv.innerHTML = pwImpViz(stratumP(st), s); autoFig(iv, `${s.outcome}_st${i}`); }
 }
 function bindStrata() {
   const P = state.lastPw; if (!P?.strata) return;
@@ -525,11 +558,7 @@ function renderPairwise(dropped, robCmp, subRes, tr) {
   const P = state.lastPw, { fit, g, S, measure, isRatio, cfg } = P;
   const lbl = isRatio ? measure : measure;
   const fav = cfg.higherBetter ? [`Favours ${P.comp}`, `Favours ${P.int}`] : [`Favours ${P.int}`, `Favours ${P.comp}`];
-  const het = fit.k > 1 ? `Heterogeneity: τ² = ${fit.tau2.toFixed(3)}; I² = ${fit.I2.toFixed(0)}%; Q = ${fit.QE.toFixed(2)} (p = ${fp(fit.QEp)})` : '';
-  const grp = subRes && subRes.fits ? subRes.fits.map(x => ({ label: `${x.na ? 'Not reported' : x.sg}`, rows: x.ix.map((i, j) => fRow(P, tr, S[i], x.f.weights[j])), pooled: fPool(P, tr, x.f, `Subtotal (k = ${x.f.k})`, x.ix.map(i => S[i]), hetShort(x.f)) })) : null;
-  const short = !!(grp || P.colSpec);
-  const pooledAll = { ...fPool(P, tr, fit, short ? 'Overall' : `Pooled (${methLabel(fit).replace('Random effects, ', 'random effects, ').replace('Common effect', 'common effect')})`, S, short ? `${methLabel(fit)}. ${het}` : het), pi: fit.k >= 3 ? [tr(fit.pi[0]), tr(fit.pi[1])] : null };
-  const svg = forestSVG({ rows: S.map((s, i) => fRow(P, tr, s, fit.weights[i])), groups: grp, cols: P.colSpec?.cols || [], pooled: pooledAll, interaction: subRes && subRes.test ? interTxt(subRes.col, subRes.test) : '', weightHead: grp ? 'Weight (in subgroup)' : 'Weight', log: isRatio, measure: lbl, leftLabel: fav[0], rightLabel: fav[1], title: P.outcome });
+  const svg = pwForest(P, tr, { groups: subRes && subRes.fits ? subRes.fits.map(x => ({ label: x.na ? 'Not reported' : x.sg, ss: x.ix.map(i => S[i]), f: x.f })) : null, overall: true, interaction: subRes && subRes.test ? { col: subRes.col, test: subRes.test } : null }, P.outcome);
   const A = g.abs, ab = g.ab, un = ab.binary ? ` por ${cfg.unit}` : '';
   let html = `<div class="card"><h2>Resultados — ${esc(P.outcome)}</h2>`;
   if (dropped.length) html += `<div class="warn">Excluidos del cálculo: ${dropped.map(d => esc(d.study) + ' (' + esc(d.dropped) + ')').join('; ')}</div>`;
@@ -543,7 +572,7 @@ function renderPairwise(dropped, robCmp, subRes, tr) {
   if (robCmp) html += `<p class="muted"><b>Bajo vs alto riesgo de sesgo:</b> bajo ${f2(tr(robCmp.fl.est))} (${f2(tr(robCmp.fl.ci[0]))}–${f2(tr(robCmp.fl.ci[1]))}, k=${robCmp.fl.k}); alto ${f2(tr(robCmp.fh.est))} (${f2(tr(robCmp.fh.ci[0]))}–${f2(tr(robCmp.fh.ci[1]))}, k=${robCmp.fh.k}); p de interacción = ${fp(robCmp.test?.p)}. Si difieren de forma importante y hay evidencia apreciable de bajo riesgo, use solo los estudios de bajo riesgo y no baje la certeza (Core GRADE 4).</p>`;
   html += `</div>`;
   html += subRegHTML(P, tr, subRes);
-  html += pwVizHTML(robCmp);
+  html += vizCardHTML(P, robCmp);
   // GRADE
   html += `<div class="card"><h2>Certeza de la evidencia (Core GRADE)</h2>
   <p class="muted">Umbral: <b>${cfg.threshold === 'MID' ? 'MID ±' + cfg.mid + un : 'valor nulo'}</b> · punto de partida: <b>${LEVELS[g.start]}</b>. Las calificaciones son sugerencias: modifique el nivel y la justificación si su juicio difiere.</p>
@@ -561,8 +590,8 @@ function renderPairwise(dropped, robCmp, subRes, tr) {
   <div class="row end"><button class="primary" id="pw-add">Añadir a la tabla SoF</button></div></div>`;
   html += strataHTML(P, tr);
   $('#pw-results').innerHTML = html;
-  bindVizTabs($('#pw-results'));
-  autoFig($('#pw-results'), P.outcome);
+  bindVizTabs($('#pw-results')); bindCtxTabs($('#pw-results')); fillCtxImp(P); fillCtxImp(P);
+  autoFig($('#pw-results'), P.outcome); figNote();
   $('#pw-results').querySelectorAll('[data-dom],[data-why]').forEach(el => el.addEventListener('input', updatePwFinal));
   $('#pw-add').addEventListener('click', addPwToSoF);
   if (P.ov) document.querySelectorAll('#pw-results [data-dom],#pw-results [data-why]').forEach(el => { const k = el.dataset.dom ?? el.dataset.why + '_why'; if (P.ov[k] != null) el.value = P.ov[k]; });
@@ -582,9 +611,15 @@ function autoFig(root, prefix) {
   });
   bindFigs(root.querySelectorAll ? root : document);
 }
-function figNote() { const st = figSettings(); $('#fig-note').textContent = `Ancho ${st.mm} mm a ${st.dpi} dpi = ${Math.round(st.mm / 25.4 * st.dpi)} px. Letra del texto principal ≈ ${effPt(900, st.mm).toFixed(1)} pt en gráficos de umbrales/forest (${effPt(620, st.mm).toFixed(1)} pt en el gráfico de red)${effPt(900, st.mm) < 6 ? ' — demasiado pequeña: use 2 columnas' : ''}.`; }
-['#fig-width', '#fig-mm', '#fig-dpi', '#fig-font'].forEach(id => $(id).addEventListener('change', figNote)); figNote();
-
+function figNote() {
+  const st = figSettings(), svg = document.querySelector('#pw-results svg.plot, #nm-results svg.plot'), w = svg ? +svg.getAttribute('viewBox').split(/\s+/)[2] : 900, fs = +svg?.dataset.fs || 12;
+  $('#fig-pt').disabled = !st.auto; $('#fig-mm').disabled = st.auto || $('#fig-width').value !== 'custom';
+  $('#fig-note').textContent = st.auto ? `Ancho automático: con letra final de ${st.pt} pt, la figura mostrada mide ≈ ${Math.round(st.pt * 0.3528 * w / fs)} mm de ancho (los forest anchos pueden superar una página: reduzca la letra o las columnas).`
+    : `Ancho ${st.mm} mm a ${st.dpi} dpi = ${Math.round(st.mm / 25.4 * st.dpi)} px. Letra del gráfico mostrado ≈ ${(fs * st.mm / w / 0.3528).toFixed(1)} pt${fs * st.mm / w / 0.3528 < 6 ? ' — demasiado pequeña: use ancho automático, un ancho mayor o menos columnas' : ''}.`;
+}
+['#fig-width', '#fig-mm', '#fig-dpi', '#fig-font', '#fig-pt'].forEach(id => $(id).addEventListener('change', figNote));
+$('#fig-forest').addEventListener('change', () => { const P = state.lastPw; if (P && !$('#pw').hidden) renderPairwise(...P.args, x => (P.isRatio ? Math.exp(x) : x)); figNote(); });
+figNote();
 // ---------- Visualización de dominios (riesgo de sesgo, inconsistencia, imprecisión) ----------
 const ROB_LBL = { high: 'High', some: 'Some concerns', low: 'Low', na: 'Not reported' };
 function robSegments(items) { // items: [{rob, w}]
@@ -607,17 +642,54 @@ function bindVizTabs(root) {
     card.querySelectorAll(':scope > .vizpane').forEach(p => p.classList.toggle('active', p.dataset.pane === b.dataset.pane));
   })));
 }
-function pwAbs(yi, lo, hi) {
-  const { cfg, g } = state.lastPw, sc = g.ab.binary ? cfg.unit : 1;
+// Visualización de dominios GRADE: para todos los estudios y, además, para cada diseño (ECA vs observacionales) y para cada subgrupo
+// cuando hay diferencia entre subgrupos (p de interacción < 0,10); cada contexto tiene su propio g (GRADE) y sus cuatro paneles.
+const SUB_P = 0.10;
+function vizContexts(P) {
+  const out = [{ id: 'main', label: 'Todos los estudios', C: P, robCmp: null }];
+  if (P.strata) P.strata.list.forEach((st, i) => out.push({ id: `st${i}`, label: DESIGN_SHORT[st.kind], C: stratumP(st), st: i }));
+  const sr = P.subRes;
+  if (sr?.fits && sr.test && sr.test.p < SUB_P && !(P.strata && P.subvar === state.map.design)) {
+    sr.fits.filter(x => !x.na).forEach((x, i) => {
+      const ss = x.ix.map(j => P.S[j]), c = { ...P.cfg, fit: x.f, studies: ss, eggerRes: ss.length >= 10 ? egger(ss.map(q => q.yi), ss.map(q => q.vi)) : null };
+      out.push({ id: `sg${i}`, label: `${sr.col}: ${x.sg}`, C: { ...P, cfg: c, g: gradePairwise(c), fit: x.f, S: ss, eg: c.eggerRes } });
+    });
+  }
+  return out;
+}
+const DESIGN_SHORT = { RCT: 'ECA', NRSI: 'Observacionales' };
+function vizCardHTML(P, robCmp) {
+  const ctx = vizContexts(P); ctx[0].robCmp = robCmp; P.vizCtx = ctx;
+  if (ctx.length === 1) return `<div class="card"><h2>Visualización de los dominios GRADE</h2>${pwVizHTML(P, robCmp, 'main')}</div>`;
+  const why = [P.strata ? 'ECA y observacionales por separado' : '', ctx.some(c => c.id.startsWith('sg')) ? `subgrupos de «${esc(P.subRes.col)}» (p de interacción = ${fp(P.subRes.test.p)} < ${SUB_P.toFixed(2)})` : ''].filter(Boolean).join(' · ');
+  return `<div class="card"><h2>Visualización de los dominios GRADE</h2><p class="muted">Se muestran por separado: ${why}. Cada pestaña recalcula la sugerencia GRADE solo con esos estudios.</p>
+  <div class="viztabs ctxtabs">${ctx.map((c, i) => `<button type="button" class="${i ? '' : 'active'}" data-ctx="${c.id}">${esc(c.label)}</button>`).join('')}</div>
+  ${ctx.map((c, i) => `<div class="vizctx${i ? '' : ' active'}" data-ctx="${c.id}"${i ? ' hidden' : ''}>${pwVizHTML(c.C, c.robCmp ?? robCompare(c.C.S, c.C.cfg, P.method, P.test), c.id)}</div>`).join('')}</div>`;
+}
+function bindCtxTabs(root) {
+  root.querySelectorAll('.ctxtabs').forEach(t => t.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+    t.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+    t.parentElement.querySelectorAll(':scope > .vizctx').forEach(d => { const on = d.dataset.ctx === b.dataset.ctx; d.hidden = !on; d.classList.toggle('active', on); });
+  })));
+}
+// imprecisión de los contextos distintos del principal (el principal se actualiza en updatePwFinal)
+function fillCtxImp(P) {
+  (P.vizCtx || []).filter(c => c.id !== 'main').forEach(c => {
+    const el = document.getElementById(`pw-impviz-${c.id}`); if (!el) return;
+    const s = pwSummary(c.C, c.st != null ? P.strata.list[c.st].ov : {}); el.innerHTML = pwImpViz(c.C, s); autoFig(el, `${s.outcome}_${c.id}`);
+  });
+}
+function pwAbs(C, yi, lo, hi) {
+  const { cfg, g } = C, sc = g.ab.binary ? cfg.unit : 1;
   const a = absolute(cfg.measure, yi, lo, hi, cfg.p0);
   return { d: a.d * sc, lo: a.lo * sc, hi: a.hi * sc };
 }
-function pwXLabel() {
-  const { cfg, g, int, comp } = state.lastPw;
+function pwXLabel(C) {
+  const { cfg, g, int, comp } = C;
   return g.ab.binary ? `Absolute effect per ${cfg.unit} (${int} − ${comp})` : `${cfg.measure} (${int} − ${comp})`;
 }
-function pwVizHTML(robCmp) {
-  const P = state.lastPw, { fit, g, S, cfg } = P, w = fit.weights;
+function pwVizHTML(C, robCmp, id) {
+  const P = C, { fit, g, S, cfg } = P, w = fit.weights;
   const mid = cfg.threshold === 'MID' ? cfg.mid : 0;
   // Riesgo de sesgo
   const items = S.map((s, i) => ({ rob: s.rob, w: w[i], study: s.study }));
@@ -626,19 +698,19 @@ function pwVizHTML(robCmp) {
     marker: { at: cfg.robDominance, label: `Dominance threshold ${(cfg.robDominance * 100).toFixed(0)}%${cfg.someConcernsAsHigh ? ' (high + some concerns)' : ' (high risk)'}` } });
   rob += `<table class="data wtable"><thead><tr><th>Study</th><th>Risk of bias</th><th>Weight</th></tr></thead><tbody>${items.slice().sort((a, b) => b.w - a.w).map(x => `<tr><td>${esc(x.study)}</td><td><span class="chip" style="background:${ROB_COL[robClass(x.rob)]}"></span>${esc(x.rob || '—')}</td><td><div class="wbar"><span style="width:${x.w * 100}%;background:${ROB_COL[robClass(x.rob)]}"></span></div>${(x.w * 100).toFixed(1)}%</td></tr>`).join('')}</tbody></table>`;
   if (robCmp) {
-    const r3 = [['Low risk of bias', robCmp.fl], ['High risk of bias', robCmp.fh], ['All studies', fit]].map(([l, f], i) => ({ label: l, sub: `k = ${f.k}`, ...pwAbs(f.est, f.ci[0], f.ci[1]), bold: i === 2, fill: i < 2 ? (i ? 'F2C4C4' : 'C6E0B4') : null }));
-    rob += thresholdSVG({ rows: r3, mid, higherBetter: cfg.higherBetter, xlabel: pwXLabel(), title: `Low vs high risk of bias (interaction p = ${fp(robCmp.test?.p)})` });
+    const r3 = [['Low risk of bias', robCmp.fl], ['High risk of bias', robCmp.fh], ['All studies', fit]].map(([l, f], i) => ({ label: l, sub: `k = ${f.k}`, ...pwAbs(C, f.est, f.ci[0], f.ci[1]), bold: i === 2, fill: i < 2 ? (i ? 'F2C4C4' : 'C6E0B4') : null }));
+    rob += thresholdSVG({ rows: r3, mid, higherBetter: cfg.higherBetter, xlabel: pwXLabel(C), title: `Low vs high risk of bias (interaction p = ${fp(robCmp.test?.p)})` });
     rob += `<p class="muted">Si los estudios de bajo riesgo dan un resultado importante distinto y aportan evidencia apreciable, use solo esos estudios y no baje la certeza (Core GRADE 4).</p>`;
   } else rob += `<p class="muted">No hay estudios de bajo y alto riesgo a la vez: no se puede comparar por riesgo de sesgo.</p>`;
   rob += robLegend();
   // Inconsistencia
   let inc;
   if (fit.k >= 2) {
-    const rows = S.map((s, i) => { const se = Math.sqrt(s.vi); return { label: s.study, ...pwAbs(s.yi, s.yi - 1.96 * se, s.yi + 1.96 * se), w: w[i], chip: ROB_COL[robClass(s.rob)] }; });
-    const piA = fit.k >= 3 ? pwAbs(fit.est, fit.pi[0], fit.pi[1]) : null;
+    const rows = S.map((s, i) => { const se = Math.sqrt(s.vi); return { label: s.study, ...pwAbs(C, s.yi, s.yi - 1.96 * se, s.yi + 1.96 * se), w: w[i], chip: ROB_COL[robClass(s.rob)] }; });
+    const piA = fit.k >= 3 ? pwAbs(C, fit.est, fit.pi[0], fit.pi[1]) : null;
     rows.push({ label: 'Pooled', sub: piA ? 'band = 95% prediction interval' : '', ...g.abs, bold: true, pi: piA ? [piA.lo, piA.hi] : null });
     const Di = g.domains.inc;
-    inc = thresholdSVG({ rows, mid, higherBetter: cfg.higherBetter, xlabel: pwXLabel(), title: `Study estimates against the decision threshold (absolute scale)${Di.piAbs && cfg.usePI ? ` — prediction interval ${Di.piLevel ? `crosses ${Di.piLevel} MID${Di.piLevel > 1 ? 's' : ''} not crossed by the CI → −${Di.piLevel}` : 'adds no threshold → 0'}` : ''}` });
+    inc = thresholdSVG({ rows, mid, higherBetter: cfg.higherBetter, xlabel: pwXLabel(C), title: `Study estimates against the decision threshold (absolute scale)${Di.piAbs && cfg.usePI ? ` — prediction interval ${Di.piLevel ? `crosses ${Di.piLevel} MID${Di.piLevel > 1 ? 's' : ''} not crossed by the CI → −${Di.piLevel}` : 'adds no threshold → 0'}` : ''}` });
     const zoneOf = d => { const v = cfg.higherBetter ? d : -d; return mid > 0 ? (v >= mid ? 'benefit' : v <= -mid ? 'harm' : 'nodiff') : (v > 0 ? 'benefit' : 'harm'); };
     const zw = { benefit: 0, nodiff: 0, harm: 0 }; rows.slice(0, -1).forEach(r => { zw[zoneOf(r.d)] += r.w; });
     const D = g.domains.inc;
@@ -647,7 +719,7 @@ function pwVizHTML(robCmp) {
       marker: { at: 0.8, label: '≥80% on one side → not serious' } });
     inc += i2GaugeSVG(fit.I2);
   } else inc = '<p class="muted">Un solo estudio: la inconsistencia no es evaluable.</p>';
-  const imp = '<div id="pw-impviz"></div>';
+  const imp = `<div id="pw-impviz-${id}"></div>`;
   // sesgo de publicación: funnel plot + Egger
   const egAll = fit.k >= 3 ? egger(S.map(x => x.yi), S.map(x => x.vi)) : null;
   const pub = fit.k >= 3 ? funnelSVG({ pts: S.map(x => ({ y: x.yi, se: Math.sqrt(x.vi), label: x.study, col: ROB_COL[robClass(x.rob)] })), center: fit.est, log: P.isRatio, eg: egAll,
@@ -655,12 +727,12 @@ function pwVizHTML(robCmp) {
       note: fit.k < 10 ? `Only ${fit.k} studies: funnel plot and Egger's test have low power (recommended ≥10 studies); interpret with caution.` : 'Dashed red line: Egger regression; grey triangle: pseudo 95% confidence limits around the pooled estimate.' })
       + `<p class="muted">Juicio GRADE sugerido: <b>${g.domains.pub.level ? 'serio (−1)' : 'no detectado'}</b> — ${esc(g.domains.pub.why)}. La asimetría puede deberse también a heterogeneidad o a efectos de estudios pequeños verdaderos; considere además estudios no publicados, registros y financiamiento.</p>${robLegend()}`
     : '<p class="muted">Se necesitan al menos 3 estudios para el funnel plot.</p>';
-  return `<div class="card"><h2>Visualización de los dominios GRADE</h2>${vizTabs('pw', [['Riesgo de sesgo', rob], ['Inconsistencia', inc], ['Imprecisión', imp], ['Sesgo de publicación', pub]])}</div>`;
+  return vizTabs('pw', [['Riesgo de sesgo', rob], ['Inconsistencia', inc], ['Imprecisión', imp], ['Sesgo de publicación', pub]]);
 }
-function pwImpViz(s) {
-  const { g, cfg } = state.lastPw, mid = cfg.threshold === 'MID' ? cfg.mid : 0, I = g.domains.imp;
+function pwImpViz(C, s) {
+  const { g, cfg } = C, mid = cfg.threshold === 'MID' ? cfg.mid : 0, I = g.domains.imp;
   let h = thresholdSVG({ rows: [{ label: s.intervention, sub: `vs ${s.comparator}`, ...g.abs, bold: true, fill: fillFor(s.cat, s.c), right: `${crossLabel(g.abs.lo, g.abs.hi, mid, I.ths)}${I.level && !/crosses/i.test(I.why) ? ' · OIS → −' + I.level : ''}`, badge: { text: `${SYM[s.c]} ${LEVELS[s.c]}`, fill: fillFor(s.cat, s.c) } }],
-    mid, ths: I.ths, higherBetter: cfg.higherBetter, xlabel: pwXLabel(), title: `Imprecision: 95% CI of the absolute effect vs ${I.ths && I.ths.length > 1 ? 'small, moderate and large thresholds' : mid > 0 ? '±MID' : 'the null'}` });
+    mid, ths: I.ths, higherBetter: cfg.higherBetter, xlabel: pwXLabel(C), title: `Imprecision: 95% CI of the absolute effect vs ${I.ths && I.ths.length > 1 ? 'small, moderate and large thresholds' : mid > 0 ? '±MID' : 'the null'}` });
   if (isFinite(I.ois) && I.ntot > 0) h += oisSVG({ n: I.ntot, ois: I.ois, title: 'Optimal information size (applies when the CI does not cross the threshold and the effect is large)' });
   return h + `<p class="muted">${esc(I.why || '')}</p>`;
 }
@@ -701,7 +773,7 @@ function updatePwFinal() {
   $('#pw-final').innerHTML = `<div class="row gap wrap" style="margin-top:10px"><span class="badge" style="background:#${fill}">${SYM[s.c]} ${LEVELS[s.c]}</span>
     <span>${legendText(s.cat, s.c, s.comparator)}</span></div><p><b>Frase en lenguaje claro:</b> ${esc(plain)}</p>
     <div class="notes">${s.notes.map(n => `<p>• ${esc(n)}</p>`).join('')}</div>`;
-  const vi = $('#pw-impviz'); if (vi) { vi.innerHTML = pwImpViz(s); autoFig(vi, s.outcome); }
+  const vi = $('#pw-impviz-main'); if (vi) { vi.innerHTML = pwImpViz(state.lastPw, s); autoFig(vi, s.outcome); }
 }
 const sameItem = (a, b) => a.type === b.type && a.outcome === b.outcome && (a.type === 'nma' || (a.intervention === b.intervention && a.comparator === b.comparator));
 function pushSoF(item) { const i = state.sof.findIndex(x => sameItem(x, item)); if (i >= 0) state.sof[i] = item; else state.sof.push(item); save('mg-sof', state.sof); }
