@@ -6,7 +6,7 @@ const FONT = { arial: 'Arial, Helvetica, sans-serif', helvetica: 'Helvetica, Ari
 export function figSettings() {
   const g = id => document.getElementById(id);
   const w = g('fig-width')?.value || 'double';
-  return { mm: w === 'custom' ? +g('fig-mm').value || 174 : FIG_WIDTHS[w], auto: w === 'auto', pt: +(g('fig-pt')?.value) || 8, forest: g('fig-forest')?.value || 'classic', dpi: +(g('fig-dpi')?.value || 600), font: FONT[g('fig-font')?.value || 'arial'] };
+  return { mm: w === 'custom' ? +g('fig-mm').value || 174 : FIG_WIDTHS[w], auto: w === 'auto', pt: +(g('fig-pt')?.value) || 8, forest: g('fig-forest')?.value || 'revman', dpi: +(g('fig-dpi')?.value || 600), font: FONT[g('fig-font')?.value || 'arial'] };
 }
 // tamaño de letra efectivo (pt) de un texto de 12 unidades en una figura de ancho vbW
 export const effPt = (vbW, mm) => (12 * mm / vbW) / 0.3528;

@@ -2,7 +2,7 @@
 // A directa (A1 dominios → preliminar; A2 imprecisión → final), B indirecta (B1 lazo; B2 intransitividad → preliminar;
 // B3 imprecisión → final), C red (C1 punto de partida; C2 incoherencia; C3 imprecisión → final), D mejor estimado.
 // También la tabla suplementaria de estimados directos, indirectos y de red con su certeza (formato BMJ 2023;383:e076226).
-import { LEVELS, SYM } from './grade.js?v=2026.10.25-1';
+import { LEVELS, SYM } from './grade.js?v=2026.10.25-2';
 
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const SEV = ['No serious', 'Serious', 'Very serious', 'Extremely serious'];

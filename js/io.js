@@ -50,6 +50,7 @@ const ALIAS = {
   lower: ['lower', 'lci', 'ci_lower', 'lo', 'li', 'ic_inf'],
   upper: ['upper', 'uci', 'ci_upper', 'hi', 'ls', 'ic_sup'],
   n: ['n', 'n_total', 'samplesize', 'sample_size', 'total', 'tamano'],
+  fu: ['followup', 'follow_up', 'follow-up', 'seguimiento', 'followup_months', 'followup_weeks', 'followup_years', 'followup_days', 'follow_up_months', 'follow_up_years'],
   rob: ['rob', 'risk_of_bias', 'riesgo_sesgo', 'riesgo_de_sesgo', 'overall_rob'],
   indirect: ['indirect', 'indirectness', 'indirecto', 'evidencia_indirecta'],
   design: ['design', 'diseño', 'diseno', 'study_design'],

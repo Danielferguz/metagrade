@@ -1,69 +1,69 @@
-study,outcome,events_int,n_int,events_comp,n_comp,rob,indirect,importance,direction,mid,disutility,intervention_name,comparator_name,design,region,year
-Alvarez 2015,All-cause mortality,48,434,16,138,Low,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,Asia,2015
-Brown 2016,All-cause mortality,37,425,45,407,Low,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,North America,2016
-Chen 2017,All-cause mortality,41,380,65,464,Some concerns,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,North America,2017
-Diaz 2018,All-cause mortality,12,124,18,159,High,1,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,Asia,2018
-Evans 2019,All-cause mortality,44,425,7,65,Low,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,North America,2019
-Garcia 2020,All-cause mortality,23,203,28,251,Some concerns,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,Europe,2020
-Huang 2021,All-cause mortality,32,292,50,326,High,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,Europe,2021
-Ito 2022,All-cause mortality,20,241,26,198,Low,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,Asia,2022
-Kumar 2023,All-cause mortality,24,297,31,276,Low,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,Asia,2023
-Lopez 2024,All-cause mortality,50,387,27,277,Some concerns,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,Europe,2024
-Alvarez 2015,Hospitalisation,91,391,61,203,Low,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Asia,2015
-Brown 2016,Hospitalisation,79,326,86,243,Low,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,North America,2016
-Chen 2017,Hospitalisation,27,106,147,476,Some concerns,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,North America,2017
-Diaz 2018,Hospitalisation,26,86,74,274,High,1,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Asia,2018
-Evans 2019,Hospitalisation,63,304,82,324,Low,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,North America,2019
-Garcia 2020,Hospitalisation,55,167,113,406,Some concerns,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Europe,2020
-Huang 2021,Hospitalisation,83,397,92,323,High,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Europe,2021
-Ito 2022,Hospitalisation,47,207,31,89,Low,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Asia,2022
-Kumar 2023,Hospitalisation,72,267,51,183,Low,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Asia,2023
-Lopez 2024,Hospitalisation,132,493,110,350,Some concerns,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Europe,2024
-Danish registry 2018,Hospitalisation,762,3740,1050,4211,Serious,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,Cohort,Europe,2018
-US claims 2020,Hospitalisation,1188,5455,1214,4840,Moderate,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,Cohort,North America,2020
-Korean cohort 2022,Hospitalisation,952,4271,1089,3860,Serious,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,Cohort,Asia,2022
-UK primary care 2024,Hospitalisation,1062,5322,1141,4188,Serious,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,Cohort,Europe,2024
-Alvarez 2015,Kidney failure,22,196,28,192,Low,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,Asia,2015
-Brown 2016,Kidney failure,10,209,15,223,Low,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,North America,2016
-Chen 2017,Kidney failure,15,251,22,228,Some concerns,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,North America,2017
-Diaz 2018,Kidney failure,36,416,52,442,High,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,Asia,2018
-Evans 2019,Kidney failure,9,159,8,172,Low,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,North America,2019
-Garcia 2020,Kidney failure,11,186,29,214,Some concerns,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,Europe,2020
-Huang 2021,Kidney failure,26,434,24,350,High,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,Europe,2021
-Ito 2022,Kidney failure,17,254,18,246,Low,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,Asia,2022
-Danish registry 2018,Kidney failure,137,2431,234,2278,Moderate,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,Cohort,Europe,2018
-US claims 2020,Kidney failure,236,3607,222,2801,Serious,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,Cohort,North America,2020
-Korean cohort 2022,Kidney failure,318,3662,320,2980,Serious,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,Cohort,Asia,2022
-Alvarez 2015,Serious adverse events,31,210,43,249,Low,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Asia,2015
-Brown 2016,Serious adverse events,87,339,64,282,Low,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,North America,2016
-Chen 2017,Serious adverse events,56,237,50,235,Some concerns,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,North America,2017
-Diaz 2018,Serious adverse events,56,263,46,231,High,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Asia,2018
-Evans 2019,Serious adverse events,48,197,30,181,Low,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,North America,2019
-Garcia 2020,Serious adverse events,87,350,86,327,Some concerns,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Europe,2020
-Huang 2021,Serious adverse events,62,202,38,189,High,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Europe,2021
-Ito 2022,Serious adverse events,55,286,64,286,Low,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Asia,2022
-Kumar 2023,Serious adverse events,56,373,59,380,Low,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Asia,2023
-Lopez 2024,Serious adverse events,46,232,45,219,Some concerns,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Europe,2024
-Danish registry 2018,Serious adverse events,688,2570,494,2113,Moderate,0,Critical,lower,2,,SGLT2 inhibitor,placebo,Cohort,Europe,2018
-US claims 2020,Serious adverse events,574,2134,593,2464,Serious,0,Critical,lower,2,,SGLT2 inhibitor,placebo,Cohort,North America,2020
-Korean cohort 2022,Serious adverse events,1226,4979,1063,4571,Serious,0,Critical,lower,2,,SGLT2 inhibitor,placebo,Cohort,Asia,2022
-UK primary care 2024,Serious adverse events,708,3096,709,3451,Moderate,0,Critical,lower,2,,SGLT2 inhibitor,placebo,Cohort,Europe,2024
-Alvarez 2015,Genital mycotic infection,27,472,10,539,Low,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,Asia,2015
-Brown 2016,Genital mycotic infection,11,288,5,301,Low,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,North America,2016
-Chen 2017,Genital mycotic infection,7,410,1,455,Some concerns,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,North America,2017
-Diaz 2018,Genital mycotic infection,11,158,3,144,High,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,Asia,2018
-Evans 2019,Genital mycotic infection,7,150,3,132,Low,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,North America,2019
-Garcia 2020,Genital mycotic infection,15,235,4,263,Some concerns,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,Europe,2020
-Huang 2021,Genital mycotic infection,15,269,0,274,High,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,Europe,2021
-Alvarez 2015,Severe hypoglycaemia,15,188,12,208,Low,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,Asia,2015
-Brown 2016,Severe hypoglycaemia,8,343,5,274,Low,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,North America,2016
-Chen 2017,Severe hypoglycaemia,22,416,15,362,Some concerns,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,North America,2017
-Diaz 2018,Severe hypoglycaemia,15,278,8,233,High,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,Asia,2018
-Evans 2019,Severe hypoglycaemia,11,374,4,319,Low,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,North America,2019
-Garcia 2020,Severe hypoglycaemia,9,250,10,266,Some concerns,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,Europe,2020
-Alvarez 2015,Diabetic ketoacidosis,0,471,2,539,Low,0,Important,lower,0.2,,SGLT2 inhibitor,placebo,RCT,Asia,2015
-Brown 2016,Diabetic ketoacidosis,1,218,0,224,Low,0,Important,lower,0.2,,SGLT2 inhibitor,placebo,RCT,North America,2016
-Chen 2017,Diabetic ketoacidosis,0,300,0,247,Some concerns,0,Important,lower,0.2,,SGLT2 inhibitor,placebo,RCT,North America,2017
-Diaz 2018,Diabetic ketoacidosis,2,243,0,271,High,0,Important,lower,0.2,,SGLT2 inhibitor,placebo,RCT,Asia,2018
-Evans 2019,Diabetic ketoacidosis,6,467,1,423,Low,0,Important,lower,0.2,,SGLT2 inhibitor,placebo,RCT,North America,2019
-Garcia 2020,Diabetic ketoacidosis,1,297,1,329,Some concerns,0,Important,lower,0.2,,SGLT2 inhibitor,placebo,RCT,Europe,2020
+study,outcome,events_int,n_int,events_comp,n_comp,rob,indirect,importance,direction,mid,disutility,intervention_name,comparator_name,design,region,year,rob_d1,rob_d2,rob_d3,rob_d4,rob_d5,rob_d6,rob_d7,followup_months,dose
+Alvarez 2015,All-cause mortality,48,434,16,138,Low,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,Asia,2015,Low,Low,Low,Low,Low,,,18,Low dose
+Brown 2016,All-cause mortality,37,425,45,407,Low,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,North America,2016,Low,Low,Low,Low,Low,,,36,High dose
+Chen 2017,All-cause mortality,41,380,65,464,Some concerns,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,North America,2017,Some concerns,Low,Low,Some concerns,Some concerns,,,24,High dose
+Diaz 2018,All-cause mortality,12,124,18,159,High,1,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,Asia,2018,High,Low,High,Low,Low,,,12,High dose
+Evans 2019,All-cause mortality,44,425,7,65,Low,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,North America,2019,Low,Low,Low,Low,Low,,,36,High dose
+Garcia 2020,All-cause mortality,23,203,28,251,Some concerns,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,Europe,2020,Low,Low,Low,Some concerns,Some concerns,,,12,High dose
+Huang 2021,All-cause mortality,32,292,50,326,High,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,Europe,2021,High,High,High,Low,High,,,18,Low dose
+Ito 2022,All-cause mortality,20,241,26,198,Low,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,Asia,2022,Low,Low,Low,Low,Low,,,24,High dose
+Kumar 2023,All-cause mortality,24,297,31,276,Low,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,Asia,2023,Low,Low,Low,Low,Low,,,12,High dose
+Lopez 2024,All-cause mortality,50,387,27,277,Some concerns,0,Critical,lower,,1,SGLT2 inhibitor,placebo,RCT,Europe,2024,Some concerns,Some concerns,Low,Some concerns,Low,,,30,Low dose
+Alvarez 2015,Hospitalisation,91,391,61,203,Low,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Asia,2015,Low,Low,Low,Low,Low,,,18,Low dose
+Brown 2016,Hospitalisation,79,326,86,243,Low,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,North America,2016,Low,Low,Low,Low,Low,,,36,High dose
+Chen 2017,Hospitalisation,27,106,147,476,Some concerns,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,North America,2017,Some concerns,Low,Some concerns,Low,Some concerns,,,24,High dose
+Diaz 2018,Hospitalisation,26,86,74,274,High,1,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Asia,2018,Low,High,High,High,High,,,12,High dose
+Evans 2019,Hospitalisation,63,304,82,324,Low,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,North America,2019,Low,Low,Low,Low,Low,,,36,High dose
+Garcia 2020,Hospitalisation,55,167,113,406,Some concerns,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Europe,2020,Low,Some concerns,Some concerns,Low,Low,,,12,High dose
+Huang 2021,Hospitalisation,83,397,92,323,High,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Europe,2021,Low,Low,High,Low,Low,,,18,Low dose
+Ito 2022,Hospitalisation,47,207,31,89,Low,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Asia,2022,Low,Low,Low,Low,Low,,,24,High dose
+Kumar 2023,Hospitalisation,72,267,51,183,Low,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Asia,2023,Low,Low,Low,Low,Low,,,12,High dose
+Lopez 2024,Hospitalisation,132,493,110,350,Some concerns,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,RCT,Europe,2024,Low,Low,Low,Some concerns,Low,,,30,Low dose
+Danish registry 2018,Hospitalisation,762,3740,1050,4211,Serious,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,Cohort,Europe,2018,Low,Low,Serious,Low,Low,Low,Serious,48,
+US claims 2020,Hospitalisation,1188,5455,1214,4840,Moderate,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,Cohort,North America,2020,Moderate,Low,Moderate,Low,Moderate,Moderate,Low,60,
+Korean cohort 2022,Hospitalisation,952,4271,1089,3860,Serious,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,Cohort,Asia,2022,Serious,Low,Serious,Serious,Low,Serious,Low,48,
+UK primary care 2024,Hospitalisation,1062,5322,1141,4188,Serious,0,Important,lower,,0.45,SGLT2 inhibitor,placebo,Cohort,Europe,2024,Low,Serious,Serious,Serious,Low,Low,Serious,36,
+Alvarez 2015,Kidney failure,22,196,28,192,Low,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,Asia,2015,Low,Low,Low,Low,Low,,,18,Low dose
+Brown 2016,Kidney failure,10,209,15,223,Low,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,North America,2016,Low,Low,Low,Low,Low,,,36,High dose
+Chen 2017,Kidney failure,15,251,22,228,Some concerns,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,North America,2017,Some concerns,Low,Low,Low,Some concerns,,,24,High dose
+Diaz 2018,Kidney failure,36,416,52,442,High,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,Asia,2018,Low,Low,High,High,Low,,,12,High dose
+Evans 2019,Kidney failure,9,159,8,172,Low,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,North America,2019,Low,Low,Low,Low,Low,,,36,High dose
+Garcia 2020,Kidney failure,11,186,29,214,Some concerns,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,Europe,2020,Low,Low,Some concerns,Some concerns,Low,,,12,High dose
+Huang 2021,Kidney failure,26,434,24,350,High,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,Europe,2021,Low,High,Low,Low,Low,,,18,Low dose
+Ito 2022,Kidney failure,17,254,18,246,Low,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,RCT,Asia,2022,Low,Low,Low,Low,Low,,,24,High dose
+Danish registry 2018,Kidney failure,137,2431,234,2278,Moderate,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,Cohort,Europe,2018,Low,Moderate,Moderate,Low,Moderate,Low,Low,48,
+US claims 2020,Kidney failure,236,3607,222,2801,Serious,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,Cohort,North America,2020,Low,Low,Low,Low,Low,Serious,Serious,60,
+Korean cohort 2022,Kidney failure,318,3662,320,2980,Serious,0,Critical,lower,,0.6,SGLT2 inhibitor,placebo,Cohort,Asia,2022,Low,Serious,Low,Low,Low,Serious,Low,48,
+Alvarez 2015,Serious adverse events,31,210,43,249,Low,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Asia,2015,Low,Low,Low,Low,Low,,,18,Low dose
+Brown 2016,Serious adverse events,87,339,64,282,Low,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,North America,2016,Low,Low,Low,Low,Low,,,36,High dose
+Chen 2017,Serious adverse events,56,237,50,235,Some concerns,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,North America,2017,Some concerns,Low,Some concerns,Some concerns,Low,,,24,High dose
+Diaz 2018,Serious adverse events,56,263,46,231,High,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Asia,2018,High,Low,Low,Low,High,,,12,High dose
+Evans 2019,Serious adverse events,48,197,30,181,Low,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,North America,2019,Low,Low,Low,Low,Low,,,36,High dose
+Garcia 2020,Serious adverse events,87,350,86,327,Some concerns,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Europe,2020,Low,Low,Some concerns,Low,Some concerns,,,12,High dose
+Huang 2021,Serious adverse events,62,202,38,189,High,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Europe,2021,Low,High,High,Low,Low,,,18,Low dose
+Ito 2022,Serious adverse events,55,286,64,286,Low,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Asia,2022,Low,Low,Low,Low,Low,,,24,High dose
+Kumar 2023,Serious adverse events,56,373,59,380,Low,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Asia,2023,Low,Low,Low,Low,Low,,,12,High dose
+Lopez 2024,Serious adverse events,46,232,45,219,Some concerns,0,Critical,lower,2,,SGLT2 inhibitor,placebo,RCT,Europe,2024,Low,Low,Low,Some concerns,Some concerns,,,30,Low dose
+Danish registry 2018,Serious adverse events,688,2570,494,2113,Moderate,0,Critical,lower,2,,SGLT2 inhibitor,placebo,Cohort,Europe,2018,Low,Low,Moderate,Moderate,Low,Low,Low,48,
+US claims 2020,Serious adverse events,574,2134,593,2464,Serious,0,Critical,lower,2,,SGLT2 inhibitor,placebo,Cohort,North America,2020,Low,Low,Low,Low,Serious,Serious,Serious,60,
+Korean cohort 2022,Serious adverse events,1226,4979,1063,4571,Serious,0,Critical,lower,2,,SGLT2 inhibitor,placebo,Cohort,Asia,2022,Low,Serious,Serious,Serious,Serious,Low,Serious,48,
+UK primary care 2024,Serious adverse events,708,3096,709,3451,Moderate,0,Critical,lower,2,,SGLT2 inhibitor,placebo,Cohort,Europe,2024,Low,Moderate,Moderate,Low,Low,Moderate,Low,36,
+Alvarez 2015,Genital mycotic infection,27,472,10,539,Low,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,Asia,2015,Low,Low,Low,Low,Low,,,18,Low dose
+Brown 2016,Genital mycotic infection,11,288,5,301,Low,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,North America,2016,Low,Low,Low,Low,Low,,,36,High dose
+Chen 2017,Genital mycotic infection,7,410,1,455,Some concerns,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,North America,2017,Low,Some concerns,Some concerns,Some concerns,Low,,,24,High dose
+Diaz 2018,Genital mycotic infection,11,158,3,144,High,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,Asia,2018,Low,Low,Low,Low,High,,,12,High dose
+Evans 2019,Genital mycotic infection,7,150,3,132,Low,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,North America,2019,Low,Low,Low,Low,Low,,,36,High dose
+Garcia 2020,Genital mycotic infection,15,235,4,263,Some concerns,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,Europe,2020,Low,Some concerns,Some concerns,Low,Low,,,12,High dose
+Huang 2021,Genital mycotic infection,15,269,0,274,High,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,Europe,2021,Low,Low,Low,High,High,,,18,Low dose
+Alvarez 2015,Severe hypoglycaemia,15,188,12,208,Low,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,Asia,2015,Low,Low,Low,Low,Low,,,18,Low dose
+Brown 2016,Severe hypoglycaemia,8,343,5,274,Low,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,North America,2016,Low,Low,Low,Low,Low,,,36,High dose
+Chen 2017,Severe hypoglycaemia,22,416,15,362,Some concerns,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,North America,2017,Some concerns,Low,Low,Some concerns,Some concerns,,,24,High dose
+Diaz 2018,Severe hypoglycaemia,15,278,8,233,High,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,Asia,2018,High,High,High,High,High,,,12,High dose
+Evans 2019,Severe hypoglycaemia,11,374,4,319,Low,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,North America,2019,Low,Low,Low,Low,Low,,,36,High dose
+Garcia 2020,Severe hypoglycaemia,9,250,10,266,Some concerns,0,Important,lower,1,,SGLT2 inhibitor,placebo,RCT,Europe,2020,Low,Some concerns,Some concerns,Some concerns,Low,,,12,High dose
+Alvarez 2015,Diabetic ketoacidosis,0,471,2,539,Low,0,Important,lower,0.2,,SGLT2 inhibitor,placebo,RCT,Asia,2015,Low,Low,Low,Low,Low,,,18,Low dose
+Brown 2016,Diabetic ketoacidosis,1,218,0,224,Low,0,Important,lower,0.2,,SGLT2 inhibitor,placebo,RCT,North America,2016,Low,Low,Low,Low,Low,,,36,High dose
+Chen 2017,Diabetic ketoacidosis,0,300,0,247,Some concerns,0,Important,lower,0.2,,SGLT2 inhibitor,placebo,RCT,North America,2017,Some concerns,Some concerns,Some concerns,Some concerns,Some concerns,,,24,High dose
+Diaz 2018,Diabetic ketoacidosis,2,243,0,271,High,0,Important,lower,0.2,,SGLT2 inhibitor,placebo,RCT,Asia,2018,Low,Low,Low,Low,High,,,12,High dose
+Evans 2019,Diabetic ketoacidosis,6,467,1,423,Low,0,Important,lower,0.2,,SGLT2 inhibitor,placebo,RCT,North America,2019,Low,Low,Low,Low,Low,,,36,High dose
+Garcia 2020,Diabetic ketoacidosis,1,297,1,329,Some concerns,0,Important,lower,0.2,,SGLT2 inhibitor,placebo,RCT,Europe,2020,Low,Low,Some concerns,Low,Low,,,12,High dose

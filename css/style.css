@@ -165,3 +165,6 @@ details.ocfg { border: 1px solid var(--line); border-radius: 8px; padding: 6px 1
 details.ocfg[open] { background: var(--soft); }
 details.ocfg summary { cursor: pointer; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 details.ocfg .form { margin-top: 8px; }
+
+.legend td.sw { width: 28px; padding: 0; } .legend td.lt { background: #fff; color: #1B2430; } .legend td.h { background: #fff; font-weight: 600; }
+.sof td.cert { text-align: center; color: #1B2430; }

@@ -1,14 +1,14 @@
-import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.25-1';
-import { escalc, rma, egger, subgroupTest, metaReg, designMatrix } from './pairwise.js?v=2026.10.25-1';
-import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.25-1';
-import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.25-1';
-import { mountThreshold } from './thresh.js?v=2026.10.25-1';
-import { renderEtD } from './etd.js?v=2026.10.25-1';
-import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.25-1';
-import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.25-1';
-import { forestSVG, forestRM, bubbleSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.25-1';
-import { median } from './stats.js?v=2026.10.25-1';
-import { HELP_HTML } from './help.js?v=2026.10.25-1';
+import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.25-2';
+import { escalc, rma, egger, subgroupTest, metaReg, designMatrix } from './pairwise.js?v=2026.10.25-2';
+import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.25-2';
+import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.25-2';
+import { mountThreshold } from './thresh.js?v=2026.10.25-2';
+import { renderEtD } from './etd.js?v=2026.10.25-2';
+import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.25-2';
+import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.25-2';
+import { forestSVG, forestRM, bubbleSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.25-2';
+import { median } from './stats.js?v=2026.10.25-2';
+import { HELP_HTML } from './help.js?v=2026.10.25-2';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -20,8 +20,8 @@ const pct = x => (isFinite(x) ? (x * 100).toFixed(0) + '%' : '–');
 const fp = p => (!isFinite(p) ? '–' : p < 0.001 ? '<0.001' : p.toFixed(3));
 
 const PALETTES = {
-  default: { benefit: { 4: '93C47D', 3: 'C6E0B4', 2: 'E2EFDA' }, harm: { 4: 'E59393', 3: 'F2C4C4', 2: 'FAE1E1' }, nodiff: { 4: 'FFD966', 3: 'FFE699', 2: 'FFF2CC' }, verylow: 'D9D9D9' },
-  cvd: { benefit: { 4: '6BAED6', 3: 'BDD7EE', 2: 'DEEBF7' }, harm: { 4: 'F4A261', 3: 'F8CBAD', 2: 'FBE5D6' }, nodiff: { 4: 'B4A7D6', 3: 'D9D2E9', 2: 'EEEAF5' }, verylow: 'D9D9D9' },
+  default: { benefit: { 4: 'B6D7A8', 3: 'D4E8CB', 2: 'EAF4E4' }, harm: { 4: 'EDB0B0', 3: 'F5CFCF', 2: 'FBEAEA' }, nodiff: { 4: 'FFE08A', 3: 'FFEDB8', 2: 'FFF7DB' }, verylow: 'EDEDED' },
+  cvd: { benefit: { 4: 'A9CCE3', 3: 'CFE2F0', 2: 'E8F1F8' }, harm: { 4: 'F5C19B', 3: 'F9DAC3', 2: 'FCEDE1' }, nodiff: { 4: 'C9C0E0', 3: 'DDD7EC', 2: 'EEEBF6' }, verylow: 'EDEDED' },
 };
 const fillFor = (cat, c, pal = PALETTES[state.palette]) => c <= 1 ? pal.verylow : (pal[cat] || {})[c];
 
@@ -84,8 +84,8 @@ function selectSheet(name) {
   $('#kind').value = state.kind;
   renderMapping(); refreshData();
 }
-const CANON = { pairwise: ['study', 'outcome', 'subgroup', 'e1', 'n1', 'e2', 'n2', 'm1', 'sd1', 'm2', 'sd2', 'est', 'lower', 'upper', 'yi', 'sei', 'n', 'rob', 'indirect', 'design'], nma: ['study', 'outcome', 'treatment', 'r', 'mean', 'sd', 'n', 'rob', 'indirect', 'modifier'] };
-const CANON_LABEL = { study: 'Estudio', outcome: 'Desenlace', subgroup: 'Subgrupo', e1: 'Eventos intervención', n1: 'N intervención', e2: 'Eventos comparador', n2: 'N comparador', m1: 'Media intervención', sd1: 'DE intervención', m2: 'Media comparador', sd2: 'DE comparador', est: 'Estimador (HR/OR/RR)', lower: 'IC inferior', upper: 'IC superior', yi: 'yi', sei: 'EE (sei)', n: 'N total', rob: 'Riesgo de sesgo', indirect: 'Indirecto', design: 'Diseño', treatment: 'Tratamiento', r: 'Eventos/respondedores', mean: 'Media', sd: 'DE', modifier: 'Modificador (intransitividad)' };
+const CANON = { pairwise: ['study', 'outcome', 'subgroup', 'e1', 'n1', 'e2', 'n2', 'm1', 'sd1', 'm2', 'sd2', 'est', 'lower', 'upper', 'yi', 'sei', 'n', 'fu', 'rob', 'indirect', 'design'], nma: ['study', 'outcome', 'treatment', 'r', 'mean', 'sd', 'n', 'rob', 'indirect', 'modifier'] };
+const CANON_LABEL = { fu: 'Seguimiento (mediana o rango)', study: 'Estudio', outcome: 'Desenlace', subgroup: 'Subgrupo', e1: 'Eventos intervención', n1: 'N intervención', e2: 'Eventos comparador', n2: 'N comparador', m1: 'Media intervención', sd1: 'DE intervención', m2: 'Media comparador', sd2: 'DE comparador', est: 'Estimador (HR/OR/RR)', lower: 'IC inferior', upper: 'IC superior', yi: 'yi', sei: 'EE (sei)', n: 'N total', rob: 'Riesgo de sesgo', indirect: 'Indirecto', design: 'Diseño', treatment: 'Tratamiento', r: 'Eventos/respondedores', mean: 'Media', sd: 'DE', modifier: 'Modificador (intransitividad)' };
 function renderMapping() {
   const cols = Object.keys(state.raw[0] || {});
   $('#mapping').innerHTML = CANON[state.kind].map(k => `<label>${CANON_LABEL[k]}<select data-canon="${k}"><option value="">—</option>${cols.map(c => `<option ${state.map[k] === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>`).join('');
@@ -147,8 +147,9 @@ function setupAnalysis() {
     }
     $('#pw-p0').closest('label').hidden = t.data === 'continuous';
     const dc = dataCols(), opts2 = cur => '<option value="">— ninguno —</option>' + dc.map(c => `<option ${c === cur ? 'selected' : ''}>${esc(c)}</option>`).join('');
-    const keep = v => (v !== undefined && (v === '' || dc.includes(v)) ? v : null);
-    $('#pw-subvar').innerHTML = opts2(keep(state.subvar) ?? (state.subAll && state.map.subgroup ? state.map.subgroup : ''));
+    const keep = v => (v !== undefined && (v === '' || v === '__rob__' || dc.includes(v)) ? v : null);
+    const cs = keep(state.subvar) ?? (state.subvar === '__rob__' ? '__rob__' : state.subAll && state.map.subgroup ? state.map.subgroup : '');
+    $('#pw-subvar').innerHTML = opts2(cs).replace('</option>', `</option><option value="__rob__"${cs === '__rob__' ? ' selected' : ''}>Riesgo de sesgo (sensibilidad: bajo / algunas preocupaciones / alto)</option>`);
     $('#pw-regvar').innerHTML = opts2(keep(state.regvar) ?? '');
     $('#pw-results').innerHTML = '';
   } else {
@@ -186,6 +187,18 @@ function p0Source(outcome) {
   const C = state.ocfg.pw || {}, c = C[outcome] || (Object.keys(C).length === 1 && C['__single__']);
   if (!c || !c.p0method) return '';
   return P0_EN[c.p0method] + (c.p0method === 'largest' && c.p0stats ? ` (${c.p0stats.largestName})` : '');
+}
+// seguimiento para la SoF: texto libre del desenlace o, si no hay, resumen de la columna «followup» (mediana y rango; texto → valores distintos)
+function followupText(P) {
+  const C = state.ocfg.pw || {}, c = C[P.outcome] || (Object.keys(C).length === 1 && C.__single__);
+  if (c && String(c.followup || '').trim()) return String(c.followup).trim();
+  const col = state.map.fu; if (!col) return '';
+  const vals = P.S.map(s => String(s.raw.fu ?? '').trim()).filter(Boolean); if (!vals.length) return '';
+  if (vals.every(v => /^-?[\d.,]+$/.test(v))) {
+    const x = vals.map(v => parseFloat(v.replace(',', '.'))), u = { year: 'years', 'año': 'years', ano: 'years', month: 'months', mes: 'months', week: 'weeks', semana: 'weeks', day: 'days', dia: 'days', 'día': 'days' }, un = u[(String(col).toLowerCase().match(/year|a[nñ]o|month|mes|week|semana|day|d[ií]a/) || [''])[0]] || '', f = v => +v.toFixed(1);
+    return x.length > 1 ? `median ${f(median(x))}${un ? ' ' + un : ''} (range ${f(Math.min(...x))}–${f(Math.max(...x))})` : `${f(x[0])}${un ? ' ' + un : ''}`;
+  }
+  return [...new Set(vals)].slice(0, 4).join('; ');
 }
 function p0Value(c) { return c.p0method === 'manual' || !c.p0stats ? c.p0manual : c.p0stats[c.p0method]; }
 function defaultCfg(kind, o) {
@@ -234,7 +247,7 @@ function renderOutcomeConfig(kind) {
           <label>Riesgo basal (proporción) <input data-oc="p0manual" type="number" step="any" min="0" max="1" value="${esc(c.p0method === 'manual' ? c.p0manual : c.p0)}" ${c.p0method === 'manual' ? '' : 'disabled'}></label>` : ''}
         ${kind === 'nm' && c.binary ? `<label>Riesgo basal del comparador <select data-oc="p0method">${['pt', 'median', 'largest', 'p25', 'manual'].map(m => `<option value="${m}" ${m === c.p0method ? 'selected' : ''}>${P0_LABEL[m].replace('grupos comparadores', 'brazos del comparador').replace('Grupo comparador', 'Brazo del comparador')}</option>`).join('')}</select></label>
           <label>Riesgo basal manual (proporción) <input data-oc="p0manual" type="number" step="any" min="0" max="1" value="${esc(c.p0manual)}" ${c.p0method === 'manual' ? '' : 'disabled'}></label>` : ''}
-        ${kind === 'pw' ? fld(o, 'int', 'Intervención') + fld(o, 'comp', 'Comparador') : ''}
+        ${kind === 'pw' ? fld(o, 'int', 'Intervención') + fld(o, 'comp', 'Comparador') + fld(o, 'followup', 'Seguimiento en la SoF', 'placeholder="vacío = automático (columna de seguimiento)"') : ''}
       </div>
       <details class="thr-oc" open><summary>Umbrales de este desenlace: GRADE-THRESHOLD (disutilidad) o DME 0,2 / 0,5 / 0,8</summary><div class="thr" data-thr="${oi}"></div></details>
       <div class="row end gap"><button type="button" class="ghost" data-ocrun>Ejecutar solo este desenlace</button></div></details>`; }).join('')}`;
@@ -314,7 +327,7 @@ function pwStudies(rows, measure, dataType) {
     if (dataType === 'ratio-ci') e = r.est > 0 && r.lower > 0 ? { yi: Math.log(r.est), vi: ((Math.log(r.upper) - Math.log(r.lower)) / 3.92) ** 2 } : null;
     else e = escalc(r, measure);
     const n = isFinite(r.n1) && isFinite(r.n2) ? r.n1 + r.n2 : (isFinite(r.n) ? r.n : NaN);
-    return e && isFinite(e.yi) ? { study: r.study || '?', yi: e.yi, vi: e.vi, rob: r.rob, indirect: r.indirect, n, subgroup: r.subgroup, raw: r } : { study: r.study, dropped: e ? e.dropped || 'datos incompletos' : 'datos incompletos' };
+    return e && isFinite(e.yi) ? { study: r.study || '?', yi: e.yi, vi: e.vi, rob: r.rob, indirect: r.indirect, n, subgroup: r.subgroup, raw: r } : { study: r.study, rob: r.rob, raw: r, dropped: e ? e.dropped || 'datos incompletos' : 'datos incompletos' };
   });
 }
 // ---------- subgrupos, meta-regresión, columnas de grupo y estratos por diseño ----------
@@ -322,7 +335,11 @@ const hiddenCols = new Set(['study', 'outcome', 'e1', 'n1', 'e2', 'n2', 'm1', 's
 function dataCols() { const used = new Set(Object.entries(state.map).filter(([k]) => hiddenCols.has(k)).map(([, c]) => c)); return Object.keys(state.raw[0] || {}).filter(c => !used.has(c)); }
 $('#pw-subvar').addEventListener('change', e => { state.subvar = e.target.value; });
 $('#pw-regvar').addEventListener('change', e => { state.regvar = e.target.value; });
-const colOf = (s, col) => String(s.raw?._raw?.[col] ?? '').trim();
+const ROB_LBL3 = ['Low risk of bias', 'Some concerns', 'High risk of bias'], ROB_KEY = { low: ROB_LBL3[0], some: ROB_LBL3[1], high: ROB_LBL3[2], na: '' };
+const colOf = (s, col) => (col === '__rob__' ? ROB_KEY[robClass(s.rob)] : String(s.raw?._raw?.[col] ?? '').trim());
+const colLabel = c => (c === '__rob__' ? 'Risk of bias' : c);
+// columnas de riesgo de sesgo por dominio (rob_*): se muestran como A, B, C… en el forest estilo RevMan
+const robDomCols = () => Object.keys(state.raw[0] || {}).filter(c => /^rob[_\s.-]\S/i.test(c));
 const NRSI_RE = /non.?random|no.?aleat|observ|cohort|case.?control|caso|nrsi|nrs\b|registr|claims|real.?world|quasi|cuasi/i, RCT_RE = /rct|random|aleat|ensayo|\beca\b|trial/i;
 const designClass = (v, fallback) => (!v ? fallback : NRSI_RE.test(v) ? 'NRSI' : RCT_RE.test(v) ? 'RCT' : 'NRSI');
 const num = v => parseFloat(String(v).replace(',', '.'));
@@ -330,11 +347,11 @@ function subgroupAnalysis(S, col, method, test) {
   const by = new Map(); let miss = 0;
   S.forEach((s, i) => { const v = colOf(s, col); if (!v) miss++; const key = v || '(not reported)'; if (!by.has(key)) by.set(key, []); by.get(key).push(i); });
   const named = [...by.keys()].filter(k => k !== '(not reported)');
-  if (named.length < 2) return { col, err: 'La variable tiene menos de 2 categorías con datos.' };
-  if (named.length > 10) return { col, err: `La variable tiene ${named.length} categorías: use la meta-regresión o agrupe las categorías.` };
-  if (named.every(k => isFinite(num(k)))) named.sort((a, b) => num(a) - num(b));
+  if (named.length < 2) return { col: colLabel(col), err: 'La variable tiene menos de 2 categorías con datos.' };
+  if (named.length > 10) return { col: colLabel(col), err: `La variable tiene ${named.length} categorías: use la meta-regresión o agrupe las categorías.` };
+  if (col === '__rob__') named.sort((a, b) => ROB_LBL3.indexOf(a) - ROB_LBL3.indexOf(b)); else if (named.every(k => isFinite(num(k)))) named.sort((a, b) => num(a) - num(b));
   const fits = [...named, ...(by.has('(not reported)') ? ['(not reported)'] : [])].map(sg => { const ix = by.get(sg); return { sg, ix, na: sg === '(not reported)', f: rma(ix.map(i => S[i].yi), ix.map(i => S[i].vi), { method, test }) }; });
-  return { col, fits, miss, test: subgroupTest(fits.filter(x => !x.na).map(x => x.f)) };
+  return { col: colLabel(col), fits, miss, test: subgroupTest(fits.filter(x => !x.na).map(x => x.f)) };
 }
 function regAnalysis(S, col, type, method, test) {
   const vals = S.map(s => colOf(s, col)), ne = vals.filter(v => v !== '');
@@ -414,7 +431,7 @@ function runPairwise() {
   const regRes = regvar ? regAnalysis(S, regvar, $('#pw-regtype').value, method, test) : null;
   const strata = $('#pw-strata').checked ? designStrata(S, cfg, method, test) : null;
   const colSpec = pwCols(t.data, S, $('#pw-cols').checked);
-  state.lastPw = { cfg, g, fit, S, measure, isRatio, eg, outcome: $('#pw-outcome').value, int: $('#pw-int').value, comp: $('#pw-comp').value, method, test, dataType: t.data, overrides: {}, regRes, strata, colSpec, subvar, regvar };
+  state.lastPw = { dropped, cfg, g, fit, S, measure, isRatio, eg, outcome: $('#pw-outcome').value, int: $('#pw-int').value, comp: $('#pw-comp').value, method, test, dataType: t.data, overrides: {}, regRes, strata, colSpec, subvar, regvar };
   state.lastPw.args = [dropped, robCmp, subRes]; state.lastPw.subRes = subRes;
   state.cache.pw[state.lastPw.outcome] = state.lastPw;
   renderPairwise(dropped, robCmp, subRes, tr);
@@ -444,19 +461,25 @@ const hetRM = f => (f.k > 1 ? `Heterogeneity: Tau² = ${f.tau2.toFixed(2)}; Chi�
 const testRM = f => (f.k > 1 && f.test !== 'z' ? `Test for overall effect: t = ${Math.abs(f.z).toFixed(2)}, df = ${f.k - 1} (P ${pRM(f.pval)})` : `Test for overall effect: Z = ${Math.abs(f.z).toFixed(2)} (P ${pRM(f.pval)})`);
 // spec: {groups:[{label, ss, f}] | null, overall: bool, interaction: {col, test} | null, weightHead}
 function pwForest(P, tr, spec, title) {
-  const { fit, S, cfg, isRatio } = P, fav = cfg.higherBetter ? [`Favours ${P.comp}`, `Favours ${P.int}`] : [`Favours ${P.int}`, `Favours ${P.comp}`], G = spec.groups;
-  if (figSettings().forest === 'revman') {
-    const cs = rmCols(P), mk = (ss, f) => ss.map((s, j) => ({ label: s.study, cells: cs.cells(s), w: `${(f.weights[j] * 100).toFixed(1)}%`, wf: f.weights[j], est: tr(s.yi), lo: tr(s.yi - 1.96 * Math.sqrt(s.vi)), hi: tr(s.yi + 1.96 * Math.sqrt(s.vi)), rob: s.rob }));
-    const pool = (f, ss, label) => ({ label, cells: cs.total(ss), w: '100.0%', est: tr(f.est), lo: tr(f.ci[0]), hi: tr(f.ci[1]) });
-    const groups = G ? G.map(x => ({ label: x.label, rows: mk(x.ss, x.f), sub: pool(x.f, x.ss, 'Subtotal (95% CI)'), lines: [hetRM(x.f), testRM(x.f)] })) : [{ label: '', rows: mk(S, fit) }];
-    const ov = spec.overall ? { ...pool(fit, S, 'Total (95% CI)'), lines: [hetRM(fit), testRM(fit)] } : null, t = spec.interaction?.test;
-    return forestRM({ title, groups, overall: ov, cols: cs.cols, log: isRatio, measure: MEAS_RM[P.measure] || P.measure, model: `IV, ${fit.method === 'EE' ? 'Fixed' : 'Random'}, 95% CI`, leftLabel: fav[0], rightLabel: fav[1], fs: 12, rob: S.some(s => s.rob),
+  const { fit, S, cfg, isRatio } = P, fav = cfg.higherBetter ? [`Favours ${P.comp}`, `Favours ${P.int}`] : [`Favours ${P.int}`, `Favours ${P.comp}`], G = spec.groups, DR = P.dropped || [];
+  // estudios sin estimador (p. ej., doble cero) se muestran como «Not estimable»; en los análisis por grupos van a su grupo
+  const dropFor = x => (x ? x.drop || [] : DR);
+  if (figSettings().forest !== 'classic') {
+    const cs = rmCols(P), rd = robDomCols(), blank = d => ({ ...d, yi: NaN, vi: NaN });
+    const mk = (ss, f, dr) => [...ss.map((s, j) => ({ label: s.study, cells: cs.cells(s), w: `${(f.weights[j] * 100).toFixed(1)}%`, wf: f.weights[j], est: tr(s.yi), lo: tr(s.yi - 1.96 * Math.sqrt(s.vi)), hi: tr(s.yi + 1.96 * Math.sqrt(s.vi)), rob: s.rob, robs: rd.map(c => String(s.raw?._raw?.[c] ?? '').trim()) })),
+      ...dr.map(d => ({ label: d.study, cells: cs.cells(blank(d)), w: '', wf: 0, est: NaN, lo: NaN, hi: NaN, rob: d.rob, robs: rd.map(c => String(d.raw?._raw?.[c] ?? '').trim()) }))];
+    const pool = (f, ss, dr, label) => ({ label, cells: cs.total([...ss, ...dr]), w: '100.0%', est: tr(f.est), lo: tr(f.ci[0]), hi: tr(f.ci[1]) });
+    const groups = G ? G.map(x => ({ label: x.label, rows: mk(x.ss, x.f, dropFor(x)), sub: pool(x.f, x.ss, dropFor(x), 'Subtotal (95% CI)'), lines: [hetRM(x.f), testRM(x.f)] })) : [{ label: '', rows: mk(S, fit, DR) }];
+    const ov = spec.overall ? { ...pool(fit, S, DR, 'Total (95% CI)'), lines: [hetRM(fit), testRM(fit)] } : null, t = spec.interaction?.test;
+    const robDoms = rd.map((c, j) => ({ head: String.fromCharCode(65 + j), name: c.replace(/^rob[_\s.-]+/i, '').replace(/[_.-]+/g, ' ').replace(/^./, m => m.toUpperCase()) }));
+    return forestRM({ title, groups, overall: ov, cols: cs.cols, log: isRatio, measure: MEAS_RM[P.measure] || P.measure, model: `IV, ${fit.method === 'EE' ? 'Fixed' : 'Random'}, 95% CI`, leftLabel: fav[0], rightLabel: fav[1], fs: 12, rob: S.some(s => s.rob), robDoms,
       interaction: t ? `Test for subgroup differences: Chi² = ${t.Q.toFixed(2)}, df = ${t.df} (P ${pRM(t.p)}), I² = ${t.Q > t.df ? (100 * (t.Q - t.df) / t.Q).toFixed(1) : '0.0'}%` : '' });
   }
-  const grp = G ? G.map(x => ({ label: x.label, rows: x.ss.map((s, j) => fRow(P, tr, s, x.f.weights[j])), pooled: fPool(P, tr, x.f, `Subtotal (k = ${x.f.k})`, x.ss, hetShort(x.f)) })) : null;
+  const dRow = d => fRow(P, tr, { ...d, yi: NaN, vi: NaN }, null);
+  const grp = G ? G.map(x => ({ label: x.label, rows: [...x.ss.map((s, j) => fRow(P, tr, s, x.f.weights[j])), ...dropFor(x).map(dRow)], pooled: fPool(P, tr, x.f, `Subtotal (k = ${x.f.k})`, x.ss, hetShort(x.f)) })) : null;
   const hetTxt = fit.k > 1 ? `Heterogeneity: τ² = ${fit.tau2.toFixed(3)}; I² = ${fit.I2.toFixed(0)}%; Q = ${fit.QE.toFixed(2)} (p = ${fp(fit.QEp)})` : '', short = !!(grp || P.colSpec);
   const pooledAll = spec.overall ? { ...fPool(P, tr, fit, short ? 'Overall' : `Pooled (${methLabel(fit).replace('Random effects, ', 'random effects, ').replace('Common effect', 'common effect')})`, S, short ? `${methLabel(fit)}. ${hetTxt}` : hetTxt), pi: fit.k >= 3 ? [tr(fit.pi[0]), tr(fit.pi[1])] : null } : null;
-  return forestSVG({ rows: G ? [] : S.map((s, i) => fRow(P, tr, s, fit.weights[i])), groups: grp, cols: P.colSpec?.cols || [], pooled: pooledAll, interaction: spec.interaction ? interTxt(spec.interaction.col, spec.interaction.test) : '', weightHead: spec.weightHead || (grp ? 'Weight (in subgroup)' : 'Weight'), log: isRatio, measure: P.measure, leftLabel: fav[0], rightLabel: fav[1], title });
+  return forestSVG({ rows: G ? [] : [...S.map((s, i) => fRow(P, tr, s, fit.weights[i])), ...DR.map(dRow)], groups: grp, cols: P.colSpec?.cols || [], pooled: pooledAll, interaction: spec.interaction ? interTxt(spec.interaction.col, spec.interaction.test) : '', weightHead: spec.weightHead || (grp ? 'Weight (in subgroup)' : 'Weight'), log: isRatio, measure: P.measure, leftLabel: fav[0], rightLabel: fav[1], title });
 }
 const nTot = ss => { const v = ss.map(s => s.n).filter(isFinite); return v.length ? v.reduce((a, b) => a + b, 0) : '–'; };
 function subRegHTML(P, tr, subRes) {
@@ -504,7 +527,7 @@ function stratumOv(i) {
 function strataHTML(P, tr) {
   const ST = P.strata; if (!ST) return '';
   const lbl = P.measure, fav = P.cfg.higherBetter ? [`Favours ${P.comp}`, `Favours ${P.int}`] : [`Favours ${P.int}`, `Favours ${P.comp}`];
-  const svg = pwForest(P, tr, { groups: ST.list.map(st => ({ label: DESIGN_EN[st.kind], ss: st.ss, f: st.f })), overall: false, interaction: { col: 'study design', test: ST.test }, weightHead: 'Weight (in design)' }, `${P.outcome} — by study design`);
+  const svg = pwForest(P, tr, { groups: ST.list.map(st => ({ label: DESIGN_EN[st.kind], ss: st.ss, f: st.f, drop: (P.dropped || []).filter(d => designClass(colOf(d, state.map.design), P.cfg.design === 'RCT' ? 'RCT' : 'NRSI') === st.kind) })), overall: false, interaction: { col: 'study design', test: ST.test }, weightHead: 'Weight (in design)' }, `${P.outcome} — by study design`);
   const body = ST.list.map((st, i) => { const g = st.g, un = g.ab.binary ? ` por ${P.cfg.unit}` : '';
     return `<details class="stratum" data-st="${i}" open><summary><b>${DESIGN_NAME[st.kind]}</b> <span class="muted">· ${st.f.k} estudio(s) · punto de partida: ${LEVELS[g.start]}</span></summary>
     <table class="grade-table"><thead><tr><th style="width:160px">Dominio</th><th style="width:190px">Juicio</th><th>Justificación (aparece como nota al pie)</th></tr></thead><tbody>
@@ -558,7 +581,7 @@ function renderPairwise(dropped, robCmp, subRes, tr) {
   const P = state.lastPw, { fit, g, S, measure, isRatio, cfg } = P;
   const lbl = isRatio ? measure : measure;
   const fav = cfg.higherBetter ? [`Favours ${P.comp}`, `Favours ${P.int}`] : [`Favours ${P.int}`, `Favours ${P.comp}`];
-  const svg = pwForest(P, tr, { groups: subRes && subRes.fits ? subRes.fits.map(x => ({ label: x.na ? 'Not reported' : x.sg, ss: x.ix.map(i => S[i]), f: x.f })) : null, overall: true, interaction: subRes && subRes.test ? { col: subRes.col, test: subRes.test } : null }, P.outcome);
+  const svg = pwForest(P, tr, { groups: subRes && subRes.fits ? subRes.fits.map(x => ({ label: x.na ? 'Not reported' : x.sg, ss: x.ix.map(i => S[i]), f: x.f, drop: (P.dropped || []).filter(d => (colOf(d, P.subvar) || '(not reported)') === (x.na ? '(not reported)' : x.sg)) })) : null, overall: true, interaction: subRes && subRes.test ? { col: subRes.col, test: subRes.test } : null }, P.outcome);
   const A = g.abs, ab = g.ab, un = ab.binary ? ` por ${cfg.unit}` : '';
   let html = `<div class="card"><h2>Resultados — ${esc(P.outcome)}</h2>`;
   if (dropped.length) html += `<div class="warn">Excluidos del cálculo: ${dropped.map(d => esc(d.study) + ' (' + esc(d.dropped) + ')').join('; ')}</div>`;
@@ -756,7 +779,7 @@ function pwSummary(P = state.lastPw, o = readOverrides()) {
   const ntot = g.domains.imp.ntot;
   const des = { RCT: 'RCT', NRSI: 'non-randomised studies', NRSI_TTE: 'non-randomised studies' }[cfg.design];
   return {
-    type: 'pairwise', outcome: P.outcome, intervention: P.int, comparator: P.comp, participants: `${ntot || '–'} (${P.strata && !P.isStratum ? P.strata.list.map(st => `${st.f.k} ${st.kind === 'RCT' ? (st.f.k > 1 ? 'RCTs' : 'RCT') : 'non-randomised'}`).join(' + ') : `${fit.k} ${des === 'RCT' ? (fit.k > 1 ? 'RCTs' : 'RCT') : des}`})`, relative: rel,
+    type: 'pairwise', followup: followupText(P), outcome: P.outcome, intervention: P.int, comparator: P.comp, participants: `${ntot || '–'} (${P.strata && !P.isStratum ? P.strata.list.map(st => `${st.f.k} ${st.kind === 'RCT' ? (st.f.k > 1 ? 'RCTs' : 'RCT') : 'non-randomised'}`).join(' + ') : `${fit.k} ${des === 'RCT' ? (fit.k > 1 ? 'RCTs' : 'RCT') : des}`})`, relative: rel,
     risk0: g.ab.binary ? `${f1(cfg.p0 * cfg.unit)}${un}` : '—', risk1: g.ab.binary ? `${f1(g.ab.p1 * cfg.unit)}${un}` : '—',
     absolute: absTxt, c, cat, notes, plain: plainStatement(cat, c, P.int, lcOut(P.outcome), cfg.threshold, cfg.higherBetter ? -g.abs.d : g.abs.d).replace(/an? (important )?(reduction|increase)/, (m0) => m0),
     importance: P.importance || '', k: fit.k, ntot, design: cfg.design, p0src: g.ab.binary ? p0Source(P.outcome) : '',
@@ -978,11 +1001,11 @@ function addNmToSoF(importance) {
 $('#palette').value = state.palette;
 $('#palette').addEventListener('change', e => { state.palette = e.target.value; save('mg-pal', state.palette); renderSoF(); });
 function legendHTML(comparator, nma) {
-  const pal = PALETTES[state.palette];
-  const cells = c => ['benefit', 'harm', 'nodiff'].map(cat => `<td class="c" style="background:#${pal[cat][c]}" bgcolor="#${pal[cat][c]}">${legendText(cat, c, comparator, nma)}</td>`).join('');
-  return `<table class="legend"><tr><td class="h" colspan="4">Interpretation of the colour code</td></tr>
+  const pal = PALETTES[state.palette], sw = f => `<td class="sw" style="background:#${f}" bgcolor="#${f}"></td>`;
+  const cells = c => ['benefit', 'harm', 'nodiff'].map(cat => `${sw(pal[cat][c])}<td class="lt">${legendText(cat, c, comparator, nma)}</td>`).join('');
+  return `<table class="legend"><tr><td class="h" colspan="7">Summary of findings (GRADE approach)</td></tr>
   ${[4, 3, 2].map(c => `<tr><td class="h">${LEVELS[c]} certainty</td>${cells(c)}</tr>`).join('')}
-  <tr><td class="h">Very low certainty</td><td class="c" colspan="3" style="background:#${pal.verylow}" bgcolor="#${pal.verylow}">The evidence is very uncertain</td></tr></table>`;
+  <tr><td class="h">Very low certainty</td>${[0, 1, 2].map(() => `${sw(pal.verylow)}<td class="lt">The evidence is very uncertain</td>`).join('')}</tr></table>`;
 }
 function sofHTML() {
   const pw = state.sof.filter(s => s.type === 'pairwise'), nm = state.sof.filter(s => s.type === 'nma');
@@ -993,13 +1016,13 @@ function sofHTML() {
     const comp = pw[0].comparator, notes = [], mids = [];
     const L = n => { let i = notes.indexOf(n); if (i < 0) { notes.push(n); i = notes.length - 1; } return 'abcdefghijklmnopqrstuvwxyz'[i]; };
     html += `<h3>Summary of findings: ${esc(pw[0].intervention)} compared with ${esc(comp)}</h3>` + legendHTML(comp, false);
-    html += `<table class="sof"><thead><tr><th>Outcome</th><th>Participants (studies)</th><th>Relative effect (95% CI)</th><th>Risk with ${esc(comp)}</th><th>Risk with ${esc(pw[0].intervention)}</th><th>Absolute effect (95% CI)</th><th>Certainty of evidence</th><th>Plain language summary</th></tr></thead><tbody>`;
+    html += `<table class="sof"><thead><tr><th>Outcome</th><th>Participants (studies)</th><th>Follow-up</th><th>Relative effect (95% CI)</th><th>Risk with ${esc(comp)}</th><th>Risk with ${esc(pw[0].intervention)}</th><th>Absolute effect (95% CI)</th><th>Certainty of evidence</th><th>Plain language summary</th></tr></thead><tbody>`;
     pw.forEach(s => {
       const fill = fillFor(s.cat, s.c), lt = s.notes.map(L).join(',');
       if (s.mid !== 'null') mids.push(`${s.outcome} ${s.mid}`);
-      html += `<tr><td>${esc(s.outcome)}</td><td>${esc(s.participants)}</td><td>${esc(s.relative)}</td><td>${esc(s.risk0)}</td><td>${esc(s.risk1)}</td><td class="c" style="background:#${fill}" bgcolor="#${fill}">${esc(s.absolute)}</td><td class="c" style="background:#${fill}" bgcolor="#${fill}">${SYM[s.c]}<br>${LEVELS[s.c]}${lt ? ' <sup>' + lt + '</sup>' : ''}</td><td>${esc(s.plain)}</td></tr>`;
+      html += `<tr><td>${esc(s.outcome)}</td><td>${esc(s.participants)}</td><td>${esc(s.followup || '—')}</td><td>${esc(s.relative)}</td><td>${esc(s.risk0)}</td><td>${esc(s.risk1)}</td><td>${esc(s.absolute)}</td><td class="c cert" style="background:#${fill}" bgcolor="#${fill}">${SYM[s.c]}<br>${LEVELS[s.c]}${lt ? ' <sup>' + lt + '</sup>' : ''}</td><td>${esc(s.plain)}</td></tr>`;
     });
-    html += `</tbody></table><div class="notes"><p>Colours apply to the absolute effect and certainty columns (minimally contextualised framework).</p>${mids.length ? `<p>Minimal important differences: ${esc(mids.join('; '))}.</p>` : ''}${pw.some(x => x.p0src) ? `<p>Baseline (comparator) risk: ${esc(pw.filter(x => x.p0src).map(x => `${x.outcome}, ${x.risk0} (${x.p0src})`).join('; '))}.</p>` : ''}${notes.map((n, i) => `<p>${'abcdefghijklmnopqrstuvwxyz'[i]}. ${esc(n)}</p>`).join('')}</div>`;
+    html += `</tbody></table><div class="notes"><p>Colour applies to the certainty column only (minimally contextualised framework).</p>${mids.length ? `<p>Minimal important differences: ${esc(mids.join('; '))}.</p>` : ''}${pw.some(x => x.p0src) ? `<p>Baseline (comparator) risk: ${esc(pw.filter(x => x.p0src).map(x => `${x.outcome}, ${x.risk0} (${x.p0src})`).join('; '))}.</p>` : ''}${notes.map((n, i) => `<p>${'abcdefghijklmnopqrstuvwxyz'[i]}. ${esc(n)}</p>`).join('')}</div>`;
   }
   // una tabla por red: los desenlaces que comparten tratamientos van juntos (columnas por desenlace)
   const nets = [];
@@ -1058,13 +1081,13 @@ $('#sup-csv').addEventListener('click', () => {
 });
 $('#sof-clear').addEventListener('click', () => { if (confirm('¿Vaciar la tabla SoF?')) { state.sof = []; save('mg-sof', []); renderSoF(); } });
 $('#sof-doc').addEventListener('click', () => {
-  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>body{font-family:Calibri,sans-serif;font-size:9pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #9aa4ae;padding:3pt;vertical-align:top;font-size:8pt}th{background:#1F3A5F;color:#fff}.notes p{margin:0;font-size:8pt}</style></head><body>${sofHTML()}</body></html>`;
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><style>body{font-family:Calibri,sans-serif;font-size:9pt}table{border-collapse:collapse;width:100%}td,th{border:1px solid #9aa4ae;padding:3pt;vertical-align:top;font-size:8pt}td.sw{width:18pt}th{background:#1F3A5F;color:#fff}.notes p{margin:0;font-size:8pt}</style></head><body>${sofHTML()}</body></html>`;
   download('summary_of_findings.doc', html, 'application/msword');
 });
 $('#sof-csv').addEventListener('click', () => {
-  const rows = state.sof.filter(s => s.type === 'pairwise').map(s => ({ outcome: s.outcome, participants: s.participants, relative: s.relative, risk_comparator: s.risk0, risk_intervention: s.risk1, absolute: s.absolute, certainty: LEVELS[s.c], category: s.cat, plain: s.plain, footnotes: s.notes.join(' | ') }));
+  const rows = state.sof.filter(s => s.type === 'pairwise').map(s => ({ outcome: s.outcome, participants: s.participants, follow_up: s.followup || '', relative: s.relative, risk_comparator: s.risk0, risk_intervention: s.risk1, absolute: s.absolute, certainty: LEVELS[s.c], category: s.cat, plain: s.plain, footnotes: s.notes.join(' | ') }));
   const nm = state.sof.filter(s => s.type === 'nma').flatMap(b => Object.entries(b.cells).flatMap(([t, cs]) => Object.entries(cs).map(([ref, x]) => ({ outcome: b.outcome, participants: '', relative: x.text.split('\n')[2], risk_comparator: ref, risk_intervention: t, absolute: x.text.split('\n').slice(0, 2).join(' '), certainty: LEVELS[x.c], category: x.cat, plain: '', footnotes: x.letters }))));
-  download('summary_of_findings.csv', toCSV([...rows, ...nm], ['outcome', 'participants', 'relative', 'risk_comparator', 'risk_intervention', 'absolute', 'certainty', 'category', 'plain', 'footnotes']), 'text/csv');
+  download('summary_of_findings.csv', toCSV([...rows, ...nm], ['outcome', 'participants', 'follow_up', 'relative', 'risk_comparator', 'risk_intervention', 'absolute', 'certainty', 'category', 'plain', 'footnotes']), 'text/csv');
 });
 $('#sof-copy').addEventListener('click', async () => {
   try { await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([sofHTML()], { type: 'text/html' }) })]); $('#sof-copy').textContent = 'Copiado ✓'; }
