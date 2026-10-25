@@ -25,6 +25,10 @@ Todo se calcula en el navegador: los datos no salen de tu computadora. No requie
 | Figuras | Descarga SVG / PNG / TIFF con DPI incrustado, ancho de columna de revista y fuente Arial |
 | Marco EtD | Paso 4: evidencia a la decisión (por pares o múltiples intervenciones) con juicios sugeridos, recomendación y exportación a Word |
 
+- **SoF por diseño:** con ECA + observacionales, dos filas por desenlace (una por diseño) en una misma tabla.
+- **Prevalencia / incidencia:** meta-análisis de proporciones y tasas (PLO/PFT/PRAW, IRLN/IRS/IR), subgrupos, meta-regresión y forest RevMan; sin GRADE.
+- **Exactitud diagnóstica (beta):** Se/Sp univariado y bivariado (Reitsma), SROC y GRADE para DTA (FN/FP por 100, umbrales de decisión, dominios editables).
+
 ## Uso
 
 Abre la página publicada (GitHub Pages) o, en local:

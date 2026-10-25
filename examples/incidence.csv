@@ -1,0 +1,11 @@
+study,outcome,cases,person_years,region,year,rob
+Registry A 2010,Incidence of kidney failure (per 1000 person-years),135,22000,Europe,2010,Some concerns
+Registry B 2011,Incidence of kidney failure (per 1000 person-years),48,5400,North America,2011,Low
+Registry C 2012,Incidence of kidney failure (per 1000 person-years),54,9800,Asia,2012,Low
+Registry D 2013,Incidence of kidney failure (per 1000 person-years),33,1800,Africa,2013,Some concerns
+Registry E 2014,Incidence of kidney failure (per 1000 person-years),55,5400,Europe,2014,Some concerns
+Registry F 2015,Incidence of kidney failure (per 1000 person-years),16,1800,North America,2015,Some concerns
+Registry G 2016,Incidence of kidney failure (per 1000 person-years),26,5400,Asia,2016,Some concerns
+Registry H 2017,Incidence of kidney failure (per 1000 person-years),147,15000,Africa,2017,Low
+Registry I 2018,Incidence of kidney failure (per 1000 person-years),36,5400,Europe,2018,High
+Registry J 2019,Incidence of kidney failure (per 1000 person-years),35,5400,North America,2019,Low

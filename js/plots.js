@@ -105,7 +105,7 @@ export function forestSVG({ rows = [], pooled, groups = null, cols = [], interac
 // groups: [{label, rows:[{label, cells, w (texto), wf (0–1), est, lo, hi, rob}], sub:{label, cells, w, est, lo, hi}, lines:[texto]}]
 // overall: igual que sub (+ lines); cols: [{group, head}]; fs: tamaño de letra (unidades de figura).
 const RM_ROB = { low: ['#33CC33', '+'], some: ['#FFEE33', '?'], high: ['#E02B20', '−'] };
-export function forestRM({ title = '', groups, overall = null, cols = [], log = false, measure = '', model = '', leftLabel = '', rightLabel = '', interaction = '', fs = 12, rob = false, robDoms = [], estDec = 2 }) {
+export function forestRM({ title = '', groups, overall = null, cols = [], log = false, measure = '', model = '', leftLabel = '', rightLabel = '', interaction = '', fs = 12, rob = false, robDoms = [], estDec = 2, xlim = null, noRef = false }) {
   const rowH = fs * 1.7, tw = (t, bold) => String(t ?? '').length * fs * (bold ? 0.6 : 0.54);
   const fmt = v => (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(estDec)).replace('-', '−');
   const ci = e => (isFinite(e.est) ? `${fmt(e.est)} [${fmt(e.lo)}, ${fmt(e.hi)}]` : 'Not estimable');
@@ -121,7 +121,7 @@ export function forestRM({ title = '', groups, overall = null, cols = [], log = 
   let x = 8 + labW; const colR = colW.map(w => (x += w)), wR = (x += wW), eR = (x += eW), p0 = x + fs * 1.2, p1 = p0 + PW, W = p1 + fs * 1.2 + robW;
   const vals = [...all, ...pools].flatMap(r => [r.lo, r.hi, r.est]).filter(v => isFinite(v) && (!log || v > 0)), ref = log ? 1 : 0;
   let lo = Math.min(...vals, ref), hi = Math.max(...vals, ref);
-  if (log) { lo = Math.max(Math.min(lo, 0.8), 0.01); hi = Math.min(Math.max(hi, 1.25), 100); } else { const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad; }
+  if (xlim) { [lo, hi] = xlim; } else if (log) { lo = Math.max(Math.min(lo, 0.8), 0.01); hi = Math.min(Math.max(hi, 1.25), 100); } else { const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad; }
   const ticks = niceTicks(lo, hi, log), tmin = Math.min(...ticks, lo), tmax = Math.max(...ticks, hi), sx = scaleFn(tmin, tmax, p0, p1, log), cl = v => Math.max(p0, Math.min(p1, sx(Math.max(v, log ? 1e-9 : -Infinity))));
   // filas
   const L = []; const row = o => L.push(o);
@@ -149,7 +149,7 @@ export function forestRM({ title = '', groups, overall = null, cols = [], log = 
   if (nD) { s += T((rx0 + gx) / 2, hy - fs * 1.25, 'Risk of Bias', 'middle', 'h'); robDoms.forEach((d, j) => { s += T(rx0 + (j + 0.5) * cw, hy, d.head, 'middle', 'h'); }); s += T(gx, hy, 'Global', 'middle', 'h'); }
   else if (rob) s += T(W - robW / 2 - fs * 0.6, hy, 'Risk of Bias', 'middle', 'h');
   s += `<line x1="8" x2="${W - 8}" y1="${hy + fs * 0.45}" y2="${hy + fs * 0.45}" stroke="currentColor" stroke-width=".6"/>`;
-  s += `<line x1="${sx(ref)}" x2="${sx(ref)}" y1="${hy + fs * 0.45}" y2="${ya}" stroke="currentColor" stroke-width="1"/>`;
+  if (!noRef) s += `<line x1="${sx(ref)}" x2="${sx(ref)}" y1="${hy + fs * 0.45}" y2="${ya}" stroke="currentColor" stroke-width="1"/>`;
   const cellTxt = (o, bold) => (o.cells || []).map((t, i) => T(colR[i] - fs * 0.4, o.y + fs * 0.35, t, 'end', bold ? 'h' : '')).join('') + T(wR - fs * 0.4, o.y + fs * 0.35, o.w, 'end', bold ? 'h' : '') + T(eR - fs * 0.4, o.y + fs * 0.35, ci(o), 'end', bold ? 'h' : '');
   L.forEach(l => {
     if (l.k === 'hdr') s += T(8, l.y + fs * 0.35, l.t, 'start', 'h');
@@ -170,9 +170,23 @@ export function forestRM({ title = '', groups, overall = null, cols = [], log = 
   });
   s += `<line x1="${p0}" x2="${p1}" y1="${ya}" y2="${ya}" stroke="currentColor"/>`;
   ticks.forEach(v => { s += `<line x1="${sx(v)}" x2="${sx(v)}" y1="${ya}" y2="${ya + fs * 0.4}" stroke="currentColor"/>` + T(sx(v), ya + fs * 1.5, String(v).replace('-', '−'), 'middle'); });
-  s += T(sx(ref) - fs * 0.4, ya + fs * 3, leftLabel, 'end') + T(sx(ref) + fs * 0.4, ya + fs * 3, rightLabel, 'start');
+  if (!noRef) s += T(sx(ref) - fs * 0.4, ya + fs * 3, leftLabel, 'end') + T(sx(ref) + fs * 0.4, ya + fs * 3, rightLabel, 'start');
   if (rob || nD) s += `<text x="8" y="${ya + fs * 4.6}" style="font-size:${(fs * 0.85).toFixed(1)}px" class="m">Risk of bias: (+) low, (?) some concerns / unclear, (−) high</text>`;
   if (nD) { for (let i = 0; i < nD; i += per) s += `<text x="8" y="${ya + fs * (6 + i / per * 1.3)}" style="font-size:${(fs * 0.85).toFixed(1)}px">${esc(robDoms.slice(i, i + per).map(d => `(${d.head}) ${d.name}`).join('   '))}</text>`; }
+  return s + '</svg>';
+}
+
+// Plano ROC resumen (DTA): puntos de los estudios (área ∝ n), punto combinado con cruz de IC 95 % y diagonal de no discriminación.
+// pts: [{se, sp, n, label}]; summary: {se:[est,lo,hi], sp:[est,lo,hi]}
+export function srocSVG({ pts, summary = null, title = '', fs = 12 }) {
+  const W = 420, H = 400, L = 56, R = 14, T = title ? 30 : 12, B = 50, sx = v => L + v * (W - L - R), sy = v => H - B - v * (H - B - T), maxN = Math.max(...pts.map(p => p.n), 1);
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" data-fs="${fs}" class="plot" role="img" aria-label="SROC plot"><style>text{font:${fs}px system-ui,sans-serif;fill:currentColor}.h{font-weight:600}.m{fill:var(--muted,#666)}</style>`;
+  if (title) s += `<text x="8" y="${fs * 1.3}" class="h">${esc(title)}</text>`;
+  [0, 0.2, 0.4, 0.6, 0.8, 1].forEach(v => { s += `<line x1="${L}" x2="${W - R}" y1="${sy(v)}" y2="${sy(v)}" stroke="currentColor" opacity=".1"/><text x="${L - 6}" y="${sy(v) + 4}" text-anchor="end">${v}</text><line x1="${sx(v)}" x2="${sx(v)}" y1="${H - B}" y2="${H - B + 4}" stroke="currentColor"/><text x="${sx(v)}" y="${H - B + 18}" text-anchor="middle">${v}</text>`; });
+  s += `<line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" stroke="currentColor"/><line x1="${L}" x2="${L}" y1="${T}" y2="${H - B}" stroke="currentColor"/><line x1="${sx(0)}" y1="${sy(0)}" x2="${sx(1)}" y2="${sy(1)}" stroke="currentColor" stroke-dasharray="4 3" opacity=".5"/>`;
+  pts.forEach(p => { s += `<circle cx="${sx(1 - p.sp)}" cy="${sy(p.se)}" r="${3 + 10 * Math.sqrt(p.n / maxN)}" fill="#7A8CA5" fill-opacity=".5" stroke="#1F3A5F"><title>${esc(p.label)}: Se ${p.se.toFixed(2)}, Sp ${p.sp.toFixed(2)}</title></circle>`; });
+  if (summary) { const [e, a, b] = summary.se, [f, c, d] = summary.sp, X = sx(1 - f), Y = sy(e); s += `<line x1="${sx(1 - d)}" x2="${sx(1 - c)}" y1="${Y}" y2="${Y}" stroke="#B5281C" stroke-width="2"/><line x1="${X}" x2="${X}" y1="${sy(b)}" y2="${sy(a)}" stroke="#B5281C" stroke-width="2"/><polygon points="${X},${Y - 7} ${X + 7},${Y} ${X},${Y + 7} ${X - 7},${Y}" fill="#B5281C"/>`; }
+  s += `<text x="${(L + W - R) / 2}" y="${H - 10}" text-anchor="middle">1 − Specificity</text><text transform="translate(14 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">Sensitivity</text>`;
   return s + '</svg>';
 }
 

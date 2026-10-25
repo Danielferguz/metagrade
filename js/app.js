@@ -1,15 +1,16 @@
-import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.25-3';
-import { escalc, rma, egger, subgroupTest, metaReg, designMatrix } from './pairwise.js?v=2026.10.25-3';
-import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.25-3';
-import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.25-3';
-import { mountThreshold } from './thresh.js?v=2026.10.25-3';
-import { renderEtD } from './etd.js?v=2026.10.25-3';
-import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.25-3';
-import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.25-3';
-import { forestSVG, forestRM, bubbleSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.25-3';
-import { MIDS, midValues } from './mids.js?v=2026.10.25-3';
-import { median } from './stats.js?v=2026.10.25-3';
-import { HELP_HTML } from './help.js?v=2026.10.25-3';
+import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.25-4';
+import { escalc, rma, egger, subgroupTest, metaReg, designMatrix } from './pairwise.js?v=2026.10.25-4';
+import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.25-4';
+import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.25-4';
+import { mountThreshold } from './thresh.js?v=2026.10.25-4';
+import { renderEtD } from './etd.js?v=2026.10.25-4';
+import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.25-4';
+import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.25-4';
+import { forestSVG, forestRM, bubbleSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.25-4';
+import { mountModules } from './modules.js?v=2026.10.25-4';
+import { MIDS, midValues } from './mids.js?v=2026.10.25-4';
+import { median } from './stats.js?v=2026.10.25-4';
+import { HELP_HTML } from './help.js?v=2026.10.25-4';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -88,12 +89,12 @@ function selectSheet(name) {
   state.sheet = name; state.raw = state.sheets[name] || []; state.subvar = state.regvar = undefined;
   state.map = mapColumns(state.raw);
   state.type = detectType(state.map);
-  state.kind = state.type.kind === 'nma' ? 'nma' : 'pairwise';
+  state.kind = ['nma', 'prop', 'dta'].includes(state.type.kind) ? state.type.kind : 'pairwise';
   $('#kind').value = state.kind;
   renderMapping(); refreshData();
 }
-const CANON = { pairwise: ['study', 'outcome', 'subgroup', 'e1', 'n1', 'e2', 'n2', 'm1', 'sd1', 'm2', 'sd2', 'est', 'lower', 'upper', 'yi', 'sei', 'n', 'fu', 'rob', 'indirect', 'design'], nma: ['study', 'outcome', 'treatment', 'r', 'mean', 'sd', 'n', 'rob', 'indirect', 'modifier'] };
-const CANON_LABEL = { fu: 'Seguimiento (mediana o rango)', study: 'Estudio', outcome: 'Desenlace', subgroup: 'Subgrupo', e1: 'Eventos intervención', n1: 'N intervención', e2: 'Eventos comparador', n2: 'N comparador', m1: 'Media intervención', sd1: 'DE intervención', m2: 'Media comparador', sd2: 'DE comparador', est: 'Estimador (HR/OR/RR)', lower: 'IC inferior', upper: 'IC superior', yi: 'yi', sei: 'EE (sei)', n: 'N total', rob: 'Riesgo de sesgo', indirect: 'Indirecto', design: 'Diseño', treatment: 'Tratamiento', r: 'Eventos/respondedores', mean: 'Media', sd: 'DE', modifier: 'Modificador (intransitividad)' };
+const CANON = { pairwise: ['study', 'outcome', 'subgroup', 'e1', 'n1', 'e2', 'n2', 'm1', 'sd1', 'm2', 'sd2', 'est', 'lower', 'upper', 'yi', 'sei', 'n', 'fu', 'rob', 'indirect', 'design'], prop: ['study', 'outcome', 'subgroup', 'x', 'n', 'pt', 'rob', 'design', 'fu'], dta: ['study', 'outcome', 'subgroup', 'tp', 'fp', 'fn', 'tn', 'rob', 'indirect'], nma: ['study', 'outcome', 'treatment', 'r', 'mean', 'sd', 'n', 'rob', 'indirect', 'modifier'] };
+const CANON_LABEL = { tp: 'Verdaderos positivos (TP)', fp: 'Falsos positivos (FP)', fn: 'Falsos negativos (FN)', tn: 'Verdaderos negativos (TN)', x: 'Casos', pt: 'Tiempo-persona', fu: 'Seguimiento (mediana o rango)', study: 'Estudio', outcome: 'Desenlace', subgroup: 'Subgrupo', e1: 'Eventos intervención', n1: 'N intervención', e2: 'Eventos comparador', n2: 'N comparador', m1: 'Media intervención', sd1: 'DE intervención', m2: 'Media comparador', sd2: 'DE comparador', est: 'Estimador (HR/OR/RR)', lower: 'IC inferior', upper: 'IC superior', yi: 'yi', sei: 'EE (sei)', n: 'N total', rob: 'Riesgo de sesgo', indirect: 'Indirecto', design: 'Diseño', treatment: 'Tratamiento', r: 'Eventos/respondedores', mean: 'Media', sd: 'DE', modifier: 'Modificador (intransitividad)' };
 function renderMapping() {
   const cols = Object.keys(state.raw[0] || {});
   $('#mapping').innerHTML = CANON[state.kind].map(k => `<label>${CANON_LABEL[k]}<select data-canon="${k}"><option value="">—</option>${cols.map(c => `<option ${state.map[k] === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>`).join('');
@@ -132,20 +133,22 @@ function refreshData() {
   } else { state.subgroups = []; state.subAll = false; }
   state.rows = rows;
   const t = detectType(state.map);
-  $('#detected').textContent = t.kind === 'nma' ? `NMA · ${t.outcome === 'binary' ? 'binario' : 'continuo'} · ${new Set(rows.map(r => r.study)).size} estudios` : t.kind === 'pairwise' ? `Pares · ${{ binary: 'binario', continuous: 'continuo', generic: 'genérico (yi, sei)', 'ratio-ci': 'razones ajustadas con IC' }[t.data]} · ${rows.length} estudios` : 'Formato no reconocido: revise las columnas';
+  $('#detected').textContent = t.kind === 'dta' ? `DTA (beta) · ${new Set(rows.map(r => r.outcome)).size} análisis · ${rows.length} filas` : t.kind === 'prop' ? `${t.data === 'rate' ? 'Incidencia' : 'Prevalencia'} · ${rows.length} estudios` : t.kind === 'nma' ? `NMA · ${t.outcome === 'binary' ? 'binario' : 'continuo'} · ${new Set(rows.map(r => r.study)).size} estudios` : t.kind === 'pairwise' ? `Pares · ${{ binary: 'binario', continuous: 'continuo', generic: 'genérico (yi, sei)', 'ratio-ci': 'razones ajustadas con IC' }[t.data]} · ${rows.length} estudios` : 'Formato no reconocido: revise las columnas';
   const cols = Object.keys(state.raw[0] || {});
   const vis = state.raw.filter(r => !state.map.outcome || outs.length < 2 || r[state.map.outcome] === ($('#outcome-filter').value || outs[0])).slice(0, 200);
   $('#preview').innerHTML = `<thead><tr>${cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${vis.map(r => `<tr>${cols.map(c => `<td>${esc(r[c])}</td>`).join('')}</tr>`).join('')}</tbody>`;
   if ($('#pw-outcome') && outs.length) { $('#pw-outcome').value = $('#outcome-filter').value || outs[0]; $('#nm-outcome').value = $('#pw-outcome').value; }
 }
 
-$('#go-analysis').addEventListener('click', () => { setupAnalysis(); renderOutcomeConfig(state.kind === 'nma' ? 'nm' : 'pw'); showTab('analisis'); });
+$('#go-analysis').addEventListener('click', () => { setupAnalysis(); if (['pairwise', 'nma'].includes(state.kind)) renderOutcomeConfig(state.kind === 'nma' ? 'nm' : 'pw'); showTab('analisis'); });
 
 // ---------------- análisis: preparación ----------------
 function setupAnalysis() {
   const t = detectType(state.map);
   $('#no-data').hidden = true;
-  $('#pw').hidden = state.kind !== 'pairwise'; $('#nm').hidden = state.kind !== 'nma';
+  $('#pw').hidden = state.kind !== 'pairwise'; $('#nm').hidden = state.kind !== 'nma'; $('#pr').hidden = state.kind !== 'prop'; $('#dt').hidden = state.kind !== 'dta';
+  if (state.kind === 'prop') { MOD.setupPrev(); return; }
+  if (state.kind === 'dta') { MOD.setupDta(); return; }
   if (state.kind === 'pairwise') {
     const opts = { binary: ['RR', 'OR', 'RD'], continuous: ['MD', 'SMD', 'ROM'], generic: ['RR', 'OR', 'HR', 'MD', 'SMD'], 'ratio-ci': ['HR', 'OR', 'RR'] }[t.data] || ['RR'];
     $('#pw-measure').innerHTML = opts.map(o => `<option>${o}</option>`).join('');
@@ -583,16 +586,18 @@ function bindStrata() {
   P.strata.list.forEach((_, i) => updateStratum(i));
   $('#st-add').addEventListener('click', addStrataToSoF);
 }
-function addStrataToSoF() {
+function addStrataToSoF(importance) {
   const P = state.lastPw;
+  state.sof = state.sof.filter(x => !(x.type === 'pairwise' && x.outcome === P.outcome && !x.stratum && x.intervention === P.int && x.comparator === P.comp)); // la fila combinada se sustituye por las dos filas por diseño
   P.strata.list.forEach(st => {
     const s = pwSummary(stratumP(st), st.ov);
     s.plain = plainStatement(s.cat, s.c, s.intervention, lcOut(s.outcome), P.cfg.threshold, s.plainRaw.d);
-    s.importance = state.rows[0]?.o_importance || P.importance || '';
-    s.outcome = `${P.outcome} (${st.kind === 'RCT' ? 'RCTs' : 'observational'})`; s.stratum = st.kind;
+    s.importance = (typeof importance === 'string' && importance) || state.rows[0]?.o_importance || P.importance || '';
+    s.baseOutcome = P.outcome; s.outcome = `${P.outcome} (${st.kind === 'RCT' ? 'RCTs' : 'observational'})`; s.stratum = st.kind;
     pushSoF(s);
   });
-  const b = $('#st-add'); b.textContent = 'Añadido ✓'; setTimeout(() => b.textContent = 'Añadir ECA y observacionales a la tabla SoF', 1500);
+  P.addedSoF = true; save('mg-sof', state.sof);
+  const b = $('#st-add'); if (b) { b.textContent = 'Añadido ✓'; setTimeout(() => b.textContent = 'Añadir ECA y observacionales a la tabla SoF', 1500); }
 }
 
 function renderPairwise(dropped, robCmp, subRes, tr) {
@@ -819,6 +824,7 @@ function updatePwFinal() {
 const sameItem = (a, b) => a.type === b.type && a.outcome === b.outcome && (a.type === 'nma' || (a.intervention === b.intervention && a.comparator === b.comparator));
 function pushSoF(item) { const i = state.sof.findIndex(x => sameItem(x, item)); if (i >= 0) state.sof[i] = item; else state.sof.push(item); save('mg-sof', state.sof); }
 function addPwToSoF(importance) {
+  if (state.lastPw.strata) { addStrataToSoF(importance); const b = $('#pw-add'); if (b) { b.textContent = 'Añadido ✓ (ECA y observacionales)'; setTimeout(() => $('#pw-add') && ($('#pw-add').textContent = 'Añadir a la tabla SoF'), 1500); } return; }
   const s = pwSummary();
   if (typeof importance === 'string' && importance) s.importance = importance;
   else if (state.rows[0]?.o_importance) s.importance = state.rows[0].o_importance;
@@ -1034,11 +1040,11 @@ function sofHTML() {
     const comp = pw[0].comparator, notes = [], mids = [];
     const L = n => { let i = notes.indexOf(n); if (i < 0) { notes.push(n); i = notes.length - 1; } return 'abcdefghijklmnopqrstuvwxyz'[i]; };
     html += `<h3>Summary of findings: ${esc(pw[0].intervention)} compared with ${esc(comp)}</h3>` + legendHTML(comp, false);
-    html += `<table class="sof"><thead><tr><th>Outcome</th><th>Participants (studies)</th><th>Follow-up</th><th>Relative effect (95% CI)</th><th>Risk with ${esc(comp)}</th><th>Risk with ${esc(pw[0].intervention)}</th><th>Absolute effect (95% CI)</th><th>Certainty of evidence</th><th>Plain language summary</th></tr></thead><tbody>`;
-    pw.forEach(s => {
-      const fill = fillFor(s.cat, s.c), lt = s.notes.map(L).join(',');
+    html += `<table class="sof"><thead><tr><th>Outcome</th>${pw.some(x => x.stratum) ? '<th>Study design</th>' : ''}<th>Participants (studies)</th><th>Follow-up</th><th>Relative effect (95% CI)</th><th>Risk with ${esc(comp)}</th><th>Risk with ${esc(pw[0].intervention)}</th><th>Absolute effect (95% CI)</th><th>Certainty of evidence</th><th>Plain language summary</th></tr></thead><tbody>`;
+    pw.forEach((s, ix) => {
+      const fill = fillFor(s.cat, s.c), lt = s.notes.map(L).join(','), key = x => x.baseOutcome || x.outcome, first = ix === 0 || key(pw[ix - 1]) !== key(s) || !s.stratum, span = s.stratum ? pw.slice(ix).findIndex((x, j) => j > 0 && key(x) !== key(s)) : 1, spn = s.stratum ? (span < 0 ? pw.length - ix : span) : 1;
       if (s.mid !== 'null') mids.push(`${s.outcome} ${s.mid}`);
-      html += `<tr><td>${esc(s.outcome)}</td><td>${esc(s.participants)}</td><td>${esc(s.followup || '—')}</td><td>${esc(s.relative)}</td><td>${esc(s.risk0)}</td><td>${esc(s.risk1)}</td><td>${esc(s.absolute)}</td><td class="c cert" style="background:#${fill}" bgcolor="#${fill}">${SYM[s.c]}<br>${LEVELS[s.c]}${lt ? ' <sup>' + lt + '</sup>' : ''}</td><td>${esc(s.plain)}</td></tr>`;
+      html += `<tr>${first ? `<td${spn > 1 ? ` rowspan="${spn}"` : ''}>${esc(s.baseOutcome || s.outcome)}</td>` : ''}${pw.some(x => x.stratum) ? `<td>${s.stratum ? (s.stratum === 'RCT' ? 'Randomised trials' : 'Observational studies') : 'All studies'}</td>` : ''}<td>${esc(s.participants)}</td><td>${esc(s.followup || '—')}</td><td>${esc(s.relative)}</td><td>${esc(s.risk0)}</td><td>${esc(s.risk1)}</td><td>${esc(s.absolute)}</td><td class="c cert" style="background:#${fill}" bgcolor="#${fill}">${SYM[s.c]}<br>${LEVELS[s.c]}${lt ? ' <sup>' + lt + '</sup>' : ''}</td><td>${esc(s.plain)}</td></tr>`;
     });
     html += `</tbody></table><div class="notes"><p>Colour applies to the certainty column only (minimally contextualised framework).</p>${mids.length ? `<p>Minimal important differences: ${esc(mids.join('; '))}.</p>` : ''}${pw.some(x => x.p0src) ? `<p>Baseline (comparator) risk: ${esc(pw.filter(x => x.p0src).map(x => `${x.outcome}, ${x.risk0} (${x.p0src})`).join('; '))}.</p>` : ''}${notes.map((n, i) => `<p>${'abcdefghijklmnopqrstuvwxyz'[i]}. ${esc(n)}</p>`).join('')}</div>`;
   }
@@ -1069,6 +1075,8 @@ function sofHTML() {
     ${nm.some(b => b.methods.type === 'binary') ? `<p>Comparator risk: ${esc(nm.filter(b => b.methods.type === 'binary').map(b => `${b.outcome}, ${P0_EN[b.methods.bmode] || b.methods.bmode}`).join('; '))}.</p>` : ''}
     <p><b>Explanations of certainty ratings:</b></p>${gl.map((t, i) => `<p>${'abcdefghijklmnopqrstuvwxyz'[i] || i + 1}. ${esc(t)}.</p>`).join('')}</div>`;
   }
+  const dta = state.sof.filter(x => x.type === 'dta');
+  if (dta.length) html += `<h3 style="margin-top:22px">Summary of findings: diagnostic test accuracy (BETA)</h3>` + MOD.sofDtaHTML(dta);
   return html || '<p class="muted">Aún no hay desenlaces en la tabla.</p>';
 }
 // tablas suplementarias: perfil de evidencia GRADE (pares) y estimados directo/indirecto/red (NMA)
@@ -1103,9 +1111,10 @@ $('#sof-doc').addEventListener('click', () => {
   download('summary_of_findings.doc', html, 'application/msword');
 });
 $('#sof-csv').addEventListener('click', () => {
-  const rows = state.sof.filter(s => s.type === 'pairwise').map(s => ({ outcome: s.outcome, participants: s.participants, follow_up: s.followup || '', relative: s.relative, risk_comparator: s.risk0, risk_intervention: s.risk1, absolute: s.absolute, certainty: LEVELS[s.c], category: s.cat, plain: s.plain, footnotes: s.notes.join(' | ') }));
+  const rows = state.sof.filter(s => s.type === 'pairwise').map(s => ({ outcome: s.baseOutcome || s.outcome, design: s.stratum || 'all', participants: s.participants, follow_up: s.followup || '', relative: s.relative, risk_comparator: s.risk0, risk_intervention: s.risk1, absolute: s.absolute, certainty: LEVELS[s.c], category: s.cat, plain: s.plain, footnotes: s.notes.join(' | ') }));
   const nm = state.sof.filter(s => s.type === 'nma').flatMap(b => Object.entries(b.cells).flatMap(([t, cs]) => Object.entries(cs).map(([ref, x]) => ({ outcome: b.outcome, participants: '', relative: x.text.split('\n')[2], risk_comparator: ref, risk_intervention: t, absolute: x.text.split('\n').slice(0, 2).join(' '), certainty: LEVELS[x.c], category: x.cat, plain: '', footnotes: x.letters }))));
-  download('summary_of_findings.csv', toCSV([...rows, ...nm], ['outcome', 'participants', 'follow_up', 'relative', 'risk_comparator', 'risk_intervention', 'absolute', 'certainty', 'category', 'plain', 'footnotes']), 'text/csv');
+  const dtaRows = state.sof.filter(s => s.type === 'dta').map(s => ({ outcome: s.outcome, design: 'DTA (beta)', participants: `${s.n} (${s.k} studies)`, relative: `Se ${s.se.est.toFixed(2)} (${s.se.ci[0].toFixed(2)}-${s.se.ci[1].toFixed(2)}); Sp ${s.sp.est.toFixed(2)} (${s.sp.ci[0].toFixed(2)}-${s.sp.ci[1].toFixed(2)})`, risk_comparator: `FN per 100: ${s.se.f.toFixed(1)} (${s.se.fLo.toFixed(1)}-${s.se.fHi.toFixed(1)})`, risk_intervention: `FP per 100: ${s.sp.f.toFixed(1)} (${s.sp.fLo.toFixed(1)}-${s.sp.fHi.toFixed(1)})`, absolute: '', certainty: `Se: ${LEVELS[s.se.c]}; Sp: ${LEVELS[s.sp.c]}`, category: `${s.se.zone}/${s.sp.zone}`, plain: `${s.se.text} | ${s.sp.text}`, footnotes: [...s.se.notes, ...s.sp.notes].join(' | ') }));
+  download('summary_of_findings.csv', toCSV([...rows, ...nm, ...dtaRows], ['outcome', 'design', 'participants', 'follow_up', 'relative', 'risk_comparator', 'risk_intervention', 'absolute', 'certainty', 'category', 'plain', 'footnotes']), 'text/csv');
 });
 $('#sof-copy').addEventListener('click', async () => {
   try { await navigator.clipboard.write([new ClipboardItem({ 'text/html': new Blob([sofHTML()], { type: 'text/html' }) })]); $('#sof-copy').textContent = 'Copiado ✓'; }
@@ -1129,4 +1138,5 @@ function methodsText() {
   }
   return t.join('\n\n');
 }
+const MOD = mountModules({ $, esc, state, fp, autoFig, figSettings, fillFor, pushSoF, subgroupAnalysis, regAnalysis, colLabel });
 renderSoF();

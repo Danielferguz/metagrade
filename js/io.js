@@ -44,6 +44,12 @@ const ALIAS = {
   sd1: ['sd_int', 'sd1', 'sd.e', 'de_int', 'sd1'],
   m2: ['mean_comp', 'm2', 'mean.c', 'media_comp', 'mean2'],
   sd2: ['sd_comp', 'sd2', 'sd.c', 'de_comp'],
+  tp: ['tp', 'true_positive', 'true_positives', 'vp'],
+  fp: ['fp', 'false_positive', 'false_positives'],
+  fn: ['fn', 'false_negative', 'false_negatives'],
+  tn: ['tn', 'true_negative', 'true_negatives', 'vn'],
+  x: ['cases', 'casos', 'n_cases', 'positive', 'x'],
+  pt: ['person_years', 'person_time', 'py', 'persontime', 'tiempo_persona', 'person_months', 'personyears'],
   yi: ['yi', 'te', 'logeffect', 'log_effect'],
   sei: ['sei', 'sete', 'se', 'ee'],
   est: ['estimate', 'est', 'hr', 'effect', 'efecto'],
@@ -79,7 +85,7 @@ export function mapColumns(rows) {
 
 export function normalize(rows, map) {
   const num = v => { if (v === '' || v == null) return NaN; const x = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.')); return x; };
-  const NUM = new Set(['e1', 'n1', 'e2', 'n2', 'm1', 'sd1', 'm2', 'sd2', 'yi', 'sei', 'est', 'lower', 'upper', 'n', 'r', 'mean', 'sd', 'o_mid', 'o_dis', 'o_p0']);
+  const NUM = new Set(['tp', 'fp', 'fn', 'tn', 'x', 'pt', 'e1', 'n1', 'e2', 'n2', 'm1', 'sd1', 'm2', 'sd2', 'yi', 'sei', 'est', 'lower', 'upper', 'n', 'r', 'mean', 'sd', 'o_mid', 'o_dis', 'o_p0']);
   return rows.map(r => {
     const o = { _raw: r }; // fila original: permite agrupar o hacer meta-regresión por cualquier columna
     for (const [k, c] of Object.entries(map)) o[k] = NUM.has(k) ? num(r[c]) : String(r[c] ?? '').trim();
@@ -88,10 +94,12 @@ export function normalize(rows, map) {
 }
 
 export function detectType(map) {
+  if (map.tp && map.fp && map.fn && map.tn) return { kind: 'dta' };
   if (map.e1 && map.e2) return { kind: 'pairwise', data: 'binary' };
   if (map.m1 && map.m2) return { kind: 'pairwise', data: 'continuous' };
   if (map.yi && map.sei) return { kind: 'pairwise', data: 'generic' };
   if (map.est && map.lower && map.upper) return { kind: 'pairwise', data: 'ratio-ci' };
+  if (!map.treatment && !map.e1 && (map.x || map.r) && (map.n || map.pt)) return { kind: 'prop', data: map.pt ? 'rate' : 'prop' };
   if (map.treatment && (map.r || map.mean)) return { kind: 'nma', outcome: map.r ? 'binary' : 'continuous' };
   return { kind: 'unknown' };
 }

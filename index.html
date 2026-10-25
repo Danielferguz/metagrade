@@ -7,7 +7,7 @@
 <meta name="description" content="Meta-análisis por pares y en red (NMA) con calificación de la certeza de la evidencia según Core GRADE y GRADE para NMA. Todo se calcula en el navegador.">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Source+Sans+3:wght@400;600&display=swap">
-<link rel="stylesheet" href="css/style.css?v=2026.10.25-3">
+<link rel="stylesheet" href="css/style.css?v=2026.10.25-4">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 </head>
 <body>
@@ -43,6 +43,9 @@
       <button class="ghost" data-example="examples/pairwise_binary_rct_cohort.csv">Pares · binario (ECA + cohortes)</button>
       <button class="ghost" data-example="examples/pairwise_continuous_rct_cohort.csv">Pares · continuo (ECA + cohortes)</button>
       <button class="ghost" data-example="examples/pairwise_hr_rct_cohort.csv">Pares · HR (ECA + cohortes)</button>
+      <button class="ghost" data-example="examples/prevalence.csv">Prevalencia</button>
+      <button class="ghost" data-example="examples/incidence.csv">Incidencia</button>
+      <button class="ghost" data-example="examples/dta_trv_pulmonary_hypertension.csv">DTA · TRV e hipertensión pulmonar (beta)</button>
       <button class="ghost" data-example="examples/nma_binary.csv">NMA · binario</button>
       <button class="ghost" data-example="examples/nma_continuous.csv">NMA · continuo</button>
     </div>
@@ -52,7 +55,7 @@
     <div class="row between"><h2>Vista previa</h2><span id="detected" class="pill"></span></div>
     <div class="row gap wrap">
       <label>Hoja <select id="sheet"></select></label>
-      <label>Tipo de análisis <select id="kind"><option value="pairwise">Meta-análisis por pares</option><option value="nma">Meta-análisis en red (NMA)</option></select></label>
+      <label>Tipo de análisis <select id="kind"><option value="pairwise">Meta-análisis por pares</option><option value="nma">Meta-análisis en red (NMA)</option><option value="prop">Prevalencia / incidencia</option><option value="dta">Exactitud diagnóstica (DTA, beta)</option></select></label>
       <label id="outcome-wrap" hidden>Desenlace (vista previa / análisis individual) <select id="outcome-filter"></select></label>
       <label id="subgroup-wrap" hidden>Subgrupo / comparación <select id="subgroup-filter"></select></label>
     </div>
@@ -77,6 +80,12 @@
         </ul>
       </div>
       <div>
+        <h3>Prevalencia, incidencia y DTA</h3>
+        <ul class="tight">
+          <li><b>Prevalencia:</b> <code>study, cases, n</code> (también <code>events, n</code>)</li>
+          <li><b>Incidencia:</b> <code>study, cases, person_years</code></li>
+          <li><b>DTA:</b> <code>study, tp, fp, fn, tn</code>; <code>outcome</code> = prueba o análisis (umbral, categoría…); opcionales <code>rob</code> (QUADAS-2: Low / High / Unclear) e <code>indirect</code></li>
+        </ul>
         <h3>NMA (una fila por brazo)</h3>
         <ul class="tight">
           <li><b>Binario:</b> <code>study, treatment, responders, n</code></li>
@@ -160,6 +169,48 @@
   </div>
 
   <!-- NMA -->
+  <!-- PREVALENCIA / INCIDENCIA -->
+  <div id="pr" hidden>
+    <div class="card">
+      <h2>Configuración — prevalencia / incidencia</h2>
+      <div class="form">
+        <label>Desenlace <input id="pr-outcome" value="Prevalence"></label>
+        <label>Transformación <select id="pr-tr"></select></label>
+        <label>Modelo <select id="pr-method"><option value="REML">Efectos aleatorios · REML</option><option value="DL">Efectos aleatorios · DerSimonian-Laird</option><option value="EE">Efecto común</option></select></label>
+        <label>IC del efecto combinado <select id="pr-test"><option value="z">Wald (z)</option><option value="knha">Knapp-Hartung (t)</option></select></label>
+        <label>Tasa por (tiempo-persona) <input id="pr-unit" type="number" value="1000"></label>
+        <label>Subgrupos / sensibilidad por <select id="pr-subvar"></select></label>
+        <label>Meta-regresión: moderador <select id="pr-regvar"></select></label>
+      </div>
+      <p class="muted">Para elegir el desenlace use el filtro de la pestaña Datos. Esta versión no incluye valoración GRADE de prevalencia/incidencia.</p>
+      <div class="row end gap"><button class="primary" id="pr-run">Ejecutar</button></div>
+    </div>
+    <div id="pr-results"></div>
+  </div>
+
+  <!-- DTA -->
+  <div id="dt" hidden>
+    <div class="card">
+      <h2>Configuración — exactitud diagnóstica (DTA) <span class="pill">BETA</span></h2>
+      <div class="form">
+        <label>Transformación (modelo univariado) <select id="dt-tr"><option value="PFT">Doble arcoseno (Freeman-Tukey)</option><option value="PLO">Logit</option></select></label>
+        <label>Modelo <select id="dt-method"><option value="REML">Efectos aleatorios · REML</option><option value="DL">Efectos aleatorios · DerSimonian-Laird</option></select></label>
+        <label>IC <select id="dt-test"><option value="z">Wald (z)</option><option value="knha">Knapp-Hartung (t)</option></select></label>
+        <label>Escenario de prevalencia y umbrales de decisión <select id="dt-scen"><option value="10">10 % (poblaciones de menor riesgo)</option><option value="24" selected>24 % (referencia)</option><option value="36">36 % (mayor riesgo)</option><option value="custom">Personalizado</option></select></label>
+        <label>Prevalencia (%) <input id="dt-prev" type="number" step="any" value="24"></label>
+        <label>Falsos negativos por 100: aceptable ≤ <input id="dt-fna" type="number" step="any" value="5"></label>
+        <label>Falsos negativos por 100: inaceptable ≥ <input id="dt-fnu" type="number" step="any" value="11"></label>
+        <label>Falsos positivos por 100: aceptable ≤ <input id="dt-fpa" type="number" step="any" value="4"></label>
+        <label>Falsos positivos por 100: inaceptable ≥ <input id="dt-fpu" type="number" step="any" value="18"></label>
+        <label><input type="checkbox" id="dt-restr" checked> usar la estimación restringida a estudios con riesgo de sesgo bajo/aceptable si la heterogeneidad baja ≥ 15 puntos de I²</label>
+        <label><input type="checkbox" id="dt-biv"> mostrar también el modelo bivariado (Reitsma)</label>
+      </div>
+      <p class="muted">Cada valor distinto de <code>outcome</code> se analiza como una prueba/umbral. Los umbrales de decisión son específicos de la pregunta clínica: los predefinidos (10/24/36 %) proceden de una revisión sobre hipertensión pulmonar y deben adaptarse. <b>Fase beta:</b> las sugerencias GRADE para DTA (riesgo de sesgo por peso de estudios con bajo riesgo, inconsistencia por zona de decisión, imprecisión por falsos negativos/positivos, indirectitud por la columna <code>indirect</code>) requieren revisión experta.</p>
+      <div class="row end gap"><button class="primary" id="dt-run">Analizar todas las pruebas</button></div>
+    </div>
+    <div id="dt-results"></div>
+  </div>
+
   <div id="nm" hidden>
     <div class="card">
       <h2>Configuración — meta-análisis en red</h2>
@@ -225,7 +276,7 @@
   <div class="card prose" id="help"></div>
 </section>
 </main>
-<footer class="foot"><p>MetaGRADE <span id="app-version">2026.10.25-3</span> · © Daniel Fernández-Guzmán · <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="noopener">CC BY-NC-ND 4.0</a> · cite MetaGRADE si lo usa · los cálculos se hacen en el navegador. Las calificaciones automáticas son sugerencias que dos revisores deben verificar y justificar.</p></footer>
-<script type="module" src="js/app.js?v=2026.10.25-3"></script>
+<footer class="foot"><p>MetaGRADE <span id="app-version">2026.10.25-4</span> · © Daniel Fernández-Guzmán · <a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="noopener">CC BY-NC-ND 4.0</a> · cite MetaGRADE si lo usa · los cálculos se hacen en el navegador. Las calificaciones automáticas son sugerencias que dos revisores deben verificar y justificar.</p></footer>
+<script type="module" src="js/app.js?v=2026.10.25-4"></script>
 </body>
 </html>

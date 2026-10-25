@@ -7,6 +7,8 @@ import { oisBinary, effectiveN } from '../js/grade.js';
 import { parseCSV } from '../js/io.js';
 import { forestRM } from '../js/plots.js';
 import { MIDS, midValues } from '../js/mids.js';
+import { poolSeSp, bivariate, gradeDTA, dtaCertainty, SCEN } from '../js/dta.js';
+import { poolProp, wilson } from '../js/prop.js';
 const ref = JSON.parse(fs.readFileSync(new URL('./reference.json', import.meta.url)));
 let fails = 0; const ok = (name, a, b, tol = 1e-6) => { const good = Math.abs(a - b) <= tol; if (!good) fails++; console.log(`${good ? 'OK  ' : 'FAIL'} ${name}: ${a} vs ${b}`); };
 const rd = f => parseCSV(fs.readFileSync(new URL('../examples/' + f, import.meta.url), 'utf8'));
@@ -58,4 +60,15 @@ ok('GRADE33 OIS', oisBinary(0.77, 0.25), 184, 0);
   ok('MID: todos los umbrales son positivos y crecientes', good ? 1 : 0, 1, 0);
   const d = midValues(MIDS.find(m => m.name === 'Mortalidad por todas las causas'), 100); ok('MID mortalidad por 100 = 1,35 / 3,21 / 6,25', Math.abs(d.mid - 1.35) + Math.abs(d.mod - 3.21) + Math.abs(d.large - 6.25), 0, 1e-9);
   ok('MID: hay desenlaces de nefrología, cardiología y hematología', ['Nefrología', 'Cardiología', 'Hematología'].every(a => MIDS.some(m => m.area === a && m.type === 'bin') && MIDS.some(m => m.area === a && m.type === 'cont')) ? 1 : 0, 1, 0); }
+// DTA: reproduce el artículo de referencia (TRV > 2,8 m/s: Se 0,788, Sp 0,756; I² 92/91) y el modelo bivariado frente a scipy
+{ const mk = a => a.map(([tp, fp, fn, tn]) => ({ tp, fp, fn, tn }));
+  const S = mk([[27, 3, 18, 14], [53, 14, 15, 29], [10, 11, 1, 37], [198, 2, 42, 21], [1176, 166, 88, 142], [2, 0, 5, 10], [15, 0, 19, 7], [1321, 67, 143, 77], [162, 17, 33, 45], [70, 115, 8, 318]]);
+  const r = poolSeSp(S); ok('DTA Se TRV>2,8 = 0,788', r.se.est, 0.788, 0.002); ok('DTA Sp TRV>2,8 = 0,756', r.sp.est, 0.756, 0.002); ok('DTA I² Se (Q) = 92', Math.round(r.se.I2q), 92, 0.5);
+  const b = bivariate(S); ok('bivariado Se vs scipy', b.se, 0.78106, 2e-3); ok('bivariado Sp vs scipy', b.sp, 0.76545, 2e-3);
+  const g = gradeDTA(S.map((s, i) => ({ ...s, rob: i < 4 ? 'low' : 'high' })), { prev: 0.24, thr: SCEN['24'] });
+  ok('GRADE-DTA: FN por 100 = 24 × (1 − Se)', g.se.f, 24 * (1 - g.se.est), 1e-9); ok('GRADE-DTA: certeza entre 1 y 4', dtaCertainty(g.se.dom) >= 1 && dtaCertainty(g.se.dom) <= 4 ? 1 : 0, 1, 0);
+  ok('GRADE-DTA: riesgo de sesgo rebaja si < 70 % del peso es bajo', gradeDTA(S.map(s => ({ ...s, rob: 'high' })), { prev: 0.24, thr: SCEN['24'] }).se.dom.rob, 1, 0); }
+// prevalencia: PLO reproduce la proporción agrupada cuando los estudios son idénticos; Wilson contiene la proporción
+{ const p = poolProp([20, 20, 20], [100, 100, 100], 'PLO'); ok('prevalencia PLO estudios idénticos = 0,20', p.est, 0.2, 1e-6);
+  const w = wilson(20, 100); ok('Wilson 20/100 contiene 0,20', w[0] < 0.2 && w[1] > 0.2 ? 1 : 0, 1, 0); }
 console.log(fails ? `\n${fails} fallos` : '\nTodas las comprobaciones pasaron'); process.exit(fails ? 1 : 0);
