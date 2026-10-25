@@ -1,14 +1,15 @@
-import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.25-2';
-import { escalc, rma, egger, subgroupTest, metaReg, designMatrix } from './pairwise.js?v=2026.10.25-2';
-import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.25-2';
-import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.25-2';
-import { mountThreshold } from './thresh.js?v=2026.10.25-2';
-import { renderEtD } from './etd.js?v=2026.10.25-2';
-import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.25-2';
-import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.25-2';
-import { forestSVG, forestRM, bubbleSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.25-2';
-import { median } from './stats.js?v=2026.10.25-2';
-import { HELP_HTML } from './help.js?v=2026.10.25-2';
+import { readFile, mapColumns, normalize, detectType, download, toCSV } from './io.js?v=2026.10.25-3';
+import { escalc, rma, egger, subgroupTest, metaReg, designMatrix } from './pairwise.js?v=2026.10.25-3';
+import { NMA, isConnected, armBaseline, quantile } from './nma.js?v=2026.10.25-3';
+import { gradePairwise, finalCertainty, footnotes, gradeNMA, absolute, category, legendText, plainStatement, thresholdSet, LEVELS, SYM, DOMAIN_LABEL, SEVERITY } from './grade.js?v=2026.10.25-3';
+import { mountThreshold } from './thresh.js?v=2026.10.25-3';
+import { renderEtD } from './etd.js?v=2026.10.25-3';
+import { bindFigs, effPt, figSettings } from './figs.js?v=2026.10.25-3';
+import { stepFlowHTML, stepsTableHTML, supplTable } from './nmasteps.js?v=2026.10.25-3';
+import { forestSVG, forestRM, bubbleSVG, networkSVG, funnelSVG, nodesplitSVG, thresholdSVG, shareBarSVG, i2GaugeSVG, oisSVG, crossLabel, robClass, ROB_COL, ZONE } from './plots.js?v=2026.10.25-3';
+import { MIDS, midValues } from './mids.js?v=2026.10.25-3';
+import { median } from './stats.js?v=2026.10.25-3';
+import { HELP_HTML } from './help.js?v=2026.10.25-3';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -39,6 +40,13 @@ function showTab(t) {
   window.scrollTo({ top: 0 });
 }
 $('#help').innerHTML = HELP_HTML;
+// biblioteca de MID (tabla de consulta y CSV)
+{
+  const row = m => { const a = midValues(m, 100), b = midValues(m, 1000), u = m.type === 'bin' ? 'por 100 (por 1000)' : m.unit, f = (x, y) => (m.type === 'bin' ? `${x} (${y})` : x); return [m.area, m.name, m.type === 'bin' ? 'binario' : 'continuo', u, m.type === 'bin' ? m.dis : '', f(a.mid, b.mid), f(a.mod, b.mod), f(a.large, b.large), m.dir === 'lower' ? 'mayor = indeseable' : 'mayor = deseable', m.basis]; };
+  const head = ['Área', 'Desenlace', 'Tipo', 'Unidad', 'Desutilidad', 'MID (pequeño)', 'Moderado', 'Grande', 'Dirección', 'Base'];
+  $('#help').insertAdjacentHTML('beforeend', `<h2>Biblioteca de MID para nefrología, cardiología y hematología</h2><p>Propuestas <b>conservadoras</b> y orientativas: la MID es el menor cambio que un paciente o clínico consideraría importante; se redondea hacia el valor mayor razonable para no llamar «importante» a un cambio trivial. En los binarios se usa la desutilidad (muerte = 1) y los umbrales de GRADE-THRESHOLD; en los continuos, el umbral pequeño es la MID y los otros dos son moderado y grande. Elíjalas en «Plantilla de MID» de cada desenlace (paso 2) y ajuste con su panel, su población y su contexto.</p><p><button class="ghost" id="mid-csv">Descargar CSV</button></p><div class="tablewrap"><table class="data"><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${MIDS.map(m => `<tr>${row(m).map(v => `<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+  $('#mid-csv').addEventListener('click', () => download('MID_library.csv', toCSV(MIDS.map(m => Object.fromEntries(row(m).map((v, i) => [head[i], v]))), head), 'text/csv'));
+}
 
 // ---------------- carga de datos ----------------
 $('#file').addEventListener('change', e => e.target.files[0] && loadFile(e.target.files[0]));
@@ -240,6 +248,7 @@ function renderOutcomeConfig(kind) {
         <label>Importancia <select data-oc="importance">${IMP_OPTS.map(x => `<option ${x === c.importance ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
         <label>Un valor mayor es… <select data-oc="dir"><option value="lower" ${c.dir === 'lower' ? 'selected' : ''}>indeseable</option><option value="higher" ${c.dir === 'higher' ? 'selected' : ''}>deseable</option></select></label>
         ${kind === 'pw' ? `<label>Medida <select data-oc="measure">${c.measures.map(x => `<option ${x === c.measure ? 'selected' : ''}>${x}</option>`).join('')}</select></label>` : ''}
+        <label class="wide">Plantilla de MID (nefro-cardio-hemato; propuesta conservadora, ajuste con su panel)<select data-preset><option value="">— elegir —</option>${[...new Set(MIDS.map(m => m.area))].map(a => `<optgroup label="${a}">${MIDS.map((m, i) => [i, m]).filter(([, m]) => m.area === a && (m.type === 'bin') === !!c.binary).map(([i, m]) => `<option value="${i}">${esc(m.name)}${m.type === 'cont' ? ' [' + esc(m.unit) + ']' : ''}</option>`).join('')}</optgroup>`).join('')}</select></label>
         ${fld(o, 'mid', 'MID (umbral pequeño)', 'type="number" step="any"', c.binary ? unitLbl : '')}
         ${fld(o, 'mod', 'Umbral moderado', 'type="number" step="any" placeholder="opcional"')}
         ${fld(o, 'large', 'Umbral grande', 'type="number" step="any" placeholder="opcional"')}
@@ -264,6 +273,15 @@ function renderOutcomeConfig(kind) {
           if (man) { man.disabled = c.p0method !== 'manual'; if (kind === 'pw' && c.p0method !== 'manual') man.value = c.p0; }
         }
         const sm = d.querySelector('summary .muted'); if (sm) sm.textContent = ocSummary(kind, c); });
+    });
+    d.querySelector('[data-preset]')?.addEventListener('change', e => {
+      const m = MIDS[+e.target.value]; if (!m) return;
+      const v = midValues(m, +$(kind === 'pw' ? '#pw-unit' : '#nm-unit').value);
+      Object.assign(c, { dir: m.dir, mid: v.mid, mod: v.mod, large: v.large });
+      if (m.type === 'bin') c.dis = m.dis; else if (kind === 'pw' && c.measures?.includes(m.measure)) c.measure = m.measure;
+      ['mid', 'mod', 'large', 'dir', 'measure'].forEach(k => { const inp = d.querySelector(`[data-oc="${k}"]`); if (inp && c[k] !== undefined) inp.value = c[k]; });
+      d._thr?.setDesirable(c.dir === 'higher');
+      const sm = d.querySelector('summary .muted'); if (sm) sm.textContent = ocSummary(kind, c);
     });
     const thr = d.querySelector('[data-thr]');
     d._thr = mountThreshold(thr, `oc-${kind}-${thr.dataset.thr}-`, {

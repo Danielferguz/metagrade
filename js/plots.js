@@ -8,9 +8,11 @@ function scaleFn(lo, hi, x0, x1, log) {
 }
 function niceTicks(lo, hi, log) {
   if (log) {
-    const cand = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100];
-    const t = cand.filter(v => v >= lo * 0.999 && v <= hi * 1.001);
-    return t.length > 8 ? t.filter(v => [0.01, 0.1, 1, 10, 100].includes(v) || (t.length <= 10 && [0.5, 2].includes(v))) : t;
+    // juegos de marcas de menos a más finos hasta tener entre 4 y 8 dentro del rango (HR estrechos como 0,6–1,1 necesitan marcas cada 0,1)
+    const sets = [[0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100], [0.1, 0.25, 0.5, 1, 2, 4, 10, 100], [0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4], [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.75, 2], [0.8, 0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.15, 1.2, 1.25]];
+    const inr = c => c.filter(v => v >= lo * 0.999 && v <= hi * 1.001);
+    for (const c of sets) { const t = inr(c); if (t.length >= 4 && t.length <= 8) return t; }
+    const t = inr(sets[0]); return t.length > 8 ? t.filter(v => [0.01, 0.1, 1, 10, 100].includes(v) || [0.5, 2].includes(v)) : t.length ? t : [1];
   }
   const span = hi - lo, step = Math.pow(10, Math.floor(Math.log10(span / 4)));
   const m = span / step > 20 ? 5 : span / step > 8 ? 2 : 1, st = step * m, out = [];
@@ -112,6 +114,7 @@ export function forestRM({ title = '', groups, overall = null, cols = [], log = 
   // anchos de columnas (texto alineado a la derecha, como RevMan)
   const labW = Math.max(tw('Study or Subgroup', true), ...all.map(r => tw(r.label) + fs * 0.8), ...pools.map(p => tw(p.label, true)), ...groups.map(g => tw(g.label, true))) + fs;
   const colW = cols.map((c, i) => Math.max(tw(c.head, true), ...all.map(r => tw(r.cells?.[i])), ...pools.map(p => tw(p.cells?.[i], true))) + fs * 1.3);
+  { const gs = []; cols.forEach((c, i) => { const l = gs.at(-1); if (l && l.g === c.group) l.e = i; else gs.push({ g: c.group, b: i, e: i }); }); gs.forEach(g => { const have = colW.slice(g.b, g.e + 1).reduce((a, b) => a + b, 0), need = tw(g.g || '', true) + fs; if (need > have) colW[g.e] += need - have; }); }
   const wW = Math.max(tw('Weight', true), ...all.map(r => tw(r.w)), ...pools.map(p => tw(p.w, true))) + fs * 1.3;
   const eW = Math.max(tw('IV, Random, 95% CI', true) * 0.9, ...all.map(r => tw(ci(r))), ...pools.map(p => tw(ci(p), true))) + fs * 1.2;
   const PW = fs * 24, robW = nD ? (nD * cw) + fs * 4.6 : (rob ? fs * 6 : 0);

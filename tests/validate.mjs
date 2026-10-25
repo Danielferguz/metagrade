@@ -6,6 +6,7 @@ import { NMA } from '../js/nma.js';
 import { oisBinary, effectiveN } from '../js/grade.js';
 import { parseCSV } from '../js/io.js';
 import { forestRM } from '../js/plots.js';
+import { MIDS, midValues } from '../js/mids.js';
 const ref = JSON.parse(fs.readFileSync(new URL('./reference.json', import.meta.url)));
 let fails = 0; const ok = (name, a, b, tol = 1e-6) => { const good = Math.abs(a - b) <= tol; if (!good) fails++; console.log(`${good ? 'OK  ' : 'FAIL'} ${name}: ${a} vs ${b}`); };
 const rd = f => parseCSV(fs.readFileSync(new URL('../examples/' + f, import.meta.url), 'utf8'));
@@ -52,4 +53,9 @@ ok('GRADE33 OIS', oisBinary(0.77, 0.25), 184, 0);
   const svg = forestRM({ groups: [{ label: '', rows: [r('Estudio 1', 0.8, 'High'), r('Cero 2', NaN, 'Low')] }], cols: [{ group: 'I', head: 'Events' }, { group: 'I', head: 'Total' }, { group: 'C', head: 'Events' }, { group: 'C', head: 'Total' }], log: true, measure: 'RR', model: 'IV', leftLabel: 'a', rightLabel: 'b', rob: true, robDoms: [{ head: 'A', name: 'Randomisation' }, { head: 'B', name: 'Deviations' }, { head: 'C', name: 'Missing data' }] });
   ok('forestRM: «Not estimable» para estudios sin estimador', svg.includes('Not estimable') ? 1 : 0, 1, 0);
   ok('forestRM: columnas A–C, Global y leyenda de dominios', ['>A<', '>B<', '>C<', 'Global', '(A) Randomisation', '(C) Missing data'].every(t => svg.includes(t)) && (svg.match(/<circle /g) || []).length === 8 ? 1 : 0, 1, 0); }
+// biblioteca de MID: umbrales positivos y crecientes; las desutilidades coinciden con GRADE-THRESHOLD (muerte = 1 → 1,35 / 3,21 / 6,25 por 100)
+{ const good = MIDS.every(m => { const v = midValues(m, 100); return v.mid > 0 && v.mid < v.mod && v.mod < v.large && (m.type === 'bin' ? m.dis > 0 && m.dis <= 1 : m.t.length === 3); });
+  ok('MID: todos los umbrales son positivos y crecientes', good ? 1 : 0, 1, 0);
+  const d = midValues(MIDS.find(m => m.name === 'Mortalidad por todas las causas'), 100); ok('MID mortalidad por 100 = 1,35 / 3,21 / 6,25', Math.abs(d.mid - 1.35) + Math.abs(d.mod - 3.21) + Math.abs(d.large - 6.25), 0, 1e-9);
+  ok('MID: hay desenlaces de nefrología, cardiología y hematología', ['Nefrología', 'Cardiología', 'Hematología'].every(a => MIDS.some(m => m.area === a && m.type === 'bin') && MIDS.some(m => m.area === a && m.type === 'cont')) ? 1 : 0, 1, 0); }
 console.log(fails ? `\n${fails} fallos` : '\nTodas las comprobaciones pasaron'); process.exit(fails ? 1 : 0);
