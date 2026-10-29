@@ -67,3 +67,8 @@ Guyatt G, et al. Core GRADE 1–7. BMJ 2025 · Brignardello-Petersen R, et al. G
 ## Publicar una versión nueva
 
 Después de cambiar el código, ejecute `python3 tools/bump_version.py AAAA.MM.DD-N`. Esto añade `?v=…` a todos los módulos y a la hoja de estilos para que los navegadores no sigan usando archivos antiguos en caché; la versión aparece en el pie de página.
+
+## Acceso
+La herramienta pide **usuario y contraseña** al abrirla (`auth.js`). Solo se guarda una huella PBKDF2-SHA256 del par usuario + contraseña, no la contraseña. Es una barrera para visitantes casuales: el código sigue siendo visible para quien sepa abrir las herramientas del navegador. Para proteger de verdad se necesita control de acceso en el servidor.
+
+Para cambiar la clave: `python3 tools/generar_huella.py usuario clave` y pegar la línea resultante en `auth.js` (misma clave en todas las herramientas si quieres una sola entrada: la sesión es por navegador y sitio).
