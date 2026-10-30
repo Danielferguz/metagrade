@@ -1,3 +1,8 @@
+@font-face{font-family:Montserrat;font-weight:500;font-style:normal;font-display:swap;src:url(fonts/montserrat-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:Montserrat;font-weight:600;font-style:normal;font-display:swap;src:url(fonts/montserrat-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:Montserrat;font-weight:700;font-style:normal;font-display:swap;src:url(fonts/montserrat-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Source Sans 3";font-weight:400;font-style:normal;font-display:swap;src:url(fonts/source-sans-3-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Source Sans 3";font-weight:600;font-style:normal;font-display:swap;src:url(fonts/source-sans-3-latin-600-normal.woff2) format("woff2")}
 /* MetaGRADE · identidad EPI-LAB (mismos tokens que EPI-DATA): azul verdoso (conocimiento, datos), burdeos (rigor, causalidad), carbón (método), gris claro (claridad).
    Solo la interfaz de la página; las figuras y tablas (SoF, certeza, flujos) conservan sus colores propios. */
 :root {
